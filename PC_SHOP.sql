@@ -151,3 +151,13 @@ CREATE TABLE `build_items` (
   FOREIGN KEY (`build_id`) REFERENCES `saved_builds`(`build_id`) ON DELETE CASCADE,
   FOREIGN KEY (`product_id`) REFERENCES `products`(`product_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 產品規格表 (Product Specifications) - 用於電腦零件相容性檢查
+CREATE TABLE `product_specifications` (
+  `spec_id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) NOT NULL,
+  `spec_name` varchar(100) NOT NULL,
+  `spec_value` varchar(255) NOT NULL,
+  PRIMARY KEY (`spec_id`),
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`product_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
