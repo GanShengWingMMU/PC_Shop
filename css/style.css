@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+/* =========================================
+   1. Global Variables (科技风配色引擎)
+   ========================================= */
+:root {
+    --bg-main: #0a0a0a;        /* 极夜黑背景 */
+    --bg-surface: #141414;     /* 卡片/板块的深灰底色 */
+    --bg-glass: rgba(20, 20, 20, 0.7); /* 毛玻璃透明底色 */
+    
+    --accent-blue: #00f2fe;    /* 电竞亮蓝 */
+    --accent-purple: #4facfe;  /* 科技紫蓝 */
+    --text-main: #ffffff;
+    --text-muted: #888888;
+    
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-radius: 12px;
+    --transition-fast: all 0.2s ease-in-out;
+    --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* =========================================
+   2. Base Reset & Typography
+   ========================================= */
+* {
+    margin: 0; padding: 0; box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+a { text-decoration: none; color: inherit; }
+
+/* =========================================
+   3. Glassmorphism Navbar (毛玻璃导航栏)
+   ========================================= */
+.navbar {
+    position: sticky; top: 0; z-index: 1000;
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px); /* 核心：毛玻璃模糊效果 */
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 5%;
+    display: flex; justify-content: space-between; align-items: center;
+}
+
+.navbar .logo {
+    font-size: 1.5rem; font-weight: 800;
+    background: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; /* 科技感渐变文字 */
+    letter-spacing: 1px;
+}
+
+.nav-links, .nav-actions { display: flex; gap: 2rem; align-items: center; }
+
+.navbar a:not(.logo) {
+    color: var(--text-muted); font-weight: 600; font-size: 0.95rem;
+    transition: var(--transition-fast);
+}
+
+.navbar a:not(.logo):hover { color: var(--text-main); }
+
+/* PC Builder 特殊高亮按钮 */
+.nav-links .highlight-link {
+    color: var(--accent-blue);
+    text-shadow: 0 0 10px rgba(0, 242, 254, 0.4); /* 发光文字 */
+}
+
+/* =========================================
+   4. Buttons (渐变发光按钮)
+   ========================================= */
+.btn {
+    display: inline-block; padding: 12px 28px;
+    border-radius: 8px; font-weight: 600; text-align: center;
+    cursor: pointer; transition: var(--transition-smooth);
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+    color: #000;
+    box-shadow: 0 4px 15px rgba(0, 242, 254, 0.2);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 242, 254, 0.4); /* 悬停时增强发光 */
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+}
+
+.btn-outline:hover {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+/* =========================================
+   5. Layout & Cards (商品/套餐卡片)
+   ========================================= */
+.main-container { width: 90%; max-width: 1200px; margin: 3rem auto; flex: 1; }
+
+.section-title {
+    font-size: 2rem; font-weight: 800; margin-bottom: 2rem;
+    display: flex; align-items: center; gap: 10px;
+}
+
+.card-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 2rem;
+}
+
+.tech-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+}
+
+.tech-card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+    background: linear-gradient(to right, transparent, var(--accent-blue), transparent);
+    opacity: 0; transition: var(--transition-smooth);
+}
+
+.tech-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(0, 242, 254, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.tech-card:hover::before { opacity: 1; } /* 悬停时顶部出现霓虹亮线 */
+
+.tech-card h3 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+.tech-card .specs { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.6; }
+.tech-card .price { font-size: 1.8rem; font-weight: 800; color: var(--text-main); margin-bottom: 1.5rem; }
+
+/* =========================================
+   6. Footer (极简页脚)
+   ========================================= */
+.footer {
+    background: var(--bg-surface); border-top: 1px solid var(--border-color);
+    padding: 2rem 5%; text-align: center; color: var(--text-muted); font-size: 0.9rem;
+}

@@ -1,41 +1,42 @@
-<?php 
-// 1. 引入头部 (Navbar 自动出现)
-include 'includes/header.php'; 
-?>
+<?php include 'includes/header.php'; ?>
 
-<div class="p-5 mb-4 bg-primary text-white rounded-3 shadow-sm">
-    <div class="container-fluid py-5">
-        <h1 class="display-5 fw-bold">Build Your Dream PC Today</h1>
-        <p class="col-md-8 fs-4">Explore our latest Intel Core Ultra & RTX 40 Series configurations. Use our smart builder to ensure 100% compatibility.</p>
-        <a href="builder.php" class="btn btn-warning btn-lg fw-bold">Enter PC Builder ➡️</a>
+<section class="tech-card" style="text-align: center; padding: 5rem 2rem; background: linear-gradient(180deg, rgba(20,20,20,1) 0%, rgba(0,80,120,0.2) 100%); margin-bottom: 3rem; border: 1px solid rgba(0, 242, 254, 0.2);">
+    <h1 style="font-size: 3.5rem; font-weight: 800; margin-bottom: 1rem;">Craft Your <span style="color: var(--accent-blue);">Ultimate</span> Machine</h1>
+    <p style="color: var(--text-muted); font-size: 1.2rem; margin-bottom: 2.5rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+        Experience seamless compatibility checking and real-time wattage calculation with our advanced PC Builder engine.
+    </p>
+    <a href="builder.php" class="btn btn-primary" style="font-size: 1.2rem; padding: 15px 40px;">Launch PC Builder <i class="fas fa-rocket"></i></a>
+</section>
+
+<h2 class="section-title"><i class="fas fa-fire" style="color: #ff5e62;"></i> Featured Packages</h2>
+
+<div class="card-grid">
+    <div class="tech-card">
+        <h3>Level 1: Entry Gaming</h3>
+        <p class="specs">Intel Core i5-12400F<br>16GB DDR4 3200MHz<br>NVIDIA RTX 3060 12GB<br>512GB NVMe Gen3 SSD</p>
+        <div class="price">RM 2,500.00</div>
+        <div style="display: flex; gap: 10px;">
+            <a href="#" class="btn btn-outline" style="flex: 1;">Details</a>
+            <a href="#" class="btn btn-primary" style="flex: 1;">Buy Now</a>
+        </div>
+    </div>
+
+    <div class="tech-card">
+        <h3>Level 2: Esport Pro</h3>
+        <p class="specs">Intel Core i5-13400F<br>32GB DDR5 5200MHz<br>NVIDIA RTX 4060 8GB<br>1TB NVMe Gen4 SSD</p>
+        <div class="price">RM 3,500.00</div>
+        <div style="display: flex; gap: 10px;">
+            <a href="#" class="btn btn-outline" style="flex: 1;">Details</a>
+            <a href="builder.php?package=2" class="btn btn-primary" style="flex: 1;">Customize</a>
+        </div>
+    </div>
+    
+    <div class="tech-card">
+        <h3 style="color: var(--accent-purple);">Master: Extreme Loop</h3>
+        <p class="specs">AMD Ryzen 7 7800X3D<br>64GB DDR5 6000MHz<br>NVIDIA RTX 4080 SUPER<br>Custom Hard-Tube Water Cooling</p>
+        <div class="price">RM 12,800.00</div>
+        <a href="#" class="btn btn-outline" style="width: 100%;"><i class="fas fa-envelope"></i> Request Consultation</a>
     </div>
 </div>
 
-<h3 class="mb-4 border-bottom pb-2">Featured Packages</h3>
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h5 class="card-title fw-bold">Level 1: Entry Gaming</h5>
-                <p class="card-text text-muted">Intel i5-12400F | 16GB RAM | RTX 3060</p>
-                <h4 class="text-primary mb-3">RM 2,500.00</h4>
-                <a href="#" class="btn btn-outline-dark w-100">View Details</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6 mb-4">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h5 class="card-title fw-bold">Level 2: Esport Pro</h5>
-                <p class="card-text text-muted">Intel i5-13400F | 32GB RAM | RTX 4060</p>
-                <h4 class="text-primary mb-3">RM 3,500.00</h4>
-                <a href="#" class="btn btn-dark w-100">Customize Package</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<?php 
-// 2. 引入底部 (Footer 自动出现)
-include 'includes/footer.php'; 
-?>
+<?php include 'includes/footer.php'; ?>
