@@ -155,3 +155,85 @@ a { text-decoration: none; color: inherit; }
     background: var(--bg-surface); border-top: 1px solid var(--border-color);
     padding: 2rem 5%; text-align: center; color: var(--text-muted); font-size: 0.9rem;
 }
+
+/* =========================================
+   7. Forms & Inputs (科技风表单)
+   ========================================= */
+.auth-container {
+    max-width: 450px;
+    margin: 4rem auto;
+    padding: 2.5rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    position: relative;
+}
+
+/* 顶部霓虹装饰线 */
+.auth-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 3px;
+    background: linear-gradient(to right, var(--accent-purple), var(--accent-blue));
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+}
+
+.auth-title {
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 2rem;
+    color: var(--text-main);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-main);
+    font-size: 1rem;
+    transition: var(--transition-fast);
+}
+
+/* 获得焦点时的发光效果 */
+.form-control:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* 错误提示文字 */
+.text-danger {
+    color: #ff4d4d;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    display: block;
+}
+
+/* 成功提示文字 */
+.text-success {
+    color: #00e676;
+    background: rgba(0, 230, 118, 0.1);
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 230, 118, 0.3);
+    margin-bottom: 1rem;
+    text-align: center;
+}

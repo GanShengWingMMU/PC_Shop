@@ -1,0 +1,131 @@
+/* =========================================
+   PC Builder 专属样式 (GridCitY 赛博朋克风)
+   ========================================= */
+
+.builder-container {
+    max-width: 900px;
+    margin: 2rem auto 8rem auto; /* 底部留出 8rem 空间给悬浮条，防止内容被遮挡 */
+}
+
+/* --- 配件插槽 (Slot) --- */
+.slot-card {
+    background: var(--bg-surface); /* 继承 style.css 里的极夜黑 */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition-smooth);
+}
+
+.slot-card:hover {
+    border-color: #00f2fe; /* 霓虹蓝边框 */
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.15);
+    transform: translateX(8px); /* 悬停时微微向右滑动，极具动感 */
+}
+
+.slot-info {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.slot-icon {
+    font-size: 2.2rem;
+    color: var(--text-muted);
+    width: 60px;
+    text-align: center;
+    transition: var(--transition-fast);
+}
+
+.slot-card:hover .slot-icon {
+    color: #00f2fe; /* 悬停时图标点亮发光 */
+    text-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+}
+
+.slot-details h3 {
+    font-size: 1.3rem;
+    margin-bottom: 0.3rem;
+    color: var(--text-main);
+    font-weight: 800;
+}
+
+.slot-details p {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* --- 选择按钮 --- */
+.btn-select {
+    background: transparent;
+    border: 2px dashed var(--text-muted);
+    color: var(--text-muted);
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    text-decoration: none;
+    display: inline-block;
+}
+
+.slot-card:hover .btn-select {
+    border-color: #00f2fe;
+    color: #00f2fe;
+}
+
+.btn-select:hover {
+    background: rgba(0, 242, 254, 0.1);
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+}
+
+/* --- 底部悬浮计价条 (Sticky Summary Bar) --- */
+.sticky-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(15, 15, 15, 0.85);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-top: 1px solid #00f2fe; /* 顶部发光蓝线 */
+    padding: 1.2rem 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.6);
+}
+
+.summary-stats {
+    display: flex;
+    gap: 3rem;
+}
+
+.stat-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.stat-value.highlight {
+    color: #00f2fe;
+    text-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+}
