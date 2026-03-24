@@ -109,7 +109,14 @@ a { text-decoration: none; color: inherit; }
 /* =========================================
    5. Layout & Cards (商品/套餐卡片)
    ========================================= */
-.main-container { width: 90%; max-width: 1200px; margin: 3rem auto; flex: 1; }
+.main-container { 
+    width: 90%; 
+    max-width: 1200px; 
+    margin: 3rem auto 0 auto; /* 🌟 把 bottom margin 改成 0 */
+    flex: 1; 
+    display: flex;             /* 🌟 讓容器變成彈性盒子 */
+    flex-direction: column;    /* 🌟 內容直向排列 */
+}
 
 .section-title {
     font-size: 2rem; font-weight: 800; margin-bottom: 2rem;
@@ -151,9 +158,23 @@ a { text-decoration: none; color: inherit; }
 /* =========================================
    6. Footer (极简页脚)
    ========================================= */
+/* =========================================
+   6. Footer (极简页脚) - 破牆而出完整版
+   ========================================= */
 .footer {
-    background: var(--bg-surface); border-top: 1px solid var(--border-color);
-    padding: 2rem 5%; text-align: center; color: var(--text-muted); font-size: 0.9rem;
+    background: var(--bg-surface); 
+    border-top: 1px solid var(--border-color);
+    padding: 2rem 5%; 
+    text-align: center; 
+    color: var(--text-muted); 
+    font-size: 0.9rem;
+
+    /* 全出血黑魔法 */
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    
+    /* 🌟 終極殺招：利用 auto 把自己用力往下推到最底端 */
+    margin-top: auto; 
 }
 
 /* =========================================
