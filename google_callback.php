@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'db_connect.php';
+require_once 'config.php';
 
 $client_id = '136647455136-lttdv812q1oc977eg3hqnv52o2pfak32.apps.googleusercontent.com';
 $client_secret = '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'; 
