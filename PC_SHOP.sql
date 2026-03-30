@@ -1,7 +1,7 @@
--- 关闭外键检查，避免重置表时报错
+-- Disable foreign key checks before truncating
 SET FOREIGN_KEY_CHECKS = 0;
 
--- 1. 刪除舊表 (如果存在的话，确保环境干净)
+-- 1. Drop old tables if they exist
 DROP TABLE IF EXISTS `product_specifications`;
 DROP TABLE IF EXISTS `build_items`;
 DROP TABLE IF EXISTS `saved_builds`;
@@ -17,22 +17,20 @@ DROP TABLE IF EXISTS `categories`;
 DROP TABLE IF EXISTS `customers`;
 DROP TABLE IF EXISTS `admins`;
 
--- =========================================================
--- 开始建立核心资料表
--- =========================================================
+-- ==========================================
+-- 2. Create Core Tables
+-- ==========================================
 
--- 2. 管理員表 (Admins)
 CREATE TABLE `admins` (
   `admin_id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL UNIQUE,
   `password` varchar(255) NOT NULL,
   `email` varchar(100) NOT NULL UNIQUE,
-  `role` varchar(20) DEFAULT 'SuperAdmin', /* SuperAdmin, Manager 等 */
+  `role` varchar(20) DEFAULT 'SuperAdmin',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`admin_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 3. 客戶表 (Customers)
 CREATE TABLE `customers` (
   `customer_id` int(11) NOT NULL AUTO_INCREMENT,
   `first_name` varchar(50) NOT NULL,
@@ -47,7 +45,6 @@ CREATE TABLE `customers` (
   PRIMARY KEY (`customer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 4. 商品分類表 (Categories)
 CREATE TABLE `categories` (
   `category_id` int(11) NOT NULL AUTO_INCREMENT,
   `category_name` varchar(50) NOT NULL,
@@ -55,23 +52,21 @@ CREATE TABLE `categories` (
   PRIMARY KEY (`category_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 5. 商品總表 (Products) - [🌟 高分强化：增加了功耗与套餐标记]
 CREATE TABLE `products` (
   `product_id` int(11) NOT NULL AUTO_INCREMENT,
   `category_id` int(11) NOT NULL, 
-  `name` varchar(100) NOT NULL,
+  `product_name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
   `price` decimal(10,2) NOT NULL, 
   `stock_quantity` int(11) NOT NULL DEFAULT 0,
   `image_url` varchar(255) DEFAULT NULL,
   `status` varchar(20) DEFAULT 'Available',
-  `tdp_wattage` int(11) DEFAULT 0, /* 🌟 新增：用于 PC Builder 快速计算总功耗 */
-  `is_package` tinyint(1) DEFAULT 0, /* 🌟 新增：区分散件(0)还是预设套餐(1) */
+  `tdp_wattage` int(11) DEFAULT 0, 
+  `is_package` tinyint(1) DEFAULT 0, 
   PRIMARY KEY (`product_id`),
   FOREIGN KEY (`category_id`) REFERENCES `categories`(`category_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 6. 購物車表 (Shopping Cart)
 CREATE TABLE `shopping_cart` (
   `cart_id` int(11) NOT NULL AUTO_INCREMENT,
   `customer_id` int(11) NOT NULL,
@@ -83,7 +78,6 @@ CREATE TABLE `shopping_cart` (
   FOREIGN KEY (`product_id`) REFERENCES `products`(`product_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 7. 訂單總表 (Orders)
 CREATE TABLE `orders` (
   `order_id` int(11) NOT NULL AUTO_INCREMENT,
   `customer_id` int(11) NOT NULL,
@@ -96,19 +90,17 @@ CREATE TABLE `orders` (
   FOREIGN KEY (`customer_id`) REFERENCES `customers`(`customer_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 8. 訂單明細表 (Order Details) - [🚨 致命漏洞已修复：改用 SET NULL 保留历史账单]
 CREATE TABLE `order_details` (
   `order_detail_id` int(11) NOT NULL AUTO_INCREMENT,
   `order_id` int(11) NOT NULL,
-  `product_id` int(11) DEFAULT NULL, /* 必须允许 NULL，才能在商品被删时保留订单记录 */
+  `product_id` int(11) DEFAULT NULL, 
   `quantity` int(11) NOT NULL,
   `unit_price` decimal(10,2) NOT NULL, 
   PRIMARY KEY (`order_detail_id`),
   FOREIGN KEY (`order_id`) REFERENCES `orders`(`order_id`) ON DELETE CASCADE,
-  FOREIGN KEY (`product_id`) REFERENCES `products`(`product_id`) ON DELETE SET NULL /* 🚨 修复为 SET NULL */
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`product_id`) ON DELETE SET NULL 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 9. 付款紀錄表 (Payments)
 CREATE TABLE `payments` (
   `payment_id` int(11) NOT NULL AUTO_INCREMENT,
   `order_id` int(11) NOT NULL,
@@ -119,7 +111,6 @@ CREATE TABLE `payments` (
   FOREIGN KEY (`order_id`) REFERENCES `orders`(`order_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 10. 儲存的信用卡 (Saved Cards)
 CREATE TABLE `saved_cards` (
   `card_id` int(11) NOT NULL AUTO_INCREMENT,
   `customer_id` int(11) NOT NULL,
@@ -130,7 +121,6 @@ CREATE TABLE `saved_cards` (
   FOREIGN KEY (`customer_id`) REFERENCES `customers`(`customer_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 11. 商品評價表 (Reviews)
 CREATE TABLE `reviews` (
   `review_id` int(11) NOT NULL AUTO_INCREMENT,
   `product_id` int(11) NOT NULL,
@@ -143,7 +133,6 @@ CREATE TABLE `reviews` (
   FOREIGN KEY (`customer_id`) REFERENCES `customers`(`customer_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 12. 諮詢服務表 (Consultations)
 CREATE TABLE `consultations` (
   `consultation_id` int(11) NOT NULL AUTO_INCREMENT,
   `customer_id` int(11) NOT NULL,
@@ -155,7 +144,6 @@ CREATE TABLE `consultations` (
   FOREIGN KEY (`customer_id`) REFERENCES `customers`(`customer_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 13. 儲存的電腦組裝菜單 (Saved Builds)
 CREATE TABLE `saved_builds` (
   `build_id` int(11) NOT NULL AUTO_INCREMENT,
   `customer_id` int(11) NOT NULL,
@@ -166,7 +154,6 @@ CREATE TABLE `saved_builds` (
   FOREIGN KEY (`customer_id`) REFERENCES `customers`(`customer_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 14. 菜單裡面的詳細零件 (Build Items)
 CREATE TABLE `build_items` (
   `build_item_id` int(11) NOT NULL AUTO_INCREMENT,
   `build_id` int(11) NOT NULL,
@@ -177,7 +164,6 @@ CREATE TABLE `build_items` (
   FOREIGN KEY (`product_id`) REFERENCES `products`(`product_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 15. 產品規格表 (Product Specifications) - [💡 进阶优化：增加了复合索引]
 CREATE TABLE `product_specifications` (
   `spec_id` int(11) NOT NULL AUTO_INCREMENT,
   `product_id` int(11) NOT NULL,
@@ -185,8 +171,44 @@ CREATE TABLE `product_specifications` (
   `spec_value` varchar(255) NOT NULL,
   PRIMARY KEY (`spec_id`),
   FOREIGN KEY (`product_id`) REFERENCES `products`(`product_id`) ON DELETE CASCADE,
-  INDEX `idx_spec_search` (`spec_name`, `spec_value`) /* 💡 优化：大幅提升兼容性过滤的查询速度 */
+  INDEX `idx_spec_search` (`spec_name`, `spec_value`) 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 重新开启外键检查
+-- ==========================================
+-- 3. Insert Test Data (Professional English)
+-- ==========================================
+
+INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
+(1, 'Processor (CPU)', 'The brain of the computer'),
+(2, 'Motherboard', 'Main circuit board'),
+(3, 'Memory (RAM)', 'Short-term data access'),
+(4, 'Graphics Card (GPU)', 'Renders images and video'),
+(5, 'Storage (SSD)', 'Long-term data storage'),
+(6, 'Power Supply (PSU)', 'Provides power to components'),
+(7, 'PC Case', 'Enclosure for components'),
+(8, 'Cooling System', 'Keeps components cool');
+
+INSERT INTO `products` (`category_id`, `product_name`, `description`, `price`, `stock_quantity`, `tdp_wattage`) VALUES
+(1, 'Intel Core i5-13400F', 'Mainstream Intel Processor. Keyword: LGA1700', 950.00, 10, 65),
+(1, 'Intel Core i9-14900K', 'Enthusiast Intel Processor (High TDP). Keyword: LGA1700', 2800.00, 5, 253),
+(1, 'AMD Ryzen 5 7600X', 'Solid AMD Ryzen Processor. Keyword: AM5', 1100.00, 10, 105),
+(2, 'ASUS ROG STRIX Z790-F LGA1700 DDR5', 'High-end Intel board, supports DDR5 memory only.', 1450.00, 8, 30),
+(2, 'MSI PRO H610M-G LGA1700 DDR4', 'Budget Intel board, supports DDR4 memory only.', 450.00, 15, 20),
+(2, 'Gigabyte B650 AORUS ELITE AX AM5 DDR5', 'Premium AMD board, supports DDR5 memory only.', 1350.00, 5, 30),
+(3, 'Kingston Fury Beast 16GB DDR4 3200MHz', 'Reliable standard DDR4 memory module.', 200.00, 30, 8),
+(3, 'Corsair Vengeance 32GB DDR5 6000MHz', 'High-speed DDR5 memory module for gaming.', 650.00, 20, 10),
+(3, 'G.Skill Trident Z5 RGB 64GB DDR5', 'Enthusiast DDR5 memory kit for heavy workloads.', 1200.00, 10, 15),
+(4, 'NVIDIA GeForce GT 730 2GB', 'Basic display output only (Will cause severe bottleneck with high-end CPUs).', 250.00, 20, 30),
+(4, 'NVIDIA RTX 4070 SUPER 12GB', 'Sweet spot for 1440p gaming and rendering.', 3100.00, 10, 220),
+(4, 'NVIDIA RTX 4090 24GB', 'Ultimate flagship GPU (Requires massive power supply).', 8500.00, 2, 450),
+(6, 'Corsair CV550 550W', 'Entry-level power supply (550W).', 220.00, 15, 550),
+(6, 'FSP Hydro G Pro 850W', 'High-end gold certified power supply (850W).', 600.00, 10, 850),
+(6, 'ASUS ROG Thor 1200W', 'Platinum overkill power supply (1200W).', 1500.00, 3, 1200),
+(5, 'Samsung 990 PRO 1TB NVMe', 'Top-tier M.2 NVMe SSD.', 550.00, 15, 5),
+(5, 'WD Blue SN570 500GB NVMe', 'Budget-friendly fast storage.', 200.00, 25, 5),
+(7, 'NZXT H5 Flow Black', 'High airflow premium chassis.', 400.00, 10, 0),
+(8, 'Deepcool AK400 Air Cooler', 'Efficient standard air cooler.', 150.00, 20, 0),
+(8, 'NZXT Kraken 360 RGB AIO', 'Premium liquid cooler with LCD.', 850.00, 8, 15);
+
+-- Re-enable foreign key checks
 SET FOREIGN_KEY_CHECKS = 1;
