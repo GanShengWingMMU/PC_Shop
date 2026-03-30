@@ -2,19 +2,25 @@
 session_start();
 require_once 'config.php';
 
-// 🚨 登入狀態檢查
-if (!isset($_SESSION['customer_id'])) {
-    header("Location: login.php");
+// 1. 檢查是否登入 (沒登入踢回 login)
+if (!isset($_SESSION['customer_id'])) { 
+    header("Location: login.php"); 
     exit(); 
 }
 
 $customer_id = $_SESSION['customer_id'];
+$cart_items = [];
 $total_price = 0;
 
-// 🛒 從資料庫撈取真實購物車資料 (JOIN products 表)
-$sql = "SELECT c.cart_id, c.quantity, p.product_id, p.name, p.price, p.image_url 
+// ==========================================
+// 🛒 從資料庫撈取購物車資料 (同時支援 單一零件 與 整台主機)
+// ==========================================
+$sql = "SELECT c.cart_id, c.quantity, c.product_id, c.build_id, 
+               p.name AS product_name, p.price AS product_price, p.image_url,
+               b.build_name, b.total_price AS build_price
         FROM shopping_cart c 
-        JOIN products p ON c.product_id = p.product_id 
+        LEFT JOIN products p ON c.product_id = p.product_id 
+        LEFT JOIN saved_builds b ON c.build_id = b.build_id
         WHERE c.customer_id = ?";
 
 if ($stmt = $conn->prepare($sql)) {
@@ -24,7 +30,12 @@ if ($stmt = $conn->prepare($sql)) {
 
     while ($row = $result->fetch_assoc()) {
         $cart_items[] = $row;
-        $total_price += ($row['price'] * $row['quantity']);
+        // 判斷是主機還是零件，來計算總價
+        if (!empty($row['build_id'])) {
+            $total_price += ($row['build_price'] * $row['quantity']);
+        } else {
+            $total_price += ($row['product_price'] * $row['quantity']);
+        }
     }
     $stmt->close();
 } else {
@@ -45,9 +56,21 @@ if ($stmt = $conn->prepare($sql)) {
 
 <main class="main-container cart-page-wrapper">
     
-    <div class="cart-header">
-        <i class="fa-solid fa-cart-shopping"></i>
-        <h2>MY CART</h2>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        
+        <div class="cart-header" style="margin-bottom: 0;">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <h2>MY CART</h2>
+        </div>
+        
+        <?php if(!empty($cart_items)): ?>
+            <a href="remove_cart.php?action=clear" 
+               onclick="return confirm('Are you sure you want to remove ALL items from your cart?');" 
+               style="color: #ff4d4d; border: 1px solid #ff4d4d; padding: 8px 15px; text-decoration: none; border-radius: 6px; transition: 0.3s; font-weight: bold; background: rgba(255, 77, 77, 0.05);">
+                <i class="fa-solid fa-trash-can"></i> Remove All
+            </a>
+        <?php endif; ?>
+
     </div>
 
     <div class="cart-layout">
@@ -62,28 +85,40 @@ if ($stmt = $conn->prepare($sql)) {
                     <a href="index.php" class="btn btn-primary">Continue Shopping</a>
                 </div>
             <?php else: ?>
-                <?php foreach ($cart_items as $item): ?>
-                    <div class="cart-item-card">
-                        
-                        <div class="cart-item-img">
-                            <img src="<?php echo htmlspecialchars($item['image_url'] ? $item['image_url'] : 'Image/placeholder.png'); ?>" alt="Product">
-                        </div>
+<?php foreach ($cart_items as $item): ?>
+    <div class="cart-item-card">
+        
+        <?php if (!empty($item['build_id'])): ?>
+            <div class="cart-item-img" style="background: rgba(0, 242, 254, 0.1);">
+                <i class="fa-solid fa-computer" style="font-size: 3rem; color: #00f2fe;"></i>
+            </div>
+            <div class="cart-item-info">
+                <h4 style="color: #00f2fe;"><i class="fa-solid fa-wrench"></i> <?php echo htmlspecialchars($item['build_name']); ?></h4>
+                <div class="price">RM <?php echo number_format($item['build_price'], 2); ?></div>
+                
+                <a href="view_build.php?id=<?php echo $item['build_id']; ?>" style="display: inline-block; margin-top: 8px; font-size: 0.9rem; color: var(--text-muted); text-decoration: underline;">
+                    <i class="fa-solid fa-list"></i> View Configuration
+                </a>
+            </div>
 
-                        <div class="cart-item-info">
-                            <h4><?php echo htmlspecialchars($item['name']); ?></h4>
-                            <div class="price">RM <?php echo number_format($item['price'], 2); ?></div>
-                        </div>
+        <?php else: ?>
+            <div class="cart-item-img">
+                <img src="<?php echo htmlspecialchars($item['image_url'] ? $item['image_url'] : 'Image/placeholder.png'); ?>" alt="Product">
+            </div>
+            <div class="cart-item-info">
+                <h4><?php echo htmlspecialchars($item['product_name']); ?></h4>
+                <div class="price">RM <?php echo number_format($item['product_price'], 2); ?></div>
+            </div>
+        <?php endif; ?>
 
-                        <div class="cart-item-controls">
-                            <div class="qty">
-                                Qty: <strong><?php echo $item['quantity']; ?></strong>
-                            </div>
-                            <a href="remove_cart.php?id=<?php echo $item['cart_id']; ?>" class="btn-remove" title="Remove Item">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </a>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
+        <div class="cart-item-controls">
+            <div class="qty">Qty: <strong><?php echo $item['quantity']; ?></strong></div>
+            <a href="remove_cart.php?id=<?php echo $item['cart_id']; ?>" class="btn-remove" title="Remove Item">
+                <i class="fa-solid fa-trash-can"></i>
+            </a>
+        </div>
+    </div>
+<?php endforeach; ?>
             <?php endif; ?>
 
         </div>

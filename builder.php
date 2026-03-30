@@ -153,9 +153,15 @@ $progress_percent = ($total_slots_count > 0) ? round(($filled_slots_count / $tot
         <button class="btn btn-outline" style="border-color: var(--text-main); color: var(--text-main);">
             <i class="fas fa-save"></i> Save Build
         </button>
-        <button class="btn btn-primary" <?php echo ($total_price == 0) ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''; ?>>
-            Checkout <i class="fas fa-arrow-right"></i>
-        </button>
+<?php if ($total_price > 0): ?>
+    <a href="add_build_to_cart.php" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+        Checkout <i class="fas fa-arrow-right" style="margin-left: 8px;"></i>
+    </a>
+<?php else: ?>
+    <button class="btn btn-primary" disabled style="opacity:0.5; cursor:not-allowed;">
+        Checkout <i class="fas fa-arrow-right" style="margin-left: 8px;"></i>
+    </button>
+<?php endif; ?>
     </div>
 </div>
 
