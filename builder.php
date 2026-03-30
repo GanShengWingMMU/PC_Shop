@@ -236,6 +236,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     <div style="display: flex; gap: 15px; align-items: center;">
         <a href="save_build.php" class="btn-action" style="border: 1px solid var(--accent); color: var(--accent); background: transparent; padding: 10px 20px;">
             <i class="fas fa-save"></i> Save Build
+<<<<<<< HEAD
         </a>
         
         <?php if($progress == 100): ?>
@@ -247,6 +248,18 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                 Complete Build to Checkout
             </span>
         <?php endif; ?>
+=======
+        </button>
+<?php if ($total_price > 0): ?>
+    <a href="add_build_to_cart.php" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+        Checkout <i class="fas fa-arrow-right" style="margin-left: 8px;"></i>
+    </a>
+<?php else: ?>
+    <button class="btn btn-primary" disabled style="opacity:0.5; cursor:not-allowed;">
+        Checkout <i class="fas fa-arrow-right" style="margin-left: 8px;"></i>
+    </button>
+<?php endif; ?>
+>>>>>>> dfc5db0864108be228339f52cccc21cefccc46d8
     </div>
 </div>
 

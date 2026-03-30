@@ -212,3 +212,12 @@ INSERT INTO `products` (`category_id`, `product_name`, `description`, `price`, `
 
 -- Re-enable foreign key checks
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- 1. 讓單一零件的 ID 可以是空的 (因為放整台主機時，不需要單一零件的 ID)
+ALTER TABLE `shopping_cart` MODIFY `product_id` int(11) NULL;
+
+-- 2. 新增一個 build_id 欄位，專門用來存放「整台主機」
+ALTER TABLE `shopping_cart` ADD `build_id` int(11) NULL AFTER `product_id`;
+
+-- 3. 加上外鍵保護，確保主機資料的安全
+ALTER TABLE `shopping_cart` ADD CONSTRAINT `fk_cart_build` FOREIGN KEY (`build_id`) REFERENCES `saved_builds`(`build_id`) ON DELETE CASCADE;
