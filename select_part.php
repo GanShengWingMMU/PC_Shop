@@ -1,144 +1,163 @@
 <?php
-// 1. 逻辑前置：开启缓冲和 Session
 ob_start();
 session_start();
 require_once 'config.php';
 
-// 2. 防御机制：如果没有传 category_id 过来，直接踢回 builder 页面
-if (!isset($_GET['category_id']) || empty($_GET['category_id'])) {
+$category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : 0;
+
+if ($category_id == 0) {
     header("Location: builder.php");
     exit();
 }
-$category_id = intval($_GET['category_id']); // intval() 强转数字，防止黑客 SQL 注入
 
 // ==========================================
-// 3. 处理用户点击 "Add to Build" 的动作
+// 1. 处理表单提交：存入 Session
 // ==========================================
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] == 'add') {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
     $product_id = intval($_POST['product_id']);
     
-    // 去数据库查出这个商品的名字、价格和功耗
-    $stmt = $conn->prepare("SELECT name, price, tdp_wattage FROM products WHERE product_id = ? AND status = 'Available'");
+    // 🚨 修复 1：数据库里叫 tdp_wattage，不是 wattage
+    $stmt = $conn->prepare("SELECT product_name, price, tdp_wattage FROM products WHERE product_id = ?");
     $stmt->bind_param("i", $product_id);
     $stmt->execute();
     $result = $stmt->get_result();
     
-    if ($result->num_rows === 1) {
-        $product = $result->fetch_assoc();
-        
-        // 【核心魔法】把选中的商品，存进我们之前在 builder.php 设计的 Session 购物车里！
+    if ($row = $result->fetch_assoc()) {
         $_SESSION['pc_build'][$category_id] = [
             'product_id' => $product_id,
-            'name'       => $product['name'],
-            'price'      => $product['price'],
-            'wattage'    => $product['tdp_wattage']
+            'name'       => $row['product_name'], 
+            'price'      => $row['price'],
+            'wattage'    => $row['tdp_wattage'] ?? 0 // 🚨 修复 2：提取 tdp_wattage
         ];
-        
-        // 选好之后，带着记忆瞬间传送回 builder.php
-        header("Location: builder.php");
-        exit();
     }
+    $stmt->close();
+    
+    header("Location: builder.php");
+    exit();
 }
 
 // ==========================================
-// 4. 获取要在网页上显示的商品数据
+// 2. 接收来自 Builder 的“智能算法参数”
 // ==========================================
-// 获取当前分类的名称 (比如把 1 翻译成 "Processor (CPU)")
-$cat_stmt = $conn->prepare("SELECT category_name FROM categories WHERE category_id = ?");
-$cat_stmt->bind_param("i", $category_id);
-$cat_stmt->execute();
-$cat_result = $cat_stmt->get_result();
-$category_name = ($cat_result->num_rows > 0) ? $cat_result->fetch_assoc()['category_name'] : "Components";
-$cat_stmt->close();
+$socket_filter = isset($_GET['socket']) ? $conn->real_escape_string($_GET['socket']) : '';
+$min_wattage = isset($_GET['min_w']) ? intval($_GET['min_w']) : 0;
+// 🌟 接收传递性依赖：RAM 世代参数
+$ram_type_req = isset($_GET['ram_type']) ? $conn->real_escape_string($_GET['ram_type']) : ''; 
 
-// 获取该分类下所有“上架中”且“不是整机套餐”的配件
-$prod_stmt = $conn->prepare("SELECT * FROM products WHERE category_id = ? AND status = 'Available' AND is_package = 0");
-$prod_stmt->bind_param("i", $category_id);
-$prod_stmt->execute();
-$products = $prod_stmt->get_result();
+$cat_name = "Component";
+$stmt_cat = $conn->prepare("SELECT category_name FROM categories WHERE category_id = ?");
+$stmt_cat->bind_param("i", $category_id);
+$stmt_cat->execute();
+$res_cat = $stmt_cat->get_result();
+if ($row_cat = $res_cat->fetch_assoc()) {
+    $cat_name = $row_cat['category_name']; 
+}
+$stmt_cat->close();
 
-// 开始渲染 HTML
+// ==========================================
+// 3. 🧠 动态 SQL 构建器 (Dynamic SQL Builder)
+// ==========================================
+$sql = "SELECT * FROM products WHERE category_id = $category_id AND status = 'Available'";
+$filter_messages = []; 
+
+// 规则 A：插槽过滤 (CPU -> 主板)
+if (!empty($socket_filter)) {
+    $sql .= " AND (product_name LIKE '%$socket_filter%' OR description LIKE '%$socket_filter%')";
+    $filter_messages[] = "Socket locked to: <strong>$socket_filter</strong>";
+}
+
+// 🌟 规则 B：内存世代过滤 (主板 -> RAM)
+if (!empty($ram_type_req) && $category_id == 3) { 
+    $sql .= " AND (product_name LIKE '%$ram_type_req%' OR description LIKE '%$ram_type_req%')";
+    $filter_messages[] = "Memory standard locked to: <strong>$ram_type_req</strong>";
+}
+
+// 🚨 修复 3：功耗下限过滤也要使用 tdp_wattage
+if ($min_wattage > 0 && $category_id == 6) { 
+    $sql .= " AND tdp_wattage >= $min_wattage";
+    $filter_messages[] = "Minimum Power Required: <strong>{$min_wattage}W</strong>";
+}
+
+$result = mysqli_query($conn, $sql);
+
 include 'includes/header.php';
 ?>
 
 <style>
-    .part-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1.5rem;
-        margin-top: 2rem;
-    }
-    .part-card {
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        border-radius: var(--border-radius);
-        padding: 1.5rem;
-        transition: var(--transition-smooth);
-        display: flex;
-        flex-direction: column;
-    }
-    .part-card:hover {
-        border-color: #00f2fe;
-        box-shadow: 0 5px 20px rgba(0, 242, 254, 0.1);
-        transform: translateY(-5px);
-    }
-    .part-price {
-        font-size: 1.4rem;
-        color: #00e676; /* 科技绿 */
-        font-weight: 800;
-        margin: 10px 0;
-    }
-    .part-specs {
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        background: rgba(255,255,255,0.05);
-        padding: 8px;
-        border-radius: 4px;
-        margin-bottom: 15px;
-    }
+    :root { --accent: #00f2fe; --dark-bg: #0f172a; --card-bg: rgba(255,255,255,0.03); }
+    .catalog-container { max-width: 1200px; margin: 2rem auto; padding: 0 20px; font-family: 'Inter', sans-serif; }
+    
+    .header-section { margin-bottom: 2rem; border-bottom: 1px solid rgba(0,242,254,0.2); padding-bottom: 1.5rem; }
+    .filter-badge { display: inline-block; background: rgba(0,242,254,0.1); border: 1px solid var(--accent); color: var(--accent); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; margin-right: 10px; margin-top: 10px; }
+
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    
+    .product-card { background: var(--card-bg); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; transition: 0.3s; display: flex; flex-direction: column; height: 100%; }
+    .product-card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 10px 20px rgba(0,242,254,0.1); }
+    
+    .prod-img { width: 100%; height: 180px; object-fit: contain; margin-bottom: 15px; border-radius: 8px; background: rgba(0,0,0,0.2); padding: 10px; }
+    .prod-name { font-size: 1.1rem; color: #fff; font-weight: 700; margin-bottom: 8px; line-height: 1.3; }
+    .prod-desc { font-size: 0.85rem; color: #888; flex-grow: 1; margin-bottom: 15px; }
+    
+    .prod-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; }
+    .prod-price { font-size: 1.3rem; color: #00e676; font-weight: 900; }
+    
+    .btn-add { background: var(--accent); color: #000; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+    .btn-add:hover { background: #fff; box-shadow: 0 0 10px var(--accent); }
+    
+    .empty-state { text-align: center; padding: 50px 20px; background: var(--card-bg); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.2); }
 </style>
 
-<div class="main-container" style="max-width: 1000px; margin: 2rem auto;">
-    
-    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
-        <div>
-            <a href="builder.php" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">
-                <i class="fas fa-arrow-left"></i> Back to Builder
-            </a>
-            <h1 style="font-size: 2.2rem; font-weight: 800; margin-top: 5px;">Select <span style="color: #00f2fe;"><?php echo htmlspecialchars($category_name); ?></span></h1>
-        </div>
+<div class="catalog-container">
+    <div class="header-section">
+        <a href="builder.php" style="color: #888; text-decoration: none; font-size: 0.9rem; margin-bottom: 10px; display: inline-block;"><i class="fas fa-arrow-left"></i> Back to Builder</a>
+        <h1 style="font-size: 2.5rem; font-weight: 900; margin: 0; color: #fff;">Select <span style="color: var(--accent);"><?php echo htmlspecialchars($cat_name); ?></span></h1>
+        
+        <?php if (!empty($filter_messages)): ?>
+            <div style="margin-top: 10px;">
+                <span style="color: #888; font-size: 0.85rem;"><i class="fas fa-filter"></i> Active Engine Filters:</span><br>
+                <?php foreach ($filter_messages as $msg): ?>
+                    <span class="filter-badge"><?php echo $msg; ?></span>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </div>
 
-    <div class="part-grid">
-        <?php if ($products->num_rows > 0): ?>
-            <?php while($row = $products->fetch_assoc()): ?>
-                <div class="part-card">
-                    <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 8px;"><?php echo htmlspecialchars($row['name']); ?></h3>
+    <div class="product-grid">
+        <?php if (mysqli_num_rows($result) > 0): ?>
+            <?php while ($row = mysqli_fetch_assoc($result)): ?>
+                <div class="product-card">
+                    <img src="<?php echo !empty($row['image_url']) ? htmlspecialchars($row['image_url']) : 'assets/placeholder.png'; ?>" alt="<?php echo htmlspecialchars($row['product_name']); ?>" class="prod-img" onerror="this.src='https://via.placeholder.com/280x180/111/333?text=No+Image'">
                     
-                    <p style="font-size: 0.9rem; color: var(--text-muted); flex-grow: 1;"><?php echo htmlspecialchars($row['description']); ?></p>
-                    
-                    <div class="part-specs">
-                        <i class="fas fa-bolt" style="color: #ffc107;"></i> TDP: <?php echo $row['tdp_wattage']; ?>W &nbsp;|&nbsp; 
-                        <i class="fas fa-box" style="color: var(--accent-purple);"></i> Stock: <?php echo $row['stock_quantity']; ?>
+                    <div class="prod-name"><?php echo htmlspecialchars($row['product_name']); ?></div>
+                    <div class="prod-desc">
+                        <?php 
+                            $desc = strip_tags($row['description']);
+                            echo strlen($desc) > 80 ? substr($desc, 0, 80) . '...' : $desc; 
+                        ?>
                     </div>
                     
-                    <div class="part-price">RM <?php echo number_format($row['price'], 2); ?></div>
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                        <?php if(isset($row['tdp_wattage']) && $row['tdp_wattage'] > 0): ?>
+                            <span style="font-size: 0.75rem; background: rgba(255,193,7,0.1); color: #ffc107; padding: 2px 6px; border-radius: 4px;"><i class="fas fa-bolt"></i> <?php echo $row['tdp_wattage']; ?>W</span>
+                        <?php endif; ?>
+                    </div>
 
-                    <form action="select_part.php?category_id=<?php echo $category_id; ?>" method="POST" style="margin-top: auto;">
-                        <input type="hidden" name="action" value="add">
-                        <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
-                        
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">
-                            <i class="fas fa-plus-circle"></i> Add to Build
+                    <form action="select_part.php?category_id=<?php echo $category_id; ?>" method="POST" class="prod-footer">
+                        <div class="prod-price">RM <?php echo number_format($row['price'], 2); ?></div>
+                        <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>"> 
+                        <button type="submit" name="add_to_build" class="btn-add">
+                            <i class="fas fa-plus"></i> Select
                         </button>
                     </form>
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
-            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                <i class="fas fa-box-open" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
-                <h3 style="color: var(--text-main);">No components available yet</h3>
-                <p style="color: var(--text-muted);">Please check back later or contact admin.</p>
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <i class="fas fa-search" style="font-size: 3rem; color: #444; margin-bottom: 15px;"></i>
+                <h3 style="color: #fff; margin-bottom: 5px;">No Compatible Components Found</h3>
+                <p style="color: #888; font-size: 0.9rem;">Our engine filtered out incompatible parts, but we couldn't find any matching products in the database.</p>
+                <a href="builder.php" class="btn-add" style="display: inline-block; margin-top: 15px; text-decoration: none;">Return to Builder</a>
             </div>
         <?php endif; ?>
     </div>

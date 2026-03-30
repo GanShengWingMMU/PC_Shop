@@ -29,7 +29,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } elseif (strlen($password) < 6) {
         $error_msg = "Password must be at least 6 characters long.";
     } else {
-        // 🚨 注意：这里已经改成了查询你真实的 customers 表
         $check_stmt = $conn->prepare("SELECT customer_id FROM customers WHERE email = ?");
         $check_stmt->bind_param("s", $email);
         $check_stmt->execute();
@@ -40,7 +39,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-            // 🚨 注意：这里插入的是 customers 表，密码字段名为 password
             $insert_stmt = $conn->prepare("INSERT INTO customers (first_name, last_name, email, password) VALUES (?, ?, ?, ?)");
             $insert_stmt->bind_param("ssss", $first_name, $last_name, $email, $hashed_password);
 
@@ -82,17 +80,17 @@ include 'includes/header.php';
         <div style="display: flex; gap: 15px;">
             <div class="form-group" style="flex: 1;">
                 <label class="form-label">First Name</label>
-                <input type="text" name="first_name" class="form-control" placeholder="e.g. Xuan Ming" required value="<?php echo isset($_POST['first_name']) ? $_POST['first_name'] : ''; ?>">
+                <input type="text" name="first_name" class="form-control" placeholder="e.g. Xuan Ming" required value="<?php echo isset($_POST['first_name']) ? htmlspecialchars($_POST['first_name']) : ''; ?>">
             </div>
             <div class="form-group" style="flex: 1;">
                 <label class="form-label">Last Name</label>
-                <input type="text" name="last_name" class="form-control" placeholder="e.g. Yeoh" required value="<?php echo isset($_POST['last_name']) ? $_POST['last_name'] : ''; ?>">
+                <input type="text" name="last_name" class="form-control" placeholder="e.g. Yeoh" required value="<?php echo isset($_POST['last_name']) ? htmlspecialchars($_POST['last_name']) : ''; ?>">
             </div>
         </div>
 
         <div class="form-group">
             <label class="form-label">Email Address</label>
-            <input type="email" name="email" class="form-control" placeholder="name@example.com" required value="<?php echo isset($_POST['email']) ? $_POST['email'] : ''; ?>">
+            <input type="email" name="email" class="form-control" placeholder="name@example.com" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
         </div>
 
         <div class="form-group">

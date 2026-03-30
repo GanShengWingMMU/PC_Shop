@@ -34,12 +34,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $mail->isSMTP();                                            
                 $mail->Host       = 'smtp.gmail.com';                     
                 $mail->SMTPAuth   = true;                                   
-                
                 $mail->Username   = 'ganshengwing1126@gmail.com'; 
-                
-                // 💡 小提醒：Google 應用程式密碼通常建議把中間的空格刪掉（變成 zojrbckepnkdqgli），這樣連線最穩定
                 $mail->Password   = 'zojr bcke pnkd qgli'; 
-                
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;            
                 $mail->Port       = 587;                                    
 
@@ -72,7 +68,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 exit();
 
             } catch (Exception $e) {
-                // 套用科技風的錯誤提示框
                 $message = "<div class='text-danger' style='text-align: center; margin-bottom: 15px; border: 1px solid #ff4d4d; padding: 10px; border-radius: 6px; background: rgba(255, 77, 77, 0.1);'><i class='fas fa-exclamation-circle'></i> Message could not be sent. Mailer Error: {$mail->ErrorInfo}</div>";
             }
 
@@ -86,43 +81,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit();
     }
 }
+
+// 🚨 核心修复：移除多余的 doctype 和 html/body 标签，直接引入 header！
+include 'includes/header.php'; 
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PC Store - Forgot Password</title>
-</head>
-<body>
 
-    <?php include 'includes/header.php'; ?>
+<main class="main-container" style="display: flex; align-items: center; justify-content: center; min-height: 60vh;">
+    <div class="auth-container" style="width: 100%; max-width: 450px; margin: 0;">
+        <h2 class="auth-title">Forgot Password?</h2>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Enter your email address to receive a 6-digit OTP.</p>
 
-    <main class="main-container" style="display: flex; align-items: center; justify-content: center; min-height: 60vh;">
-        <div class="auth-container" style="width: 100%; max-width: 450px; margin: 0;">
-            <h2 class="auth-title">Forgot Password?</h2>
-            <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Enter your email address to receive a 6-digit OTP.</p>
+        <?php if (!empty($message)) echo $message; ?>
 
-            <?php if (!empty($message)) echo $message; ?>
-
-            <form action="forgot_password.php" method="POST">
-                <div class="form-group">
-                    <label class="form-label" for="email">Email Address</label>
-                    <input type="email" id="email" name="email" class="form-control" required placeholder="name@example.com">
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px; font-size: 1.1rem;">
-                    Send Reset Link <i class="fa-solid fa-paper-plane" style="margin-left: 5px;"></i>
-                </button>
-            </form>
-
-            <div style="text-align: center; margin-top: 25px; font-size: 0.9rem; color: var(--text-muted);">
-                Remember your password? <a href="login.php" style="color: var(--accent-blue); font-weight: bold;">Back to Login</a>
+        <form action="forgot_password.php" method="POST">
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <input type="email" id="email" name="email" class="form-control" required placeholder="name@example.com">
             </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px; font-size: 1.1rem;">
+                Send Reset Link <i class="fa-solid fa-paper-plane" style="margin-left: 5px;"></i>
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 25px; font-size: 0.9rem; color: var(--text-muted);">
+            Remember your password? <a href="login.php" style="color: var(--accent-blue); font-weight: bold;">Back to Login</a>
         </div>
-    </main>
+    </div>
+</main>
 
- <?php include 'includes/footer.php'; ?>
-
-</body>
-</html>
+<?php include 'includes/footer.php'; ?>
