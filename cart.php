@@ -16,7 +16,7 @@ $total_price = 0;
 // 🛒 從資料庫撈取購物車資料 (同時支援 單一零件 與 整台主機)
 // ==========================================
 $sql = "SELECT c.cart_id, c.quantity, c.product_id, c.build_id, 
-               p.name AS product_name, p.price AS product_price, p.image_url,
+               p.product_name AS product_name, p.price AS product_price, p.image_url,
                b.build_name, b.total_price AS build_price
         FROM shopping_cart c 
         LEFT JOIN products p ON c.product_id = p.product_id 
