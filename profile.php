@@ -1,118 +1,137 @@
 <?php
+ob_start();
 session_start();
 require_once 'config.php';
 
-// 🚨 核心修复：安全拦截必须放在 include header 的前面！
+// ==========================================
+// 1. 门卫拦截 (Auth Guard)
+// ==========================================
 if (!isset($_SESSION['customer_id'])) {
     header("Location: login.php");
     exit();
 }
+
 $customer_id = $_SESSION['customer_id'];
 
-// 安全确认过关后，才加载头部 UI
-include 'includes/header.php';
+// ==========================================
+// 2. 抓取玩家基础资料 (Fetch User Info)
+// ==========================================
+$stmt_user = $conn->prepare("SELECT first_name, last_name, email FROM customers WHERE customer_id = ?");
+$stmt_user->bind_param("i", $customer_id);
+$stmt_user->execute();
+$user_info = $stmt_user->get_result()->fetch_assoc();
+$stmt_user->close();
 
 // ==========================================
-// 🧠 联合查询 (SQL JOIN): 把存档、零件明细、商品名字一次性查出来
+// 3. 抓取草稿箱主单 (Fetch Saved Builds)
 // ==========================================
-$sql = "
-    SELECT 
-        sb.build_id, sb.build_name, sb.total_price, sb.created_at,
-        p.product_name, p.image_url, c.category_name
-    FROM saved_builds sb
-    LEFT JOIN build_items bi ON sb.build_id = bi.build_id
-    LEFT JOIN products p ON bi.product_id = p.product_id
-    LEFT JOIN categories c ON p.category_id = c.category_id
-    WHERE sb.customer_id = ?
-    ORDER BY sb.created_at DESC
-";
-
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $customer_id);
-$stmt->execute();
-$result = $stmt->get_result();
-
-// 数据重组
+$stmt_builds = $conn->prepare("SELECT build_id, build_name, total_price, created_at FROM saved_builds WHERE customer_id = ? ORDER BY created_at DESC");
+$stmt_builds->bind_param("i", $customer_id);
+$stmt_builds->execute();
+$builds_result = $stmt_builds->get_result();
 $saved_builds = [];
-while ($row = $result->fetch_assoc()) {
-    $b_id = $row['build_id'];
-    if (!isset($saved_builds[$b_id])) {
-        $saved_builds[$b_id] = [
-            'name' => $row['build_name'],
-            'price' => $row['total_price'],
-            'date' => date('F j, Y', strtotime($row['created_at'])),
-            'parts' => []
-        ];
-    }
-    if ($row['product_name']) {
-        $saved_builds[$b_id]['parts'][] = [
-            'category' => $row['category_name'],
-            'product' => $row['product_name']
-        ];
-    }
+while ($row = $builds_result->fetch_assoc()) {
+    $saved_builds[] = $row;
 }
-$stmt->close();
+$stmt_builds->close();
+
+include 'includes/header.php';
 ?>
 
 <style>
-    :root { --accent: #00f2fe; --dark-bg: #0f172a; --card-bg: rgba(255,255,255,0.03); }
-    .profile-container { max-width: 1000px; margin: 3rem auto; padding: 0 20px; font-family: 'Inter', sans-serif; }
+    .armory-container { max-width: 1100px; margin: 4rem auto; padding: 0 20px; font-family: 'Inter', sans-serif; }
+    .page-title { font-size: 2.5rem; font-weight: 900; color: #fff; margin-bottom: 5px; letter-spacing: -1px; text-transform: uppercase; }
+    .page-subtitle { color: #888; font-size: 1rem; margin-bottom: 40px; }
     
-    .build-card { background: var(--card-bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; margin-bottom: 25px; overflow: hidden; transition: 0.3s; }
-    .build-card:hover { border-color: var(--accent); box-shadow: 0 10px 30px rgba(0,242,254,0.05); }
+    .profile-header { background: rgba(0,242,254,0.05); border: 1px solid rgba(0,242,254,0.2); border-radius: 12px; padding: 30px; margin-bottom: 40px; display: flex; align-items: center; gap: 20px; }
+    .avatar-circle { width: 80px; height: 80px; background: linear-gradient(135deg, #00f2fe, #4facfe); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 2.5rem; color: #000; font-weight: 900; box-shadow: 0 0 20px rgba(0,242,254,0.4); }
     
-    .build-header { background: rgba(0,0,0,0.3); padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .build-title { font-size: 1.3rem; font-weight: 800; color: #fff; margin: 0; }
-    .build-date { font-size: 0.85rem; color: #888; margin-top: 5px; }
-    .build-price { font-size: 1.5rem; font-weight: 900; color: var(--accent); }
+    .build-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 25px; overflow: hidden; transition: 0.3s; }
+    .build-card:hover { border-color: rgba(0,242,254,0.5); box-shadow: 0 10px 30px rgba(0,242,254,0.05); }
+    .build-header { background: rgba(0,0,0,0.4); padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .build-title { font-size: 1.3rem; font-weight: 800; color: #fff; margin-bottom: 5px; }
+    .build-date { font-size: 0.85rem; color: #64748b; }
+    .build-price { font-size: 1.5rem; font-weight: 900; color: #00e676; }
     
-    .build-body { padding: 20px 25px; }
-    .part-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); font-size: 0.9rem; }
-    .part-row:last-child { border-bottom: none; }
-    .part-cat { color: #888; font-weight: 600; width: 150px; }
-    .part-name { color: #ddd; flex-grow: 1; }
+    .parts-list { padding: 20px 25px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+    .part-item { background: rgba(255,255,255,0.03); padding: 12px 15px; border-radius: 8px; border-left: 3px solid #00f2fe; display: flex; flex-direction: column; }
+    .part-cat { font-size: 0.7rem; color: #00f2fe; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+    .part-name { font-size: 0.95rem; color: #cbd5e1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     
-    .btn-action { display: inline-block; padding: 8px 16px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 0.85rem; transition: 0.2s; margin-left: 10px; }
-    .btn-primary { background: var(--accent); color: #000; }
-    .btn-primary:hover { background: #fff; box-shadow: 0 0 10px var(--accent); }
+    .btn-action { display: inline-block; padding: 10px 20px; background: transparent; border: 1px solid #00f2fe; color: #00f2fe; font-weight: bold; border-radius: 6px; text-decoration: none; transition: 0.3s; margin-top: 15px; cursor: pointer; }
+    .btn-action:hover { background: #00f2fe; color: #000; box-shadow: 0 0 15px rgba(0,242,254,0.4); }
+    .empty-state { text-align: center; padding: 60px 20px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1); }
 </style>
 
-<div class="profile-container">
-    <div style="margin-bottom: 40px;">
-        <h1 style="font-size: 2.8rem; font-weight: 900; margin: 0;">MY <span style="color:var(--accent)">ARMORY</span></h1>
-        <p style="color: #888;">View and manage your saved custom builds.</p>
+<div class="armory-container">
+    <div class="page-title">Commander <span style="color: #00f2fe;">Armory</span></div>
+    <div class="page-subtitle">Manage your saved blueprints and order history.</div>
+
+    <div class="profile-header">
+        <div class="avatar-circle">
+            <?php echo strtoupper(substr($user_info['first_name'], 0, 1)); ?>
+        </div>
+        <div>
+            <div style="font-size: 1.8rem; font-weight: 900; color: #fff;"><?php echo htmlspecialchars($user_info['first_name'] . ' ' . $user_info['last_name']); ?></div>
+            <div style="color: #00f2fe; font-size: 0.95rem;"><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($user_info['email']); ?></div>
+            <div style="margin-top: 8px; display: inline-block; background: rgba(255,255,255,0.1); color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; letter-spacing: 1px;">CLEARANCE LEVEL: CUSTOMER</div>
+        </div>
     </div>
 
-    <?php if (empty($saved_builds)): ?>
-        <div style="text-align: center; padding: 60px 20px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 12px;">
-            <i class="fas fa-box-open" style="font-size: 3rem; color: #444; margin-bottom: 15px;"></i>
-            <h3 style="color: #fff;">Your Armory is Empty</h3>
-            <p style="color: #888;">You haven't saved any PC builds yet.</p>
-            <a href="builder.php" class="btn-action btn-primary" style="margin-top: 15px;">Go Build One Now</a>
-        </div>
-    <?php else: ?>
-        <?php foreach ($saved_builds as $id => $build): ?>
+    <h2 style="color: #fff; font-size: 1.5rem; margin-bottom: 20px; border-left: 4px solid #00f2fe; padding-left: 15px;"><i class="fas fa-save"></i> Saved Blueprints</h2>
+
+    <?php if (count($saved_builds) > 0): ?>
+        <?php foreach ($saved_builds as $build): ?>
             <div class="build-card">
                 <div class="build-header">
                     <div>
-                        <h2 class="build-title"><i class="fas fa-desktop" style="color: var(--accent); margin-right: 10px;"></i><?php echo htmlspecialchars($build['name']); ?></h2>
-                        <div class="build-date">Saved on: <?php echo $build['date']; ?></div>
+                        <div class="build-title"><?php echo htmlspecialchars($build['build_name']); ?></div>
+                        <div class="build-date"><i class="far fa-clock"></i> Secured on <?php echo date('M d, Y - H:i', strtotime($build['created_at'])); ?></div>
                     </div>
                     <div style="text-align: right;">
-                        <div class="build-price">RM <?php echo number_format($build['price'], 2); ?></div>
-                        <a href="#" class="btn-action btn-primary" style="margin-top: 10px;"><i class="fas fa-shopping-cart"></i> Checkout This Rig</a>
+                        <div class="build-price">RM <?php echo number_format($build['total_price'], 2); ?></div>
+                        <button class="btn-action" style="padding: 6px 15px; font-size: 0.85rem;"><i class="fas fa-upload"></i> Load to Builder</button>
                     </div>
                 </div>
-                <div class="build-body">
-                    <?php foreach ($build['parts'] as $part): ?>
-                        <div class="part-row">
-                            <div class="part-cat"><?php echo htmlspecialchars($part['category']); ?></div>
-                            <div class="part-name"><?php echo htmlspecialchars($part['product']); ?></div>
+                
+                <div class="parts-list">
+                    <?php
+                        // ==========================================
+                        // 🧠 架构师点睛之笔：多表 JOIN 查询零件清单
+                        // ==========================================
+                        $stmt_items = $conn->prepare("
+                            SELECT p.product_name, c.category_name 
+                            FROM build_items bi 
+                            JOIN products p ON bi.product_id = p.product_id 
+                            JOIN categories c ON p.category_id = c.category_id 
+                            WHERE bi.build_id = ?
+                        ");
+                        $stmt_items->bind_param("i", $build['build_id']);
+                        $stmt_items->execute();
+                        $items_res = $stmt_items->get_result();
+                        
+                        while ($item = $items_res->fetch_assoc()):
+                    ?>
+                        <div class="part-item">
+                            <div class="part-cat"><?php echo htmlspecialchars($item['category_name']); ?></div>
+                            <div class="part-name" title="<?php echo htmlspecialchars($item['product_name']); ?>">
+                                <?php echo htmlspecialchars($item['product_name']); ?>
+                            </div>
                         </div>
-                    <?php endforeach; ?>
+                    <?php 
+                        endwhile; 
+                        $stmt_items->close();
+                    ?>
                 </div>
             </div>
         <?php endforeach; ?>
+    <?php else: ?>
+        <div class="empty-state">
+            <i class="fas fa-box-open" style="font-size: 3rem; color: #444; margin-bottom: 15px;"></i>
+            <h3 style="color: #fff; margin-bottom: 5px;">Armory is Empty</h3>
+            <p style="color: #888; font-size: 0.95rem;">You haven't saved any custom PC blueprints yet.</p>
+            <a href="builder.php" class="btn-action" style="margin-top: 20px;"><i class="fas fa-tools"></i> Start Building</a>
+        </div>
     <?php endif; ?>
 </div>
 

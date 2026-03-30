@@ -1,64 +1,142 @@
 <?php
+ob_start();
 session_start();
 require_once 'config.php';
 
-// 🚨 真正的安全拦截：没登录就不准保存，并提示他去登录
+// ==========================================
+// 1. 门卫拦截 (Auth & Cart Guard)
+// ==========================================
+// 没登录？直接踢去登录页面
 if (!isset($_SESSION['customer_id'])) {
-    echo "<script>alert('Authentication required! Please login to save your build to the Armory.'); window.location.href='login.php';</script>";
+    header("Location: login.php");
     exit();
 }
 
 $customer_id = $_SESSION['customer_id'];
-$cart = $_SESSION['pc_build'] ?? [];
+$cart = isset($_SESSION['pc_build']) ? $_SESSION['pc_build'] : [];
 
-// 1. 防御性编程：没选东西不准保存
+// 购物车是空的？不准存空草稿，踢回大本营
 if (empty($cart)) {
-    die("<script>alert('Your build is empty! Cannot save.'); window.location.href='builder.php';</script>");
+    header("Location: builder.php");
+    exit();
 }
 
-// 算出总价
+// 算一下目前草稿的总价
 $total_price = 0;
 foreach ($cart as $item) {
     $total_price += $item['price'];
 }
 
-// ==========================================
-// 🧠 核心考点：ACID 数据库事务 (Database Transaction)
-// ==========================================
-try {
-    // 开启事务：接下来的所有 SQL 操作，要么全部成功，要么全部撤销！
-    $conn->begin_transaction();
+$message = "";
+$msg_type = "";
 
-    // 步骤 A：生成一个主配置单 (Insert into saved_builds)
-    $build_name = "My Dream Rig - " . date('M d, Y'); 
-    $stmt_build = $conn->prepare("INSERT INTO saved_builds (customer_id, build_name, total_price) VALUES (?, ?, ?)");
-    $stmt_build->bind_param("isd", $customer_id, $build_name, $total_price);
-    $stmt_build->execute();
+// ==========================================
+// 2. 💥 ACID 级联核爆入库 (Transaction Engine)
+// ==========================================
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_build'])) {
+    // 抓取用户自定义的配置单名字，防 XSS 清理
+    $build_name = trim($conn->real_escape_string($_POST['build_name']));
+    if (empty($build_name)) { $build_name = "My Custom PC (" . date('M d, Y') . ")"; }
     
-    // 获取刚才刚插入的那个配置单的 ID！(非常重要)
-    $build_id = $conn->insert_id;
-    $stmt_build->close();
+    // 开启 Try-Catch 错误捕捉机制
+    try {
+        // 🛡️ 架构师拔剑：开启 MySQL 事务！(一荣俱荣，一损俱损)
+        $conn->begin_transaction();
 
-    // 步骤 B：把购物车里的零件，一个个挂在这个配置单下面 (Insert into build_items)
-    $stmt_item = $conn->prepare("INSERT INTO build_items (build_id, product_id, quantity) VALUES (?, ?, 1)");
-    
-    foreach ($cart as $category_id => $part) {
-        $product_id = $part['product_id'];
-        $stmt_item->bind_param("ii", $build_id, $product_id);
-        $stmt_item->execute();
+        // [步骤 A]：在 saved_builds 表里创建一个主文件夹
+        $stmt = $conn->prepare("INSERT INTO saved_builds (customer_id, build_name, total_price) VALUES (?, ?, ?)");
+        $stmt->bind_param("isd", $customer_id, $build_name, $total_price);
+        $stmt->execute();
+        
+        // 极其重要：抓取刚刚生成的那个文件夹 ID！
+        $build_id = $conn->insert_id; 
+        $stmt->close();
+
+        // [步骤 B]：把购物车里的零件，一个个打上这个文件夹的 ID 烙印，存入 build_items 表
+        $stmt_items = $conn->prepare("INSERT INTO build_items (build_id, product_id, quantity) VALUES (?, ?, 1)");
+        foreach ($cart as $cat_id => $item) {
+            $pid = $item['product_id'];
+            $stmt_items->bind_param("ii", $build_id, $pid);
+            $stmt_items->execute();
+        }
+        $stmt_items->close();
+
+        // 🎉 完美落地！向数据库提交所有更改！
+        $conn->commit();
+        
+        $message = "Blueprint successfully saved to your Armory!";
+        $msg_type = "success";
+        
+    } catch (Exception $e) {
+        // 🚨 发生任何意外（断电/报错），时光倒流！(回滚数据，绝不产生残缺单)
+        $conn->rollback();
+        $message = "System Error: Failed to save blueprint. " . $e->getMessage();
+        $msg_type = "error";
     }
-    $stmt_item->close();
-
-    // 步骤 C：确认提交事务 (Commit)
-    $conn->commit();
-
-    // 存档成功后，跳转到个人中心看结果
-    echo "<script>alert('Build saved successfully! Welcome to your Armory.'); window.location.href='profile.php';</script>";
-    exit();
-
-} catch (Exception $e) {
-    // 🚨 如果中间任何一步报错（比如断网、数据库炸了），立刻回滚！(Rollback)
-    $conn->rollback();
-    die("Database Error: Saved failed. Everything has been rolled back. Error: " . $e->getMessage());
 }
+
+include 'includes/header.php';
 ?>
+
+<style>
+    .save-container { max-width: 500px; margin: 5rem auto; background: rgba(255,255,255,0.03); padding: 40px; border-radius: 15px; border: 1px solid rgba(0,242,254,0.2); box-shadow: 0 15px 35px rgba(0,0,0,0.5); font-family: 'Inter', sans-serif; }
+    .title { text-align: center; color: #fff; font-size: 2.2rem; font-weight: 900; margin-bottom: 10px; letter-spacing: -1px; }
+    .subtitle { text-align: center; color: #888; margin-bottom: 30px; font-size: 0.95rem; }
+    .form-group { margin-bottom: 20px; }
+    .form-control { width: 100%; padding: 12px 15px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #00f2fe; border-radius: 8px; outline: none; transition: 0.3s; font-size: 1.1rem; font-weight: bold; }
+    .form-control:focus { border-color: #00f2fe; box-shadow: 0 0 10px rgba(0,242,254,0.2); }
+    .btn-save { width: 100%; padding: 14px; background: #00f2fe; color: #000; border: none; font-weight: 900; font-size: 1.1rem; border-radius: 8px; cursor: pointer; transition: 0.3s; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
+    .btn-save:hover { background: #fff; box-shadow: 0 0 20px #00f2fe; transform: translateY(-2px); }
+    .parts-preview { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; margin-bottom: 25px; border: 1px dashed rgba(255,255,255,0.1); }
+    .preview-item { font-size: 0.85rem; color: #cbd5e1; margin-bottom: 5px; display: flex; justify-content: space-between; }
+</style>
+
+<div class="save-container">
+    <div class="title">Save <span style="color: #00f2fe;">Blueprint</span></div>
+    <div class="subtitle">Secure your current configuration to your armory.</div>
+
+    <?php if ($message): ?>
+        <?php if ($msg_type == 'success'): ?>
+            <div style="background: rgba(0, 230, 118, 0.1); color: #00e676; padding: 15px; border-radius: 8px; margin-bottom: 25px; text-align: center; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3);">
+                <i class="fas fa-check-circle" style="font-size: 1.5rem; display: block; margin-bottom: 5px;"></i> <?php echo $message; ?>
+            </div>
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <a href="profile.php" class="btn-save" style="text-align: center; text-decoration: none; background: transparent; border: 1px solid #00f2fe; color: #00f2fe;">View Armory</a>
+                <a href="builder.php" class="btn-save" style="text-align: center; text-decoration: none;">Keep Building</a>
+            </div>
+        <?php else: ?>
+            <div style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.3);">
+                <i class="fas fa-exclamation-triangle"></i> <?php echo $message; ?>
+            </div>
+            <a href="builder.php" style="color: #888; text-decoration: none; display: block; text-align: center;"><i class="fas fa-arrow-left"></i> Go back</a>
+        <?php endif; ?>
+    <?php else: ?>
+
+        <div class="parts-preview">
+            <div style="color: #888; font-size: 0.75rem; font-weight: bold; margin-bottom: 10px; letter-spacing: 1px;">CURRENT LOADOUT: <?php echo count($cart); ?> PARTS</div>
+            <?php foreach ($cart as $item): ?>
+                <div class="preview-item">
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">- <?php echo htmlspecialchars($item['name']); ?></span>
+                    <span style="color: #00e676;">RM <?php echo number_format($item['price'], 2); ?></span>
+                </div>
+            <?php endforeach; ?>
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; font-weight: bold; color: #fff;">
+                <span>ESTIMATED TOTAL:</span>
+                <span style="color: #00f2fe;">RM <?php echo number_format($total_price, 2); ?></span>
+            </div>
+        </div>
+
+        <form method="POST" action="">
+            <div class="form-group">
+                <label style="color: #888; font-size: 0.85rem; margin-bottom: 8px; display: block; font-weight: bold; letter-spacing: 1px;">BLUEPRINT NAME</label>
+                <input type="text" name="build_name" class="form-control" placeholder="e.g. Dream Gaming Rig 2026" required>
+            </div>
+            <button type="submit" name="save_build" class="btn-save"><i class="fas fa-lock" style="margin-right: 5px;"></i> SECURE LOADOUT</button>
+        </form>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="builder.php" style="color: #888; text-decoration: none; font-size: 0.9rem; transition: 0.2s;" onmouseover="this.style.color='#00f2fe'" onmouseout="this.style.color='#888'"><i class="fas fa-arrow-left"></i> Return to Builder</a>
+        </div>
+    <?php endif; ?>
+</div>
+
+<?php include 'includes/footer.php'; ?>

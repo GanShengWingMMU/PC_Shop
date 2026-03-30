@@ -34,23 +34,15 @@ require_once 'config.php';
     </div>
 
     <div class="nav-actions">
-        <?php 
-        // ==========================================
-        // 核心修复：根据登录状态动态显示按钮
-        // ==========================================
-        if(isset($_SESSION['customer_id'])): 
-        ?>
-            <span style="color: var(--text-main); font-weight: 600; margin-right: 15px; display: flex; align-items: center; gap: 8px;">
-                <i class="fas fa-user-circle" style="font-size: 1.2rem; color: var(--accent-blue);"></i>
-                Hi, <?php echo htmlspecialchars($_SESSION['first_name']); ?>!
-            </span>
-            <a href="logout.php" class="btn btn-outline" style="padding: 8px 16px; border-color: #ff4d4d; color: #ff4d4d;">
-                <i class="fas fa-sign-out-alt"></i> Logout
+  
+        <?php if(isset($_SESSION['customer_id'])): ?>
+            <a href="profile.php" style="color: #00f2fe; border-bottom: 2px solid #00f2fe; padding-bottom: 5px;">
+                <i class="fas fa-user-astronaut"></i> Hi, <?php echo htmlspecialchars($_SESSION['first_name']); ?>
             </a>
-
+            <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
         <?php else: ?>
-            <a href="login.php" class="btn" style="color: var(--text-main); font-weight: 600;">Login</a>
-            <a href="register.php" class="btn btn-outline" style="padding: 8px 16px;"><i class="fas fa-user-plus"></i> Register</a>
+            <a href="login.php"><i class="fas fa-sign-in-alt"></i> Login</a>
+            <a href="register.php"><i class="fas fa-user-plus"></i> Register</a>
         <?php endif; ?>
 
         <a href="cart.php" class="btn btn-primary" style="padding: 8px 16px; margin-left: 10px;">
