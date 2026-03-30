@@ -9,7 +9,6 @@ if (!isset($_SESSION['customer_id'])) {
 }
 
 $customer_id = $_SESSION['customer_id'];
-$cart_items = [];
 $total_price = 0;
 
 // 🛒 從資料庫撈取真實購物車資料 (JOIN products 表)
