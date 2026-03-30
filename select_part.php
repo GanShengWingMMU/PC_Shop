@@ -11,12 +11,12 @@ if ($category_id == 0) {
 }
 
 // ==========================================
-// 1. 处理表单提交：存入 Session
+// 1. 处理表单提交：抓取真实数据存入 Session
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
     $product_id = intval($_POST['product_id']);
     
-    // 🚨 修复 1：数据库里叫 tdp_wattage，不是 wattage
+    // 亲自去数据库查真实价格和功耗，绝对不信任前端数据！
     $stmt = $conn->prepare("SELECT product_name, price, tdp_wattage FROM products WHERE product_id = ?");
     $stmt->bind_param("i", $product_id);
     $stmt->execute();
@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
             'product_id' => $product_id,
             'name'       => $row['product_name'], 
             'price'      => $row['price'],
-            'wattage'    => $row['tdp_wattage'] ?? 0 // 🚨 修复 2：提取 tdp_wattage
+            'wattage'    => $row['tdp_wattage'] ?? 0 
         ];
     }
     $stmt->close();
@@ -41,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
 // ==========================================
 $socket_filter = isset($_GET['socket']) ? $conn->real_escape_string($_GET['socket']) : '';
 $min_wattage = isset($_GET['min_w']) ? intval($_GET['min_w']) : 0;
-// 🌟 接收传递性依赖：RAM 世代参数
 $ram_type_req = isset($_GET['ram_type']) ? $conn->real_escape_string($_GET['ram_type']) : ''; 
 
 $cat_name = "Component";
@@ -66,13 +65,13 @@ if (!empty($socket_filter)) {
     $filter_messages[] = "Socket locked to: <strong>$socket_filter</strong>";
 }
 
-// 🌟 规则 B：内存世代过滤 (主板 -> RAM)
+// 规则 B：内存世代过滤 (主板 -> RAM)
 if (!empty($ram_type_req) && $category_id == 3) { 
     $sql .= " AND (product_name LIKE '%$ram_type_req%' OR description LIKE '%$ram_type_req%')";
     $filter_messages[] = "Memory standard locked to: <strong>$ram_type_req</strong>";
 }
 
-// 🚨 修复 3：功耗下限过滤也要使用 tdp_wattage
+// 规则 C：功耗下限过滤 (总功耗 -> 电源)
 if ($min_wattage > 0 && $category_id == 6) { 
     $sql .= " AND tdp_wattage >= $min_wattage";
     $filter_messages[] = "Minimum Power Required: <strong>{$min_wattage}W</strong>";
@@ -127,7 +126,7 @@ include 'includes/header.php';
         <?php if (mysqli_num_rows($result) > 0): ?>
             <?php while ($row = mysqli_fetch_assoc($result)): ?>
                 <div class="product-card">
-                    <img src="<?php echo !empty($row['image_url']) ? htmlspecialchars($row['image_url']) : 'assets/placeholder.png'; ?>" alt="<?php echo htmlspecialchars($row['product_name']); ?>" class="prod-img" onerror="this.src='https://via.placeholder.com/280x180/111/333?text=No+Image'">
+                    <img src="<?php echo !empty($row['image_url']) ? htmlspecialchars($row['image_url']) : 'https://via.placeholder.com/280x180/111/333?text=PC+Part'; ?>" alt="Part" class="prod-img">
                     
                     <div class="prod-name"><?php echo htmlspecialchars($row['product_name']); ?></div>
                     <div class="prod-desc">

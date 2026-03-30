@@ -233,13 +233,20 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         </div>
     </div>
     
-    <div style="display: flex; gap: 15px;">
-        <button class="btn btn-outline" style="border-color: var(--text-main); color: var(--text-main);">
+    <div style="display: flex; gap: 15px; align-items: center;">
+        <a href="save_build.php" class="btn-action" style="border: 1px solid var(--accent); color: var(--accent); background: transparent; padding: 10px 20px;">
             <i class="fas fa-save"></i> Save Build
-        </button>
-        <button class="btn btn-primary" <?php echo ($total_price == 0) ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''; ?>>
-            Checkout <i class="fas fa-arrow-right"></i>
-        </button>
+        </a>
+        
+        <?php if($progress == 100): ?>
+            <a href="checkout_builder.php" class="btn-action btn-select" style="font-size: 1rem; padding: 10px 30px; box-shadow: 0 0 15px rgba(0,242,254,0.4);">
+                Checkout <i class="fas fa-arrow-right"></i>
+            </a>
+        <?php else: ?>
+            <span class="btn-action" style="background: rgba(255,255,255,0.05); color: #666; cursor: not-allowed; padding: 10px 20px; border: 1px dashed rgba(255,255,255,0.2);">
+                Complete Build to Checkout
+            </span>
+        <?php endif; ?>
     </div>
 </div>
 

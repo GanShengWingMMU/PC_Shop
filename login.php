@@ -3,9 +3,10 @@
 session_start();
 require_once 'config.php';
 
-// If user is already logged in, redirect them to the homepage
+
+// If user is already logged in, redirect them back to the builder
 if (isset($_SESSION['customer_id'])) {
-    header("Location: index.php");
+    header("Location: builder.php");
     exit();
 }
 
@@ -58,9 +59,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $_SESSION['last_name'] = $user['last_name'];
                     $_SESSION['user_type'] = 'Customer'; 
 
-                    // Redirect to homepage
-                    header("Location: index.php");
-                    exit(); 
+                    header("Location: builder.php");
+                    exit();
                 } else {
                     $error_msg = "Invalid email or password.";
                 }
