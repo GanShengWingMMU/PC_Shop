@@ -55,6 +55,7 @@ a { text-decoration: none; color: inherit; }
     font-size: 1.5rem; font-weight: 800;
     background: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent; /* 科技感渐变文字 */
     letter-spacing: 1px;
 }
@@ -257,4 +258,159 @@ a { text-decoration: none; color: inherit; }
     border: 1px solid rgba(0, 230, 118, 0.3);
     margin-bottom: 1rem;
     text-align: center;
+}
+
+/* =========================================
+   8. Cart Page (购物车页面)
+   ========================================= */
+.cart-page-wrapper {
+    padding: 2rem 0;
+}
+
+.cart-header {
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+    margin-bottom: 2rem;
+}
+
+.cart-header i {
+    font-size: 2rem; 
+    color: var(--accent-blue);
+}
+
+.cart-header h2 {
+    color: var(--text-main); 
+    margin: 0; 
+    letter-spacing: 1px;
+}
+
+.cart-layout {
+    display: flex; 
+    gap: 2rem; 
+    flex-wrap: wrap; 
+    align-items: flex-start;
+}
+
+/* 左侧商品栏 */
+.cart-items-column {
+    flex: 2; 
+    min-width: 300px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 15px;
+}
+
+.cart-empty-state {
+    background: var(--bg-surface); 
+    border: 1px solid var(--border-color); 
+    border-radius: 12px; 
+    padding: 3rem; 
+    text-align: center;
+}
+
+.cart-empty-state i {
+    font-size: 3rem; 
+    color: var(--text-muted); 
+    margin-bottom: 15px;
+}
+
+.cart-empty-state h3 { color: var(--text-main); margin-bottom: 10px; }
+.cart-empty-state p { color: var(--text-muted); margin-bottom: 20px; }
+
+/* 商品卡片 & Hover 特效 */
+.cart-item-card {
+    background: var(--bg-surface); 
+    border: 1px solid var(--border-color); 
+    border-radius: 12px; 
+    padding: 1.5rem; 
+    display: flex; 
+    align-items: center; 
+    gap: 20px; 
+    transition: var(--transition-smooth);
+}
+
+.cart-item-card:hover {
+    border-color: rgba(0, 242, 254, 0.3);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transform: translateY(-2px);
+}
+
+.cart-item-img {
+    width: 100px; 
+    height: 100px; 
+    background: rgba(0,0,0,0.3); 
+    border-radius: 8px; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    overflow: hidden;
+}
+
+.cart-item-img img {
+    max-width: 90%; 
+    max-height: 90%; 
+    object-fit: contain;
+}
+
+.cart-item-info { flex: 1; }
+.cart-item-info h4 { color: var(--text-main); margin: 0 0 10px 0; font-size: 1.1rem; }
+.cart-item-info .price { color: var(--accent-blue); font-weight: bold; font-size: 1.2rem; }
+
+/* 数量与操作 */
+.cart-item-controls { display: flex; align-items: center; gap: 20px; }
+.cart-item-controls .qty { color: var(--text-muted); font-size: 0.95rem; }
+.cart-item-controls .qty strong { color: var(--text-main); font-size: 1.1rem; margin-left: 5px; }
+
+.cart-item-controls .btn-remove {
+    color: #ff4d4d; 
+    font-size: 1.2rem; 
+    transition: 0.3s;
+}
+
+.cart-item-controls .btn-remove:hover {
+    color: #ff1a1a;
+    transform: scale(1.15); /* 鼠标移上去垃圾桶会变大 */
+}
+
+/* 右侧订单摘要 */
+.order-summary-column {
+    flex: 1; 
+    min-width: 300px; 
+    background: var(--bg-surface); 
+    border: 1px solid var(--border-color); 
+    border-radius: 12px; 
+    padding: 2rem; 
+    position: sticky; 
+    top: 100px;
+}
+
+.order-summary-column h3 {
+    color: var(--text-main); 
+    margin-top: 0; 
+    margin-bottom: 1.5rem; 
+    border-bottom: 1px solid var(--border-color); 
+    padding-bottom: 10px;
+}
+
+.summary-row {
+    display: flex; 
+    justify-content: space-between; 
+    margin-bottom: 15px; 
+    color: var(--text-muted);
+}
+
+.summary-total {
+    display: flex; 
+    justify-content: space-between; 
+    margin-top: 20px; 
+    padding-top: 15px; 
+    border-top: 1px solid var(--border-color); 
+    color: var(--text-main); 
+    font-size: 1.3rem; 
+    font-weight: bold;
+}
+
+.summary-total .amount {
+    color: var(--accent-purple);
 }

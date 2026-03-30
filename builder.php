@@ -233,18 +233,13 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         </div>
     </div>
     
-    <div style="display: flex; align-items: center; gap: 20px;">
-        <?php if(count($cart) > 0): ?>
-            <a href="builder.php?action=clear" onclick="return confirm('Wipe the entire build?');" style="color: #ff4d4d; text-decoration: none; font-size: 0.9rem; font-weight: 600;"><i class="fas fa-sync-alt"></i> Reset</a>
-            
-            <a href="save_build.php" class="btn-action" style="background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 12px 20px; font-size: 0.9rem;">
-                <i class="fas fa-save"></i> SAVE TO ARMORY
-            </a>
-        <?php endif; ?>
-        
-        <a href="checkout_builder.php" class="btn-action btn-select" <?php echo ($total_price == 0) ? 'style="pointer-events: none; opacity: 0.3;"' : 'style="padding: 12px 30px; font-size: 1rem;"'; ?>>
-            CHECKOUT <i class="fas fa-arrow-right" style="margin-left: 8px;"></i>
-        </a>
+    <div style="display: flex; gap: 15px;">
+        <button class="btn btn-outline" style="border-color: var(--text-main); color: var(--text-main);">
+            <i class="fas fa-save"></i> Save Build
+        </button>
+        <button class="btn btn-primary" <?php echo ($total_price == 0) ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''; ?>>
+            Checkout <i class="fas fa-arrow-right"></i>
+        </button>
     </div>
 </div>
 
