@@ -4,13 +4,11 @@ session_start();
 require_once 'config.php';
 include 'includes/header.php'; 
 
-// ==========================================
-// 1. 递归级联失效算法 (Cascade Invalidation)
-// ==========================================
+// 1. (Cascade Invalidation)
 $dependency_map = [
-    1 => [2, 8],    // 删 CPU(1) -> 连带删除 主板(2) 和 散热(8)
-    2 => [3, 4],    // 删 主板(2) -> 连带删除 RAM(3) 和 GPU(4)
-    4 => [6]        // 删 GPU(4) -> 连带删除 电源(6)
+    1 => [2, 8],    
+    2 => [3, 4],    
+    4 => [6]        
 ];
 
 function cascade_remove($cat_id, &$cart, $map) {
@@ -24,9 +22,7 @@ function cascade_remove($cat_id, &$cart, $map) {
     }
 }
 
-// ==========================================
-// 2. 动作拦截器 (Action Interceptor)
-// ==========================================
+// 2. (Action Interceptor)
 if (isset($_GET['action'])) {
     if ($_GET['action'] == 'remove' && isset($_GET['cat_id'])) {
         $remove_id = intval($_GET['cat_id']);
@@ -42,16 +38,14 @@ if (isset($_GET['action'])) {
     }
 }
 
-// 初始化系统状态
+// initialize system situation
 if (!isset($_SESSION['pc_build'])) { $_SESSION['pc_build'] = []; }
 $cart = $_SESSION['pc_build'];
 $total_price = 0; $total_wattage = 0;
 foreach ($cart as $p) { $total_price += $p['price']; $total_wattage += $p['wattage']; }
 
-// ==========================================
-// 3. 🧠 动态属性嗅探器 (Transitive Property Sniffer)
-// ==========================================
-// [第 1 层提取]：从 CPU 提取 Socket
+
+// 3. (Transitive Property Sniffer)
 $socket_param = "";
 if (isset($cart[1])) {
     $cpu_name = strtoupper($cart[1]['name']);
@@ -59,7 +53,7 @@ if (isset($cart[1])) {
     elseif (preg_match('/(RYZEN|AM5|AM4)/', $cpu_name)) $socket_param = "AM5";
 }
 
-// 🌟 [第 2 层提取 - 传递性依赖]：从主板提取 RAM 世代
+//  [第 2 层提取 - 传递性依赖]：从主板提取 RAM 世代
 $ram_type_param = "";
 if (isset($cart[2])) {
     $mb_name = strtoupper($cart[2]['name']);
@@ -70,9 +64,7 @@ if (isset($cart[2])) {
 // 建议电源瓦数
 $rec_psu = ceil(($total_wattage + 100) / 50) * 50;
 
-// ==========================================
-// 🌟 4. 性能评级与木桶效应算法 (Tier & Bottleneck AI)
-// ==========================================
+// 4. (Tier & Bottleneck AI)
 $system_tier = "AWAITING CORE PARTS";
 $tier_color = "#555";
 $bottleneck_warning = "";
