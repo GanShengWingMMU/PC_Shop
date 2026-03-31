@@ -15,12 +15,12 @@ $total_price = 0;
 // ==========================================
 // 🛒 從資料庫撈取購物車資料 (同時支援 單一零件 與 整台主機)
 // ==========================================
-$sql = "SELECT c.cart_id, c.quantity, c.product_id, c.build_id, 
+$sql = "SELECT c.cart_id, c.quantity, c.product_id, c.pc_build, 
                p.product_name AS product_name, p.price AS product_price, p.image_url,
                b.build_name, b.total_price AS build_price
         FROM shopping_cart c 
         LEFT JOIN products p ON c.product_id = p.product_id 
-        LEFT JOIN saved_builds b ON c.build_id = b.build_id
+        LEFT JOIN saved_builds b ON c.pc_build = b.pc_build
         WHERE c.customer_id = ?";
 
 if ($stmt = $conn->prepare($sql)) {
@@ -31,7 +31,7 @@ if ($stmt = $conn->prepare($sql)) {
     while ($row = $result->fetch_assoc()) {
         $cart_items[] = $row;
         // 判斷是主機還是零件，來計算總價
-        if (!empty($row['build_id'])) {
+        if (!empty($row['pc_build'])) {
             $total_price += ($row['build_price'] * $row['quantity']);
         } else {
             $total_price += ($row['product_price'] * $row['quantity']);
@@ -88,7 +88,7 @@ if ($stmt = $conn->prepare($sql)) {
 <?php foreach ($cart_items as $item): ?>
     <div class="cart-item-card">
         
-        <?php if (!empty($item['build_id'])): ?>
+        <?php if (!empty($item['pc_build'])): ?>
             <div class="cart-item-img" style="background: rgba(0, 242, 254, 0.1);">
                 <i class="fa-solid fa-computer" style="font-size: 3rem; color: #00f2fe;"></i>
             </div>
@@ -96,7 +96,7 @@ if ($stmt = $conn->prepare($sql)) {
                 <h4 style="color: #00f2fe;"><i class="fa-solid fa-wrench"></i> <?php echo htmlspecialchars($item['build_name']); ?></h4>
                 <div class="price">RM <?php echo number_format($item['build_price'], 2); ?></div>
                 
-                <a href="view_build.php?id=<?php echo $item['build_id']; ?>" style="display: inline-block; margin-top: 8px; font-size: 0.9rem; color: var(--text-muted); text-decoration: underline;">
+                <a href="view_build.php?id=<?php echo $item['pc_build']; ?>" style="display: inline-block; margin-top: 8px; font-size: 0.9rem; color: var(--text-muted); text-decoration: underline;">
                     <i class="fa-solid fa-list"></i> View Configuration
                 </a>
             </div>

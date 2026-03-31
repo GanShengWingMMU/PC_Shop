@@ -1,9 +1,7 @@
 <?php
-// 1. Start Session and Database connection before outputting anything
 session_start();
 require_once 'config.php';
 
-// If user is already logged in, redirect them to the homepage
 if (isset($_SESSION['customer_id'])) {
     header("Location: index.php");
     exit();
@@ -11,24 +9,14 @@ if (isset($_SESSION['customer_id'])) {
 
 $error_msg = "";
 
-// ==========================================
-// 🌟 OAuth 2.0 URLs Generation (Google & Discord)
-// ==========================================
-
-// --- Load API Keys from the secret safe ---
 require_once 'keys.php'; 
 
-// --- Google Login Configuration ---
 $google_redirect_uri = 'http://localhost/projects/google_callback.php';
 $google_login_url = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=" . $google_client_id . "&redirect_uri=" . urlencode($google_redirect_uri) . "&scope=email%20profile";
 
-// --- Discord Login Configuration ---
 $discord_redirect_uri = 'http://localhost/projects/discord_callback.php';
 $discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=" . $discord_client_id . "&redirect_uri=" . urlencode($discord_redirect_uri) . "&response_type=code&scope=" . urlencode("identify email");
 
-// ==========================================
-// 2. Handle Traditional Email/Password Login
-// ==========================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
@@ -44,21 +32,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc(); 
             
-            // Check account status
             if ($user['account_status'] !== 'Active') {
                 $error_msg = "Your account is disabled. Please contact support.";
             } else {
-                // Verify password
                 if (password_verify($password, $user['password'])) {
                     
-                    // Login successful, generate session
                     session_regenerate_id(true); 
                     $_SESSION['customer_id'] = $user['customer_id'];
                     $_SESSION['first_name'] = $user['first_name'];
                     $_SESSION['last_name'] = $user['last_name'];
                     $_SESSION['user_type'] = 'Customer'; 
 
-                    // Redirect to homepage
                     header("Location: index.php");
                     exit(); 
                 } else {
@@ -72,9 +56,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// ==========================================
-// 3. Load Frontend UI after Backend Logic
-// ==========================================
 include 'includes/header.php';
 ?>
 

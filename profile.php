@@ -25,7 +25,7 @@ $stmt_user->close();
 // ==========================================
 // 3. 抓取草稿箱主单 (Fetch Saved Builds)
 // ==========================================
-$stmt_builds = $conn->prepare("SELECT build_id, build_name, total_price, created_at FROM saved_builds WHERE customer_id = ? ORDER BY created_at DESC");
+$stmt_builds = $conn->prepare("SELECT pc_build, build_name, total_price, created_at FROM saved_builds WHERE customer_id = ? ORDER BY created_at DESC");
 $stmt_builds->bind_param("i", $customer_id);
 $stmt_builds->execute();
 $builds_result = $stmt_builds->get_result();
@@ -104,9 +104,9 @@ include 'includes/header.php';
                             FROM build_items bi 
                             JOIN products p ON bi.product_id = p.product_id 
                             JOIN categories c ON p.category_id = c.category_id 
-                            WHERE bi.build_id = ?
+                            WHERE bi.pc_build = ?
                         ");
-                        $stmt_items->bind_param("i", $build['build_id']);
+                        $stmt_items->bind_param("i", $build['pc_build']);
                         $stmt_items->execute();
                         $items_res = $stmt_items->get_result();
                         
