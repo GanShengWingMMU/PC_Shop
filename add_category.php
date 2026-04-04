@@ -1,7 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php';
-include 'header.php';
+
 
 // 1. Security Check: Admin Only
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <title>Add Category - PC shop Admin</title>
     <link href="style.css" rel="stylesheet">
-    <link href="admin_style.css" rel="stylesheet">
+    <link href="css/admin_style.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
     <style>
@@ -116,4 +116,3 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 </body>
 </html>
-<?php include 'includes/footer.php'; ?>
