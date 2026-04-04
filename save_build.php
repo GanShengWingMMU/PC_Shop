@@ -38,13 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_build'])) {
         $build_id = $conn->insert_id; 
         $stmt->close();
 
-<<<<<<< HEAD
         // [步骤 B]：把购物车里的零件，一个个打上这个文件夹的 ID 烙印，存入 build_items 表
        
         $stmt_items = $conn->prepare("INSERT INTO build_items (pc_build, product_id, quantity) VALUES (?, ?, 1)");
-=======
-        $stmt_items = $conn->prepare("INSERT INTO build_items (build_id, product_id, quantity) VALUES (?, ?, 1)");
->>>>>>> bef5aee379b8a16235e13ec7c3ceebec133498f9
         foreach ($cart as $cat_id => $item) {
             $pid = $item['product_id'];
             $stmt_items->bind_param("ii", $build_id, $pid);
