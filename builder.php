@@ -247,7 +247,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         </a>
         
         <?php if ($progress == 100): ?>
-            <a href="checkout_builder.php" class="btn-action btn-select" style="font-size: 1.1rem; padding: 10px 30px; display: flex; align-items: center; box-shadow: 0 0 20px rgba(0,242,254,0.5);">
+            <a href="name_build.php" class="btn-action btn-select" style="font-size: 1.1rem; padding: 10px 30px; display: flex; align-items: center; box-shadow: 0 0 20px rgba(0,242,254,0.5);">
                 CHECKOUT <i class="fas fa-shopping-cart" style="margin-left: 8px;"></i>
             </a>
         <?php else: ?>
