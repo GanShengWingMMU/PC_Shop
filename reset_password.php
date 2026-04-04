@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'db_connect.php';
+require_once 'config.php';
 
 if (!isset($_SESSION['otp_verified']) || $_SESSION['otp_verified'] !== true || !isset($_SESSION['reset_email'])) {
     header("Location: forgot_password.php");
@@ -15,10 +15,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $confirm_password = $_POST['confirm_password'];
 
     if ($new_password === $confirm_password) {
-        $safe_password = mysqli_real_escape_string($conn, $new_password);
+        
+        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
         
         $update_sql = "UPDATE customers 
-                       SET password = '$safe_password', reset_token = NULL, reset_token_expire = NULL 
+                       SET password = '$hashed_password', reset_token = NULL, reset_token_expire = NULL 
                        WHERE email = '$email'";
         
         if ($conn->query($update_sql) === TRUE) {
@@ -29,10 +30,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             header("Location: login.php?reset=success");
             exit();
         } else {
-            $message = "<div class='error-alert' style='background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin-bottom: 20px;'>Database error. Please try again.</div>";
+            $message = "Database error. Please try again later.";
         }
     } else {
-        $message = "<div class='error-alert' style='background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin-bottom: 20px;'>Passwords do not match. Please type carefully.</div>";
+        $message = "Passwords do not match. Please type carefully.";
     }
 }
 ?>
@@ -42,46 +43,42 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PC Store - Create New Password</title>
+    <title>GridCitY PC - Create New Password</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body style="background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif;">
+<body>
 
-    <?php include 'header.php'; ?>
+    <?php include 'includes/header.php'; ?>
 
-    <main class="login-page-wrapper">
-        <div class="login-card">
-            <div class="login-header">
+    <main class="main-container cart-page-wrapper">
+        
+        <div class="auth-container">
+            
+            <div class="auth-title">
                 <h2>Create New Password</h2>
-                <p>Your new password must be different from previously used passwords.</p>
+                <p class="specs">Your new password must be different from previously used passwords.</p>
             </div>
 
-            <?php if (!empty($message)) echo $message; ?>
+            <?php if (!empty($message)) echo "<p class='text-danger' style='text-align: center; margin-bottom: 1.5rem;'>$message</p>"; ?>
 
-            <form action="reset_password.php" method="POST" class="login-form">
-                <div class="input-group">
-                    <label for="new_password">New Password</label>
-                    <div class="input-icon-wrapper">
-                        <i class="fa-solid fa-lock"></i>
-                        <input type="password" id="new_password" name="new_password" required placeholder="Enter new password" minlength="6">
-                    </div>
+            <form action="reset_password.php" method="POST" class="form">
+                
+                <div class="form-group">
+                    <label class="form-label" for="new_password">New Password</label>
+                    <input type="password" id="new_password" name="new_password" required placeholder="Enter new password" minlength="6" class="form-control">
                 </div>
 
-                <div class="input-group">
-                    <label for="confirm_password">Confirm New Password</label>
-                    <div class="input-icon-wrapper">
-                        <i class="fa-solid fa-lock"></i>
-                        <input type="password" id="confirm_password" name="confirm_password" required placeholder="Confirm your new password" minlength="6">
-                    </div>
+                <div class="form-group">
+                    <label class="form-label" for="confirm_password">Confirm New Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required placeholder="Confirm your new password" minlength="6" class="form-control">
                 </div>
 
-                <button type="submit" class="btn-submit-login">Save Password</button>
+                <button type="submit" class="btn btn-primary btn-submit-login">Save Password</button>
             </form>
         </div>
     </main>
 
-    <?php include 'footer.php'; ?>
 
 </body>
 </html>

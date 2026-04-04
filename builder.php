@@ -230,7 +230,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
             <i class="fas fa-save"></i> Save Build
         </button>
 <?php if ($total_price > 0): ?>
-    <a href="add_build_to_cart.php" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+    <a href="name_build.php" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
         Checkout <i class="fas fa-arrow-right" style="margin-left: 8px;"></i>
     </a>
 <?php else: ?>
