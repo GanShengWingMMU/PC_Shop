@@ -3,10 +3,6 @@ ob_start();
 session_start();
 require_once 'config.php';
 
-// ==========================================
-// 1. 门卫拦截 (Auth & Cart Guard)
-// ==========================================
-// 没登录？直接踢去登录页面
 if (!isset($_SESSION['customer_id'])) {
     header("Location: login.php");
     exit();
@@ -15,13 +11,11 @@ if (!isset($_SESSION['customer_id'])) {
 $customer_id = $_SESSION['customer_id'];
 $cart = isset($_SESSION['pc_build']) ? $_SESSION['pc_build'] : [];
 
-// 购物车是空的？不准存空草稿，踢回大本营
 if (empty($cart)) {
     header("Location: builder.php");
     exit();
 }
 
-// 算一下目前草稿的总价
 $total_price = 0;
 foreach ($cart as $item) {
     $total_price += $item['price'];
@@ -30,31 +24,27 @@ foreach ($cart as $item) {
 $message = "";
 $msg_type = "";
 
-// ==========================================
-// 2. 💥 ACID 级联核爆入库 (Transaction Engine)
-// ==========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_build'])) {
-    // 抓取用户自定义的配置单名字，防 XSS 清理
     $build_name = trim($conn->real_escape_string($_POST['build_name']));
     if (empty($build_name)) { $build_name = "My Custom PC (" . date('M d, Y') . ")"; }
     
-    // 开启 Try-Catch 错误捕捉机制
     try {
-        // 🛡️ 架构师拔剑：开启 MySQL 事务！(一荣俱荣，一损俱损)
         $conn->begin_transaction();
 
-        // [步骤 A]：在 saved_builds 表里创建一个主文件夹
         $stmt = $conn->prepare("INSERT INTO saved_builds (customer_id, build_name, total_price) VALUES (?, ?, ?)");
         $stmt->bind_param("isd", $customer_id, $build_name, $total_price);
         $stmt->execute();
         
-        // 极其重要：抓取刚刚生成的那个文件夹 ID！
         $build_id = $conn->insert_id; 
         $stmt->close();
 
+<<<<<<< HEAD
         // [步骤 B]：把购物车里的零件，一个个打上这个文件夹的 ID 烙印，存入 build_items 表
        
         $stmt_items = $conn->prepare("INSERT INTO build_items (pc_build, product_id, quantity) VALUES (?, ?, 1)");
+=======
+        $stmt_items = $conn->prepare("INSERT INTO build_items (build_id, product_id, quantity) VALUES (?, ?, 1)");
+>>>>>>> bef5aee379b8a16235e13ec7c3ceebec133498f9
         foreach ($cart as $cat_id => $item) {
             $pid = $item['product_id'];
             $stmt_items->bind_param("ii", $build_id, $pid);
@@ -62,14 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_build'])) {
         }
         $stmt_items->close();
 
-        // 🎉 完美落地！向数据库提交所有更改！
         $conn->commit();
         
         $message = "Blueprint successfully saved to your Armory!";
         $msg_type = "success";
         
     } catch (Exception $e) {
-        // 🚨 发生任何意外（断电/报错），时光倒流！(回滚数据，绝不产生残缺单)
         $conn->rollback();
         $message = "System Error: Failed to save blueprint. " . $e->getMessage();
         $msg_type = "error";

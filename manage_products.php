@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php'; 
+include 'header.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: admin_login.php");
@@ -184,3 +185,4 @@ if (isset($_GET['delete_id'])) {
     </div>
 </body>
 </html>
+<?php include 'includes/footer.php'; ?>

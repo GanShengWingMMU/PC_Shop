@@ -414,3 +414,31 @@ a { text-decoration: none; color: inherit; }
 .summary-total .amount {
     color: var(--accent-purple);
 }
+
+.form-control-otp {
+    text-align: center !important;
+    letter-spacing: 12px !important;
+    font-size: 22px !important;
+    font-weight: bold !important;
+    font-family: 'Inter', monospace !important;
+    padding: 15px !important;
+}
+
+.auth-container .btn-submit-login {
+    display: block !important;
+    margin: 30px auto 0 auto !important;
+    width: 100% !important;
+    text-align: center !important;
+}
+
+.auth-container .specs a.highlight-link {
+    color: var(--accent-blue);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.auth-container .specs a.highlight-link:hover {
+    color: #fff;
+    text-shadow: 0 0 10px var(--accent-blue), 0 0 20px var(--accent-blue);
+}

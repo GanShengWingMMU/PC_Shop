@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php';
+include 'header.php';
 
 // 1. Security Check: Admin Only
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -115,3 +116,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 </body>
 </html>
+<?php include 'includes/footer.php'; ?>

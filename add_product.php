@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php'; 
+include 'header.php';
 
 // 安全门禁：确保是管理员
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -311,3 +312,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
     </div>
 </body>
 </html>
+<?php include 'includes/footer.php'; ?>

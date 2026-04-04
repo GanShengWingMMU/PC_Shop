@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php'; 
+include 'header.php';
 
 // 安全检查：必须是 admin 才能进入
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -390,3 +391,4 @@ try {
     </div>
 </body>
 </html>
+<?php include 'includes/footer.php'; ?>
