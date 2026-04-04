@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php'; 
+incldue 'header.php';
 
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: admin_login.php");
@@ -203,3 +204,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     </div>
 </body>
 </html>
+<?php include 'includes/footer.php'; ?>

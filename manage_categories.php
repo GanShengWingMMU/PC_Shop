@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php'; 
+include 'header.php';
 
 // 安全门禁：确保是管理员
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -246,3 +247,4 @@ $safe_cat_ids = array_filter($safe_cat_ids);
     </div>
 </body>
 </html>
+<?php include 'includes/footer.php'; ?>
