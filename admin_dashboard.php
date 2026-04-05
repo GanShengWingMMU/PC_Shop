@@ -1,7 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php'; 
-include 'header.php';
+
 
 // 安全检查：必须是 admin 才能进入
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -80,211 +80,20 @@ try {
     <meta charset="UTF-8">
     <title>Dashboard - PC Shop Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        /* ====== 全局样式 ====== */
-        body {
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: #f4f4f9;
-            display: flex; /* 制作左右分栏 */
-            height: 100vh;
-        }
-
-        /* ====== 侧边栏 (Sidebar) ====== */
-        .sidebar {
-            width: 250px;
-            background-color: #2c2c2c;
-            color: white;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar h2 {
-            display: flex;               
-            align-items: center;         
-            justify-content: center;     
-            gap: 10px;                   
-            font-family: 'Inter', serif;
-            color: #8a2be2;              
-            padding: 20px 0;
-            border-bottom: 1px solid #444;
-            margin: 0;
-        }
-
-        .sidebar-logo {
-            width: 50px;                 
-            height: auto;
-            background-color: transparent; 
-        }
-
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .sidebar ul li a {
-            display: block;
-            padding: 15px 20px;
-            color: #ddd;
-            text-decoration: none;
-            border-bottom: 1px solid #3a3a3a;
-            transition: 0.3s;
-        }
-        .sidebar ul li a:hover, .sidebar ul li a.active {
-            background-color: #8a2be2;
-            color: white;
-            font-weight: bold;
-        }
-        .logout-btn {
-            margin-top: auto; 
-            background-color: #1a1a1a !important;
-        }
-
-        /* ====== 主内容区 (Main Content) ====== */
-        .main-content {
-            flex: 1;
-            padding: 20px 40px;
-            overflow-y: auto;
-        }
-        .header h1 {
-            font-family: 'Inter', serif;
-            color: #333;
-            margin-top: 0;
-        }
-
-        /* ====== 顶部数据卡片 ====== */
-        .dashboard-cards {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .card {
-            background: white;
-            flex: 1;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-            border-top: 4px solid #8a2be2;
-        }
-        .card h3 {
-            margin: 0 0 10px 0;
-            color: #666;
-            font-size: 14px;
-        }
-        .card .number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2c2c2c;
-        }
-
-        /* ====== 图表占位区 ====== */
-        .charts-container {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .chart-box {
-            background: white;
-            flex: 1;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-            height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #999;
-            border: 1px dashed #ccc;
-        }
-
-        /* ====== 底部表格与区块 ====== */
-        .bottom-sections {
-            display: flex;
-            gap: 20px;
-        }
-        .table-section {
-            flex: 2;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-        }
-        .side-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .widget-box {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        table th, table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        table th {
-            background-color: #f9f9f9;
-            color: #333;
-        }
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            color: white;
-        }
-        .status-pending { background-color: #f39c12; }
-        .status-completed { background-color: #27ae60; }
-        .btn-action {
-            padding: 5px 10px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        .quick-action-btn {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            background-color: #f4f4f9;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            text-align: center;
-            text-decoration: none;
-            color: #333;
-            font-weight: bold;
-        }
-        .quick-action-btn:hover {
-            background-color: #8a2be2;
-            color: white;
-            border-color: #8a2be2;
-        }
-    </style>
+    <link rel="stylesheet" href="css/admin_style.css">
 </head>
 <body>
     <div class="sidebar">
         <h2>
-            <img src="photo/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
+            <img src="image/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
             <span>PC SHOP</span>
         </h2>
-            <ul>
-            <li><a href="admin_dashboard.php" class="active">Dashboard</a></li>
-            <li><a href="manage_products.php">Products</a></li>
+        <ul>
+            <li><a href="admin_dashboard.php">Dashboard</a></li>
+            <li><a href="manage_products.php">Products</a></li> 
             <li><a href="manage_categories.php">Categories</a></li>
             <li><a href="manage_orders.php">Orders</a></li>
+            <li><a href="admin_builder.php">Build System</a></li>
             <li><a href="manage_users.php">Users</a></li>
             <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
         </ul>
@@ -391,4 +200,3 @@ try {
     </div>
 </body>
 </html>
-<?php include 'includes/footer.php'; ?>
