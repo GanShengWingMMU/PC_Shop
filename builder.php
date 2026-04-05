@@ -10,7 +10,8 @@ include 'includes/header.php';
 $dependency_map = [
     1 => [2, 8],    
     2 => [3, 4],    
-    4 => [6]        
+    4 => [6],
+    10 => [7]    
 ];
 
 function cascade_remove($cat_id, &$cart, $map) {
@@ -43,7 +44,7 @@ if (isset($_GET['action'])) {
     }
 }
 
-// initialize system situation
+// initialize system situation （pc_build的诞生地）
 if (!isset($_SESSION['pc_build'])) { $_SESSION['pc_build'] = []; }
 $cart = $_SESSION['pc_build'];
 $total_price = 0; $total_wattage = 0;
@@ -79,13 +80,13 @@ $bottleneck_warning = "";
 if (isset($cart[1]) && isset($cart[2]) && isset($cart[4]) && isset($cart[6])) {
     if ($total_price >= 8000) {
         $system_tier = "GOD TIER (Enthusiast)";
-        $tier_color = "#ff007f"; // 🌟 重新激活的赛博粉色
+        $tier_color = "#ff007f"; //  重新激活的赛博粉色
     } elseif ($total_price >= 4000) {
         $system_tier = "HIGH-END (Pro Gaming)";
-        $tier_color = "#00e676"; // 🌟 重新激活的毒液绿色
+        $tier_color = "#00e676"; //  重新激活的毒液绿色
     } else {
         $system_tier = "MAINSTREAM (Entry)";
-        $tier_color = "#00f2fe"; // 🌟 重新激活的霓虹蓝色
+        $tier_color = "#00f2fe"; //  重新激活的霓虹蓝色
     }
 
     $cpu_price = $cart[1]['price'];
@@ -114,6 +115,11 @@ $workflow = [
         ['id' => 5, 'name' => 'Storage (SSD)', 'icon' => 'fa-hdd', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'Ultra-fast NVMe recommended.'],
         ['id' => 8, 'name' => 'Cooling System', 'icon' => 'fa-fan', 'req' => [1], 'params' => '', 'lock_msg' => 'Requires CPU for socket fit.', 'desc' => 'Keep your CPU temperatures low.'],
         ['id' => 7, 'name' => 'PC Case', 'icon' => 'fa-box', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'The house for your components.']
+    ],
+    'Phase 4: Software & Peripherals' => [
+        ['id' => 9, 'name' => 'Operating System', 'icon' => 'fa-windows', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'Essential for running your PC.'],
+        ['id' => 10, 'name' => 'Case Fans', 'icon' => 'fa-dharmachakra', 'req' => [7], 'params' => '', 'lock_msg' => 'Select a PC Case first.', 'desc' => 'Extra airflow and RGB aesthetics.'],
+        ['id' => 11, 'name' => 'Monitor', 'icon' => 'fa-desktop', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'Complete your setup with a display.']
     ]
 ];
 
