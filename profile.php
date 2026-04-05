@@ -89,8 +89,10 @@ include 'includes/header.php';
                         <div class="build-date"><i class="far fa-clock"></i> Secured on <?php echo date('M d, Y - H:i', strtotime($build['created_at'])); ?></div>
                     </div>
                     <div style="text-align: right;">
-                        <div class="build-price">RM <?php echo number_format($build['total_price'], 2); ?></div>
-                        <button class="btn-action" style="padding: 6px 15px; font-size: 0.85rem;"><i class="fas fa-upload"></i> Load to Builder</button>
+                    <div class="build-price">RM <?php echo number_format($build['total_price'], 2); ?></div>
+                    <a href="load_build.php?id=<?php echo $build['pc_build']; ?>" class="btn-action" style="padding: 6px 15px; font-size: 0.85rem; text-decoration: none;">
+                    <i class="fas fa-upload"></i> Load to Builder
+                    </a>
                     </div>
                 </div>
                 
