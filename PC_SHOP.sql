@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 31, 2026 at 11:02 AM
+-- Generation Time: Apr 09, 2026 at 01:00 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -85,7 +85,63 @@ INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`
 (29, 7, 8, 1),
 (30, 7, 16, 1),
 (31, 7, 20, 1),
-(32, 7, 18, 1);
+(32, 7, 18, 1),
+(33, 8, 1, 1),
+(34, 8, 4, 1),
+(35, 8, 10, 1),
+(36, 8, 13, 1),
+(37, 8, 8, 1),
+(38, 8, 16, 1),
+(39, 8, 19, 1),
+(40, 8, 18, 1),
+(41, 9, 1, 1),
+(42, 9, 4, 1),
+(43, 9, 10, 1),
+(44, 9, 13, 1),
+(45, 9, 8, 1),
+(46, 9, 16, 1),
+(47, 9, 19, 1),
+(48, 9, 18, 1),
+(49, 10, 17, 1),
+(50, 10, 1, 1),
+(51, 10, 4, 1),
+(52, 10, 11, 1),
+(53, 10, 13, 1),
+(54, 10, 8, 1),
+(55, 10, 20, 1),
+(56, 10, 18, 1),
+(57, 11, 1, 1),
+(58, 11, 4, 1),
+(59, 11, 10, 1),
+(60, 11, 13, 1),
+(61, 11, 8, 1),
+(62, 11, 16, 1),
+(63, 11, 19, 1),
+(64, 11, 18, 1),
+(65, 12, 1, 1),
+(66, 12, 4, 1),
+(67, 12, 10, 1),
+(68, 12, 13, 1),
+(69, 12, 8, 1),
+(70, 12, 16, 1),
+(71, 12, 19, 1),
+(72, 12, 18, 1),
+(73, 13, 1, 1),
+(74, 13, 4, 1),
+(75, 13, 10, 1),
+(76, 13, 13, 1),
+(77, 13, 8, 1),
+(78, 13, 16, 1),
+(79, 13, 19, 1),
+(80, 13, 18, 1),
+(85, 14, 1, 1),
+(86, 14, 4, 1),
+(87, 14, 10, 1),
+(88, 14, 13, 1),
+(89, 14, 8, 1),
+(90, 14, 16, 1),
+(91, 14, 19, 1),
+(92, 14, 18, 1);
 
 -- --------------------------------------------------------
 
@@ -111,7 +167,10 @@ INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
 (5, 'Storage (SSD)', 'Long-term data storage'),
 (6, 'Power Supply (PSU)', 'Provides power to components'),
 (7, 'PC Case', 'Enclosure for components'),
-(8, 'Cooling System', 'Keeps components cool');
+(8, 'Cooling System', 'Keeps components cool'),
+(9, 'Operating System', NULL),
+(10, 'Case Fans', NULL),
+(11, 'Monitor', NULL);
 
 -- --------------------------------------------------------
 
@@ -141,18 +200,48 @@ CREATE TABLE `customers` (
   `email` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
   `phone_number` varchar(20) DEFAULT NULL,
+  `wallet_balance` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `reward_coins` int(11) NOT NULL DEFAULT 0,
   `default_shipping_address` text DEFAULT NULL,
   `account_status` varchar(20) DEFAULT 'Active',
   `reset_token` varchar(6) DEFAULT NULL,
-  `reset_token_expire` datetime DEFAULT NULL
+  `reset_token_expire` datetime DEFAULT NULL,
+  `pref_gamer` int(11) DEFAULT 0,
+  `pref_creator` int(11) DEFAULT 0,
+  `pref_student` int(11) DEFAULT 0,
+  `pref_enthusiast` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`) VALUES
-(1, 'Sheng Wing', 'Gan', 'ganshengwing1126@gmail.com', 'd021cf728c2f0521865e85f94162136a', NULL, NULL, 'Active', NULL, NULL);
+INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `wallet_balance`, `reward_coins`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`) VALUES
+(1, 'Sheng Wing', 'Gan', 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, 99999999.99, 1000000888, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
+(2, 'Sheng', 'Gan', 'ganshengwing11226@gmail.com', '$2y$10$vW1.TGCWwWQMw8qP57pjjuoePphWACuonBYU6YnK6u/Kkvhd7bJ4a', NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
+(3, 'Sheng', 'Gan', 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `customer_addresses`
+--
+
+CREATE TABLE `customer_addresses` (
+  `address_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `full_address` text NOT NULL,
+  `is_default` tinyint(1) DEFAULT 0 COMMENT '1=Default, 0=Normal',
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `customer_addresses`
+--
+
+INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `full_address`, `is_default`, `created_at`) VALUES
+(1, 1, 'No 123, Jalan Multimedia, 63100 Cyberjaya, Selangor', 0, '2026-04-09 13:23:19'),
+(2, 1, 'Sheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', 1, '2026-04-09 17:17:21');
 
 -- --------------------------------------------------------
 
@@ -165,6 +254,8 @@ CREATE TABLE `orders` (
   `customer_id` int(11) NOT NULL,
   `order_date` datetime DEFAULT current_timestamp(),
   `total_amount` decimal(10,2) NOT NULL,
+  `coins_used` int(11) NOT NULL DEFAULT 0,
+  `discount_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
   `shipping_address` text NOT NULL,
   `contact_number` varchar(20) NOT NULL,
   `order_status` varchar(20) DEFAULT 'Pending'
@@ -183,6 +274,37 @@ CREATE TABLE `order_details` (
   `quantity` int(11) NOT NULL,
   `unit_price` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `packages`
+--
+
+CREATE TABLE `packages` (
+  `package_id` int(11) NOT NULL,
+  `package_name` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `target_persona` enum('Gamer','Creator','Student','Enthusiast') NOT NULL,
+  `stock_status` enum('Available','Out of Stock') DEFAULT 'Available',
+  `score_gamer` int(11) DEFAULT 0,
+  `score_creator` int(11) DEFAULT 0,
+  `score_student` int(11) DEFAULT 0,
+  `score_enthusiast` int(11) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `packages`
+--
+
+INSERT INTO `packages` (`package_id`, `package_name`, `description`, `price`, `image_url`, `target_persona`, `stock_status`, `score_gamer`, `score_creator`, `score_student`, `score_enthusiast`, `created_at`) VALUES
+(1, 'Esports Predator V1', 'Intel i5-13400F + RTX 4060. The ultimate sweet spot for 1080p competitive gaming and esports titles like Valorant and CS2.', 3499.00, 'https://via.placeholder.com/300x200/ff007f/FFF?text=Esports+Predator', 'Gamer', 'Available', 9, 3, 1, 4, '2026-04-09 10:59:36'),
+(2, 'Studio Pro Workstation', 'AMD Ryzen 9 7950X + 64GB DDR5 + RTX 4080. Built for 3D rendering, video editing, and heavy creative workloads.', 9899.00, 'https://via.placeholder.com/300x200/0078D4/FFF?text=Studio+Pro', 'Creator', 'Available', 7, 10, 0, 5, '2026-04-09 10:59:36'),
+(3, 'Campus Starter Box', 'Intel Core i3-12100 + 16GB RAM + 512GB NVMe. Fast, reliable, and affordable. Perfect for assignments, web browsing, and media consumption.', 1599.00, 'https://via.placeholder.com/300x200/00e676/000?text=Campus+Starter', 'Student', 'Available', 1, 2, 10, 0, '2026-04-09 10:59:36'),
+(4, 'Neon Liquid Beast', 'Intel Core i9-14900K + RTX 4090 + Custom Hard-Tube Liquid Cooling. For those who demand absolute perfection and maximum RGB aesthetics.', 18500.00, 'https://via.placeholder.com/300x200/8a2be2/FFF?text=Neon+Liquid+Beast', 'Enthusiast', 'Available', 10, 8, 0, 10, '2026-04-09 10:59:36');
 
 -- --------------------------------------------------------
 
@@ -241,7 +363,13 @@ INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `descriptio
 (17, 5, 'WD Blue SN570 500GB NVMe', 'Budget-friendly fast storage.', 200.00, 25, NULL, 'Available', 5, 0),
 (18, 7, 'NZXT H5 Flow Black', 'High airflow premium chassis.', 400.00, 10, NULL, 'Available', 0, 0),
 (19, 8, 'Deepcool AK400 Air Cooler', 'Efficient standard air cooler.', 150.00, 20, NULL, 'Available', 0, 0),
-(20, 8, 'NZXT Kraken 360 RGB AIO', 'Premium liquid cooler with LCD.', 850.00, 8, NULL, 'Available', 15, 0);
+(20, 8, 'NZXT Kraken 360 RGB AIO', 'Premium liquid cooler with LCD.', 850.00, 8, NULL, 'Available', 15, 0),
+(21, 9, 'Microsoft Windows 11 Home 64-bit', 'Standard edition for gamers and home users. USB Flash Drive included.', 549.00, 0, 'https://via.placeholder.com/280x180/0078D4/FFF?text=Windows+11+Home', 'Available', 0, 0),
+(22, 9, 'Microsoft Windows 11 Pro 64-bit', 'Advanced features for professionals and developers. BitLocker included.', 899.00, 0, 'https://via.placeholder.com/280x180/111/FFF?text=Windows+11+Pro', 'Available', 0, 0),
+(23, 10, 'Corsair iCUE AR120 RGB 120mm (3-Pack)', 'High performance cooling fans with customizable RGB lighting sync.', 229.00, 0, 'https://via.placeholder.com/280x180/FF007F/FFF?text=Corsair+RGB+Fans', 'Available', 5, 0),
+(24, 10, 'ARCTIC P12 PWM PST 120mm', 'Pressure-optimized quiet fan for excellent airflow and low noise.', 45.00, 0, 'https://via.placeholder.com/280x180/333/FFF?text=Arctic+P12', 'Available', 2, 0),
+(25, 11, 'ASUS TUF Gaming VG27AQ 27\" 165Hz', '27-inch WQHD (2560x1440) IPS gaming monitor with ultrafast 165Hz refresh rate.', 1299.00, 0, 'https://via.placeholder.com/280x180/000/FFF?text=ASUS+TUF+27', 'Available', 0, 0),
+(26, 11, 'AOC 24G2SP 24\" 165Hz IPS', '24-inch Full HD (1920x1080) gaming monitor, perfect for esports.', 649.00, 0, 'https://via.placeholder.com/280x180/ff0000/FFF?text=AOC+24G2', 'Available', 0, 0);
 
 -- --------------------------------------------------------
 
@@ -296,7 +424,14 @@ INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_pric
 (4, 1, 'Custom Gaming PC #8777', 4620.00, '2026-03-31 11:05:25'),
 (5, 1, 'Custom Gaming PC #5268', 4620.00, '2026-03-31 11:06:44'),
 (6, 1, 'Custom Gaming PC #8232', 5520.00, '2026-03-31 11:07:14'),
-(7, 1, 'Custom Gaming PC #7699', 7550.00, '2026-03-31 16:43:12');
+(7, 1, 'Custom Gaming PC #7699', 7550.00, '2026-03-31 16:43:12'),
+(8, 1, 'Custom Gaming PC #9227', 4620.00, '2026-03-31 17:08:29'),
+(9, 1, 'Custom Gaming PC #1264', 4620.00, '2026-03-31 17:24:22'),
+(10, 1, 'Custom Gaming PC #9158', 7820.00, '2026-04-04 17:49:41'),
+(11, 1, 'strong man', 4620.00, '2026-04-04 18:52:47'),
+(12, 1, '超級吊', 4620.00, '2026-04-05 14:39:39'),
+(13, 1, 'My Custom Build', 4620.00, '2026-04-05 15:17:12'),
+(14, 3, 'yeaaaaaaa', 4620.00, '2026-04-06 09:17:24');
 
 -- --------------------------------------------------------
 
@@ -309,7 +444,10 @@ CREATE TABLE `saved_cards` (
   `customer_id` int(11) NOT NULL,
   `cardholder_name` varchar(100) NOT NULL,
   `last_four_digits` varchar(4) NOT NULL,
-  `expiry_date` varchar(5) NOT NULL
+  `expiry_date` varchar(5) NOT NULL,
+  `card_brand` varchar(50) NOT NULL COMMENT 'Visa, Mastercard, etc.',
+  `is_default` tinyint(1) DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -323,18 +461,43 @@ CREATE TABLE `shopping_cart` (
   `customer_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
   `pc_build` int(11) DEFAULT NULL,
-  `build_id` int(11) DEFAULT NULL,
   `quantity` int(11) NOT NULL DEFAULT 1,
   `added_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ;
 
 --
 -- Dumping data for table `shopping_cart`
 --
 
-INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `build_id`, `quantity`, `added_at`) VALUES
-(2, 1, NULL, 6, NULL, 1, '2026-03-31 11:07:14'),
-(3, 1, NULL, 7, NULL, 1, '2026-03-31 16:43:12');
+INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `quantity`, `added_at`) VALUES
+(5, 1, NULL, 9, 1, '2026-03-31 17:24:22'),
+(6, 1, NULL, 10, 1, '2026-04-04 17:49:41'),
+(7, 1, NULL, 11, 1, '2026-04-04 18:52:47'),
+(8, 1, NULL, 13, 1, '2026-04-05 15:17:12'),
+(9, 3, NULL, 14, 1, '2026-04-06 09:17:24');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `wallet_transactions`
+--
+
+CREATE TABLE `wallet_transactions` (
+  `transaction_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `type` varchar(50) NOT NULL COMMENT 'Top-up, Payment, Refund',
+  `amount` decimal(10,2) NOT NULL,
+  `coins_earned` int(11) NOT NULL DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `wallet_transactions`
+--
+
+INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amount`, `coins_earned`, `created_at`) VALUES
+(1, 1, 'Top-up', 8888.00, 888, '2026-04-09 13:04:35'),
+(2, 1, 'Top-up', 99999999.99, 1000000000, '2026-04-09 17:25:22');
 
 --
 -- Indexes for dumped tables
@@ -377,6 +540,13 @@ ALTER TABLE `customers`
   ADD UNIQUE KEY `email` (`email`);
 
 --
+-- Indexes for table `customer_addresses`
+--
+ALTER TABLE `customer_addresses`
+  ADD PRIMARY KEY (`address_id`),
+  ADD KEY `customer_id` (`customer_id`);
+
+--
 -- Indexes for table `orders`
 --
 ALTER TABLE `orders`
@@ -390,6 +560,12 @@ ALTER TABLE `order_details`
   ADD PRIMARY KEY (`order_detail_id`),
   ADD KEY `order_id` (`order_id`),
   ADD KEY `product_id` (`product_id`);
+
+--
+-- Indexes for table `packages`
+--
+ALTER TABLE `packages`
+  ADD PRIMARY KEY (`package_id`);
 
 --
 -- Indexes for table `payments`
@@ -442,7 +618,14 @@ ALTER TABLE `shopping_cart`
   ADD PRIMARY KEY (`cart_id`),
   ADD KEY `customer_id` (`customer_id`),
   ADD KEY `product_id` (`product_id`),
-  ADD KEY `fk_cart_build` (`build_id`);
+  ADD KEY `fk_shopping_cart_pc_build` (`pc_build`);
+
+--
+-- Indexes for table `wallet_transactions`
+--
+ALTER TABLE `wallet_transactions`
+  ADD PRIMARY KEY (`transaction_id`),
+  ADD KEY `customer_id` (`customer_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -458,13 +641,13 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `build_items`
 --
 ALTER TABLE `build_items`
-  MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
 
 --
 -- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
-  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `consultations`
@@ -476,19 +659,31 @@ ALTER TABLE `consultations`
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `customer_addresses`
+--
+ALTER TABLE `customer_addresses`
+  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `order_details`
 --
 ALTER TABLE `order_details`
   MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `packages`
+--
+ALTER TABLE `packages`
+  MODIFY `package_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -500,7 +695,7 @@ ALTER TABLE `payments`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `product_specifications`
@@ -518,7 +713,7 @@ ALTER TABLE `reviews`
 -- AUTO_INCREMENT for table `saved_builds`
 --
 ALTER TABLE `saved_builds`
-  MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `saved_cards`
@@ -530,7 +725,13 @@ ALTER TABLE `saved_cards`
 -- AUTO_INCREMENT for table `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
-  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `wallet_transactions`
+--
+ALTER TABLE `wallet_transactions`
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Constraints for dumped tables
@@ -548,6 +749,12 @@ ALTER TABLE `build_items`
 --
 ALTER TABLE `consultations`
   ADD CONSTRAINT `consultations_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `customer_addresses`
+--
+ALTER TABLE `customer_addresses`
+  ADD CONSTRAINT `customer_addresses_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `orders`
@@ -603,9 +810,15 @@ ALTER TABLE `saved_cards`
 -- Constraints for table `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
-  ADD CONSTRAINT `fk_cart_build` FOREIGN KEY (`build_id`) REFERENCES `saved_builds` (`pc_build`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_shopping_cart_pc_build` FOREIGN KEY (`pc_build`) REFERENCES `saved_builds` (`pc_build`) ON DELETE CASCADE,
   ADD CONSTRAINT `shopping_cart_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `shopping_cart_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `wallet_transactions`
+--
+ALTER TABLE `wallet_transactions`
+  ADD CONSTRAINT `wallet_transactions_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -586,3 +586,42 @@ select.form-control option {
     background-color: var(--bg-surface); /* 強制設定為深灰底色 */
     color: var(--text-main);             /* 強制設定為白字 */
 }
+
+/* Dropdown 科技感懸浮特效 */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 120%;
+    background-color: var(--bg-darker);
+    min-width: 180px;
+    box-shadow: 0 8px 25px rgba(0, 243, 255, 0.2);
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 8px;
+    z-index: 1000;
+    overflow: hidden;
+    animation: fadeIn 0.3s ease;
+}
+
+.dropdown-content a {
+    color: var(--text-main);
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.dropdown-content a:hover {
+    background-color: rgba(0, 243, 255, 0.1);
+    color: var(--accent-blue);
+}
+
+.profile-dropdown:hover .dropdown-content {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
