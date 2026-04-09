@@ -442,3 +442,147 @@ a { text-decoration: none; color: inherit; }
     color: #fff;
     text-shadow: 0 0 10px var(--accent-blue), 0 0 20px var(--accent-blue);
 }
+
+/* =========================================
+   Checkout Page Styles (結帳頁面專屬)
+   ========================================= */
+.checkout-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 30px;
+    align-items: start;
+}
+
+@media (max-width: 768px) {
+    .checkout-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.total-row {
+    font-size: 1.5rem;
+    color: var(--accent-blue);
+    font-weight: bold;
+    margin-top: 20px;
+    border-top: 2px solid rgba(0, 243, 255, 0.3);
+    padding-top: 20px;
+}
+
+
+/* =========================================
+   E-Wallet Top-up Page Styles (虛擬錢包專屬)
+   ========================================= */
+.wallet-dashboard {
+    display: flex;
+    justify-content: space-between;
+    background: linear-gradient(135deg, rgba(0, 243, 255, 0.1), rgba(0,0,0,0.5));
+    border-left: 4px solid var(--accent-blue);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.stat-box h4 {
+    margin: 0 0 5px 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.stat-box p {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--text-main);
+}
+
+/* 儲值選項卡片 (Radio 隱藏與發光特效) */
+.topup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.topup-option input[type="radio"] {
+    display: none;
+}
+
+.topup-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 10px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.topup-card .amount {
+    font-size: 1.5rem;
+    color: var(--text-main);
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.topup-card .reward {
+    font-size: 0.85rem;
+    color: #ffd700;
+}
+
+.topup-option input[type="radio"]:checked + .topup-card {
+    border-color: var(--accent-blue);
+    background: rgba(0, 243, 255, 0.1);
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+}
+
+/* 自定義金額輸入框 (Custom Amount) */
+.custom-amount-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 5px 15px;
+    transition: border-color 0.3s;
+}
+
+.custom-amount-wrapper:focus-within {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 8px rgba(0, 243, 255, 0.2);
+}
+
+.custom-amount-wrapper span {
+    color: var(--text-muted);
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin-right: 10px;
+}
+
+.custom-amount-wrapper input {
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    font-size: 1.2rem;
+    width: 100%;
+    outline: none;
+}
+
+select.form-control option {
+    background-color: var(--bg-surface); /* 強制設定為深灰底色 */
+    color: var(--text-main);             /* 強制設定為白字 */
+}

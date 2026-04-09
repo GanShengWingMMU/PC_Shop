@@ -35,6 +35,34 @@ while ($row = $builds_result->fetch_assoc()) {
 }
 $stmt_builds->close();
 
+// ==========================================
+// 模組：撈取地址簿與信用卡 (請加在 profile.php 最上方)
+// ==========================================
+
+// 抓取所有地址 (預設地址排前面)
+$addresses = [];
+$addr_query = "SELECT * FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
+$stmt_addr = $conn->prepare($addr_query);
+$stmt_addr->bind_param("i", $customer_id);
+$stmt_addr->execute();
+$addr_result = $stmt_addr->get_result();
+while ($row = $addr_result->fetch_assoc()) {
+    $addresses[] = $row;
+}
+$stmt_addr->close();
+
+// 抓取所有綁定的信用卡 (預設卡片排前面)
+$cards = [];
+$card_query = "SELECT * FROM saved_cards WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
+$stmt_card = $conn->prepare($card_query);
+$stmt_card->bind_param("i", $customer_id);
+$stmt_card->execute();
+$card_result = $stmt_card->get_result();
+while ($row = $card_result->fetch_assoc()) {
+    $cards[] = $row;
+}
+$stmt_card->close();
+
 include 'includes/header.php';
 ?>
 
@@ -77,6 +105,51 @@ include 'includes/header.php';
             <div style="margin-top: 8px; display: inline-block; background: rgba(255,255,255,0.1); color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; letter-spacing: 1px;">CLEARANCE LEVEL: CUSTOMER</div>
         </div>
     </div>
+
+    <div class="auth-container" style="margin-bottom: 20px;">
+    <h3 style="color: var(--text-main); margin-bottom: 20px;"><i class="fa-solid fa-map-location-dot"></i> Address Book</h3>
+    
+    <?php if (empty($addresses)): ?>
+        <p class="specs"><i class="fa-solid fa-circle-info"></i> No addresses saved yet.</p>
+    <?php else: ?>
+        <?php foreach ($addresses as $addr): ?>
+            <div style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: <?php echo $addr['is_default'] ? '3px solid var(--accent-blue)' : '3px solid transparent'; ?>;">
+                <p style="color: var(--text-main); margin: 0; line-height: 1.5;">
+                    <?php echo nl2br(htmlspecialchars($addr['full_address'])); ?>
+                    <?php if ($addr['is_default']) echo '<span style="background: var(--accent-blue); color: #000; font-size: 0.7rem; font-weight: bold; padding: 2px 8px; border-radius: 12px; margin-left: 10px;">Default</span>'; ?>
+                </p>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
+<a href="add_address.php" class="btn" style="display: block; text-align: center; width: 100%; margin-top: 15px; background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); transition: 0.3s;">
+    <i class="fa-solid fa-plus"></i> Add New Address
+</a>
+</div>
+
+<div class="auth-container">
+    <h3 style="color: var(--text-main); margin-bottom: 20px;"><i class="fa-solid fa-credit-card"></i> Payment Methods</h3>
+    
+    <?php if (empty($cards)): ?>
+        <p class="specs"><i class="fa-solid fa-circle-info"></i> No payment methods saved yet.</p>
+    <?php else: ?>
+        <?php foreach ($cards as $card): ?>
+            <div style="background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: <?php echo $card['is_default'] ? '3px solid var(--accent-blue)' : '3px solid transparent'; ?>;">
+                <p style="color: var(--text-main); font-weight: bold; margin: 0;">
+                    <i class="fa-solid fa-credit-card" style="color: var(--text-muted); margin-right: 8px;"></i>
+                    <?php echo htmlspecialchars($card['card_brand']); ?> 
+                    <span class="specs" style="margin-left: 10px;">**** <?php echo htmlspecialchars($card['last_four_digits']); ?></span>
+                    <?php if ($card['is_default']) echo '<span style="background: var(--accent-blue); color: #000; font-size: 0.7rem; font-weight: bold; padding: 2px 8px; border-radius: 12px; margin-left: 10px;">Default</span>'; ?>
+                </p>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
+<a href="add_card.php" class="btn" style="display: block; text-align: center; width: 100%; margin-top: 15px; background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); transition: 0.3s;">
+    <i class="fa-solid fa-plus"></i> Add New Card
+</a>
+
+</div>
 
     <h2 style="color: #fff; font-size: 1.5rem; margin-bottom: 20px; border-left: 4px solid #00f2fe; padding-left: 15px;"><i class="fas fa-save"></i> Saved Blueprints</h2>
 
