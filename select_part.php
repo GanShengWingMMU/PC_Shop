@@ -54,7 +54,7 @@ if ($row_cat = $res_cat->fetch_assoc()) {
 $stmt_cat->close();
 
 // ==========================================
-// 3. 🧠 动态 SQL 构建器 (Dynamic SQL Builder)
+// 3. 动态 SQL 构建器 (Dynamic SQL Builder)
 // ==========================================
 $sql = "SELECT * FROM products WHERE category_id = $category_id AND status = 'Available'";
 $filter_messages = []; 
