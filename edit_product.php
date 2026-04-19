@@ -77,7 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     <div class="sidebar">
         <h2>
             <img src="image/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
-            <span>PC SHOP</span>
+            <span>GridCity PC</span>
         </h2>
         <ul>
             <li><a href="admin_dashboard.php">Dashboard</a></li>

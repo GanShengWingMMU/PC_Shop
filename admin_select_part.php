@@ -51,7 +51,7 @@ if ($res_c && mysqli_num_rows($res_c) > 0) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title><?php echo $cat_name; ?> - PC Shop Admin</title>
+    <title><?php echo $cat_name; ?> -GridCity PC Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -62,7 +62,7 @@ if ($res_c && mysqli_num_rows($res_c) > 0) {
     <div class="sidebar">
         <h2>
             <img src="image/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
-            <span>PC SHOP</span>
+            <span>GridCity PC</span>
         </h2>
         <ul>
             <li><a href="admin_dashboard.php">Dashboard</a></li>

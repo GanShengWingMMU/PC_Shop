@@ -107,7 +107,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin PC Builder - PC Shop Admin</title>
+    <title>Admin PC Builder - GridCity PC Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -118,7 +118,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     <div class="sidebar">
         <h2>
             <img src="image/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
-            <span>PC SHOP</span>
+            <span>GridCity PC</span>
         </h2>
         <ul>
             <li><a href="admin_dashboard.php">Dashboard</a></li>
