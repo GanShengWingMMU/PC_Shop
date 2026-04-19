@@ -19,7 +19,7 @@ $filter_price = (isset($_GET['filter_price']) && is_numeric($_GET['filter_price'
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Categories - PC Shop Admin</title>
+    <title>Manage Categories - GridCity PC Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css?v=<?php echo time(); ?>">

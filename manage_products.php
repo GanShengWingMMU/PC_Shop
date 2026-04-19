@@ -25,7 +25,7 @@ if (isset($_GET['delete_id'])) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Products - PC Shop Admin</title>
+    <title>Manage Products - GridCity PC Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     

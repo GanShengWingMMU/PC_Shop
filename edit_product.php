@@ -67,7 +67,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Edit Product - PC Shop Admin</title>
+    <title>Edit Product - GridCity PC Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
@@ -76,7 +76,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
 
     <div class="sidebar">
         <h2>
-            <img src="photo/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
+            <img src="image/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
             <span>PC SHOP</span>
         </h2>
         <ul>

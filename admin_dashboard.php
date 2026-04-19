@@ -77,7 +77,7 @@ try {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - PC Shop Admin</title>
+    <title>Dashboard - GridCity PC Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/admin_style.css">
 </head>

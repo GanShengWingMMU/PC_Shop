@@ -66,7 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Products - PC Shop Admin</title>
+    <title>Manage Products - GridCity PC Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/admin_style.css">
         
