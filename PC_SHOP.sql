@@ -824,3 +824,10 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+-- 1. 把 superadmin 加入到身份选项中
+ALTER TABLE `users` MODIFY `role` ENUM('superadmin', 'admin', 'customer') NOT NULL DEFAULT 'customer';
+
+-- 2. 创建一个超级管理员账号 (账号: superadmin / 密码: password)
+INSERT INTO `users` (`username`, `password`, `email`, `role`) 
+VALUES ('superadmin', 'password', 'boss@pcshop.com', 'superadmin');

@@ -2,7 +2,7 @@
 session_start();
 include 'db_connect.php'; 
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
@@ -40,11 +40,16 @@ if (isset($_GET['delete_id'])) {
         </h2>
         <ul>
             <li><a href="admin_dashboard.php">Dashboard</a></li>
-            <li><a href="manage_products.php" class="active">Products</a></li> 
+            <li><a href="manage_products.php">Products</a></li> 
             <li><a href="manage_categories.php">Categories</a></li>
             <li><a href="manage_orders.php">Orders</a></li>
             <li><a href="admin_builder.php">Build System</a></li>
-            <li><a href="manage_users.php">Users</a></li>
+            
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'superadmin'): ?>
+                <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                <li><a href="manage_users.php">Manage Customers</a></li>
+            <?php endif; ?>
+            
             <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
         </ul>
     </div>
