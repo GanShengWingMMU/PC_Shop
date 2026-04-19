@@ -824,6 +824,12 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+-- 1. superadmin  adding for selection
+ALTER TABLE `users` MODIFY `role` ENUM('superadmin', 'admin', 'customer') NOT NULL DEFAULT 'customer';
+
+-- 2. Create a superadmin management
+INSERT INTO `users` (`username`, `password`, `email`, `role`) 
+VALUES ('superadmin', 'password', 'boss@pcshop.com', 'superadmin');
 
 -- 1. 把 superadmin 加入到身份选项中
 ALTER TABLE `users` MODIFY `role` ENUM('superadmin', 'admin', 'customer') NOT NULL DEFAULT 'customer';
