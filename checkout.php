@@ -22,18 +22,27 @@ $stmt_user->close();
 $current_balance = $user_data['wallet_balance'];
 $current_coins = $user_data['reward_coins'];
 
-$default_address = "";
-$address_query = "SELECT full_address FROM customer_addresses WHERE customer_id = ? AND is_default = 1 LIMIT 1";
+$saved_addresses = [];
+$address_query = "SELECT * FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
 $stmt_addr = $conn->prepare($address_query);
 $stmt_addr->bind_param("i", $customer_id);
 $stmt_addr->execute();
 $addr_result = $stmt_addr->get_result();
 
-if ($addr_result->num_rows > 0) {
-    $addr_data = $addr_result->fetch_assoc();
-    $default_address = $addr_data['full_address'];
+while ($addr = $addr_result->fetch_assoc()) {
+    $saved_addresses[] = $addr;
 }
 $stmt_addr->close();
+$saved_cards = [];
+$query_cards = "SELECT * FROM saved_cards WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
+$stmt_cards = $conn->prepare($query_cards);
+$stmt_cards->bind_param("i", $customer_id);
+$stmt_cards->execute();
+$res_cards = $stmt_cards->get_result();
+while ($card = $res_cards->fetch_assoc()) {
+    $saved_cards[] = $card;
+}
+$stmt_cards->close();
 
 // 取得購物車內容與計算原始總價
 $cart_query = "SELECT c.cart_id, c.quantity, 
@@ -64,12 +73,20 @@ while ($row = $cart_result->fetch_assoc()) {
 $stmt->close();
 
 // ==========================================
-// 2. 處理結帳送出表單 (POST Request)
+// 🏦 結帳與 Dummy Bank 外部銀行驗證處理區
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $shipping_address = mysqli_real_escape_string($conn, $_POST['shipping_address']);
-    $payment_method = mysqli_real_escape_string($conn, $_POST['payment_method']);
     
+    $shipping_address = mysqli_real_escape_string($conn, $_POST['shipping_address']);
+    $final_payment_method = $_POST['payment_method'] ?? '';
+
+    // 防呆：如果什麼都沒選
+    if (empty($final_payment_method)) {
+        $_SESSION['error_msg'] = "Please select a payment method before checking out.";
+        header("Location: checkout.php");
+        exit();
+    }
+
     // 計算折扣邏輯 (10 Coins = RM 1)
     $use_coins = isset($_POST['use_coins']) ? true : false;
     $coins_used = 0;
@@ -83,82 +100,143 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $final_amount = $total_amount - $discount_amount;
     if ($final_amount < 0) $final_amount = 0; // 防止負數
 
-    // 🌟 金流安全檢查
-    if ($payment_method === 'E-Wallet' && $current_balance < $final_amount) {
-        $error_message = "Insufficient E-Wallet balance! Please top up or choose another payment method.";
-    } else {
-        // 開啟資料庫交易
-        $conn->begin_transaction();
+    // 🌟 1. 信用卡驗證邏輯
+    if ($final_payment_method === 'Credit Card') {
+        $selected_card = $_POST['selected_card'] ?? '';
 
-        try {
-            // A. 寫入 orders 表 (現在有 coins_used 和 discount_amount 欄位了)
-            $order_status = 'Pending';
-            $insert_order = "INSERT INTO orders (customer_id, total_amount, discount_amount, coins_used, order_status, shipping_address) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt_order = $conn->prepare($insert_order);
-            $stmt_order->bind_param("iddiss", $customer_id, $final_amount, $discount_amount, $coins_used, $order_status, $shipping_address);
-            $stmt_order->execute();
-            $order_id = $stmt_order->insert_id;
-            $stmt_order->close();
+        if ($selected_card === 'new') {
+            $card_name = trim($_POST['dummy_card_name']);
+            $card_number = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
+            $card_cvc = trim($_POST['dummy_card_cvc']);
 
-            // B. 寫入 order_details 表
-            $insert_detail = "INSERT INTO order_details (order_id, product_id, pc_build, quantity, unit_price) VALUES (?, ?, ?, ?, ?)";
-            $stmt_detail = $conn->prepare($insert_detail);
-            foreach ($cart_items as $item) {
-                $pid = $item['product_id'] ? $item['product_id'] : NULL;
-                $build_id = $item['pc_build'] ? $item['pc_build'] : NULL;
-                $qty = $item['quantity'];
-                $unit_price = $item['product_id'] ? $item['product_price'] : $item['build_price'];
-                $stmt_detail->bind_param("iiidi", $order_id, $pid, $build_id, $qty, $unit_price);
-                $stmt_detail->execute();
-            }
-            $stmt_detail->close();
+           
+            $bank_query = "SELECT * FROM bank WHERE card_number = ? AND cvc = ?";
+            $bank_stmt = $conn->prepare($bank_query);
+            $bank_stmt->bind_param("ss", $card_number, $card_cvc);
+            $bank_stmt->execute();
+            $bank_result = $bank_stmt->get_result();
 
-            // C. 寫入 payments 表
-            $payment_status = ($payment_method == 'Cash on Delivery') ? 'Pending' : 'Paid';
-            $insert_payment = "INSERT INTO payments (order_id, payment_method, payment_status) VALUES (?, ?, ?)";
-            $stmt_payment = $conn->prepare($insert_payment);
-            $stmt_payment->bind_param("iss", $order_id, $payment_method, $payment_status);
-            $stmt_payment->execute();
-            $stmt_payment->close();
-
-            // D. 如果用 E-Wallet，扣款並紀錄交易
-            if ($payment_method === 'E-Wallet') {
-                $deduct_wallet = "UPDATE customers SET wallet_balance = wallet_balance - ? WHERE customer_id = ?";
-                $stmt_deduct = $conn->prepare($deduct_wallet);
-                $stmt_deduct->bind_param("di", $final_amount, $customer_id);
-                $stmt_deduct->execute();
+            if ($bank_result->num_rows > 0) {
+                $bank_data = $bank_result->fetch_assoc();
                 
-                $type = 'Payment';
-                $insert_trans = "INSERT INTO wallet_transactions (customer_id, type, amount) VALUES (?, ?, ?)";
-                $stmt_trans = $conn->prepare($insert_trans);
-                $neg_amount = -$final_amount; // 支出顯示負數
-                $stmt_trans->bind_param("isd", $customer_id, $type, $neg_amount);
-                $stmt_trans->execute();
+                if ($bank_data['balance'] < $final_amount) {
+                    $_SESSION['error_msg'] = "Bank Declined: Insufficient funds in your bank account.";
+                    header("Location: checkout.php");
+                    exit();
+                }
+
+                // 扣款 (✅ 已修正資料表名稱)
+                $new_balance = $bank_data['balance'] - $final_amount;
+                $deduct_stmt = $conn->prepare("UPDATE bank SET balance = ? WHERE id = ?");
+                $deduct_stmt->bind_param("di", $new_balance, $bank_data['id']);
+                $deduct_stmt->execute();
+                $deduct_stmt->close();
+
+                // 組合卡片名稱 (✅ 確保變數正確傳遞)
+                $last_four = substr($card_number, -4);
+                $final_payment_method = "Visa ending in " . $last_four; 
+                
+            } else {
+                $_SESSION['error_msg'] = "Bank Declined: Invalid Card Number or CVC. Please try again.";
+                header("Location: checkout.php");
+                exit();
             }
+            $bank_stmt->close();
 
-            // E. 扣除使用的金幣
-            if ($coins_used > 0) {
-                $deduct_coins = "UPDATE customers SET reward_coins = reward_coins - ? WHERE customer_id = ?";
-                $stmt_coins = $conn->prepare($deduct_coins);
-                $stmt_coins->bind_param("ii", $coins_used, $customer_id);
-                $stmt_coins->execute();
+        } else {
+            // 使用綁定過的舊卡
+            $card_id = intval($selected_card);
+            $saved_query = "SELECT card_brand, last_four_digits FROM saved_cards WHERE card_id = ? AND customer_id = ?";
+            $saved_stmt = $conn->prepare($saved_query);
+            $saved_stmt->bind_param("ii", $card_id, $customer_id);
+            $saved_stmt->execute();
+            $saved_result = $saved_stmt->get_result();
+            
+            if ($saved_row = $saved_result->fetch_assoc()) {
+                $final_payment_method = $saved_row['card_brand'] . " ending in " . $saved_row['last_four_digits'];
             }
-
-            // F. 清空購物車
-            $clear_cart = "DELETE FROM shopping_cart WHERE customer_id = ?";
-            $stmt_clear = $conn->prepare($clear_cart);
-            $stmt_clear->bind_param("i", $customer_id);
-            $stmt_clear->execute();
-
-            $conn->commit();
-            $_SESSION['success_msg'] = "Order placed successfully! Your Order ID is #$order_id";
-            header("Location: my_orders.php");
-            exit();
-
-        } catch (Exception $e) {
-            $conn->rollback();
-            $error_message = "Checkout failed. Error: " . $e->getMessage();
+            $saved_stmt->close();
         }
+    }
+
+    // 🌟 2. 錢包安全檢查
+    if ($final_payment_method === 'E-Wallet' && $current_balance < $final_amount) {
+        $_SESSION['error_msg'] = "Insufficient E-Wallet balance! Please top up or choose another payment method.";
+        header("Location: checkout.php");
+        exit();
+    } 
+    
+    // 🌟 3. 執行訂單寫入 (Transaction)
+    // 到這裡，無論是錢包還是信用卡，都已經確保驗證成功了！
+    $conn->begin_transaction();
+    try {
+        // A. 寫入 orders 表 
+        $order_status = 'Pending';
+        $insert_order = "INSERT INTO orders (customer_id, total_amount, discount_amount, coins_used, order_status, shipping_address) VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt_order = $conn->prepare($insert_order);
+        $stmt_order->bind_param("iddiss", $customer_id, $final_amount, $discount_amount, $coins_used, $order_status, $shipping_address);
+        $stmt_order->execute();
+        $order_id = $stmt_order->insert_id;
+        $stmt_order->close();
+
+        // B. 寫入 order_details 表
+        $insert_detail = "INSERT INTO order_details (order_id, product_id, pc_build, quantity, unit_price) VALUES (?, ?, ?, ?, ?)";
+        $stmt_detail = $conn->prepare($insert_detail);
+        foreach ($cart_items as $item) {
+            $pid = $item['product_id'] ? $item['product_id'] : NULL;
+            $build_id = $item['pc_build'] ? $item['pc_build'] : NULL;
+            $qty = $item['quantity'];
+            $unit_price = $item['product_id'] ? $item['product_price'] : $item['build_price'];
+            $stmt_detail->bind_param("iiidi", $order_id, $pid, $build_id, $qty, $unit_price);
+            $stmt_detail->execute();
+        }
+        $stmt_detail->close();
+
+        // C. 寫入 payments 表 (✅ 使用最終版的 $final_payment_method)
+        $payment_status = ($final_payment_method == 'Cash on Delivery') ? 'Pending' : 'Paid';
+        $insert_payment = "INSERT INTO payments (order_id, payment_method, payment_status) VALUES (?, ?, ?)";
+        $stmt_payment = $conn->prepare($insert_payment);
+        $stmt_payment->bind_param("iss", $order_id, $final_payment_method, $payment_status);
+        $stmt_payment->execute();
+        $stmt_payment->close();
+
+        // D. E-Wallet 扣款
+        if ($final_payment_method === 'E-Wallet') {
+            $deduct_wallet = "UPDATE customers SET wallet_balance = wallet_balance - ? WHERE customer_id = ?";
+            $stmt_deduct = $conn->prepare($deduct_wallet);
+            $stmt_deduct->bind_param("di", $final_amount, $customer_id);
+            $stmt_deduct->execute();
+            
+            $type = 'Payment';
+            $insert_trans = "INSERT INTO wallet_transactions (customer_id, type, amount) VALUES (?, ?, ?)";
+            $stmt_trans = $conn->prepare($insert_trans);
+            $neg_amount = -$final_amount; 
+            $stmt_trans->bind_param("isd", $customer_id, $type, $neg_amount);
+            $stmt_trans->execute();
+        }
+
+        // E. 扣除使用的金幣
+        if ($coins_used > 0) {
+            $deduct_coins = "UPDATE customers SET reward_coins = reward_coins - ? WHERE customer_id = ?";
+            $stmt_coins = $conn->prepare($deduct_coins);
+            $stmt_coins->bind_param("ii", $coins_used, $customer_id);
+            $stmt_coins->execute();
+        }
+
+        // F. 清空購物車
+        $clear_cart = "DELETE FROM shopping_cart WHERE customer_id = ?";
+        $stmt_clear = $conn->prepare($clear_cart);
+        $stmt_clear->bind_param("i", $customer_id);
+        $stmt_clear->execute();
+
+        $conn->commit();
+        $_SESSION['success_msg'] = "Order placed successfully! Your Order ID is #$order_id";
+        header("Location: my_orders.php");
+        exit();
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        $error_message = "Checkout failed. Error: " . $e->getMessage();
     }
 }
 ?>
@@ -182,7 +260,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="specs">Complete your order details below.</p>
         </div>
 
-        <?php if (!empty($error_message)) echo "<div class='text-danger' style='margin-bottom: 20px;'><i class='fa-solid fa-circle-exclamation'></i> $error_message</div>"; ?>
+        <?php 
+        if (isset($_SESSION['error_msg'])) {
+            echo "<div class='text-danger' style='margin-bottom: 20px; border-left: 4px solid #ff4d4d; padding-left: 10px;'><i class='fa-solid fa-circle-exclamation'></i> " . $_SESSION['error_msg'] . "</div>";
+            unset($_SESSION['error_msg']);
+        }
+        if (!empty($error_message)) {
+            echo "<div class='text-danger' style='margin-bottom: 20px;'><i class='fa-solid fa-circle-exclamation'></i> $error_message</div>";
+        }
+        ?>
 
         <div class="checkout-grid">
             
@@ -192,9 +278,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <form action="checkout.php" method="POST" class="form" id="checkoutForm">
                     
 <div class="form-group input-group">
-    <label class="form-label" for="shipping_address">Full Delivery Address</label>
-    <textarea id="shipping_address" name="shipping_address" class="form-control" rows="3" required placeholder="Enter your full home address..."><?php echo htmlspecialchars($default_address); ?></textarea>
+    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <span><i class="fa-solid fa-location-dot"></i> Delivery Address</span>
+        <a href="profile.php" style="color: var(--accent-blue); font-size: 0.85rem; text-decoration: none;">
+            <i class="fa-solid fa-plus"></i> Add New Address
+        </a>
+    </label>
+
+    <?php if(!empty($saved_addresses)): ?>
+        <div id="active_address_display" style="padding: 15px; background: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.3); border-radius: 8px; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div id="current_address_text" style="color: var(--text-main); line-height: 1.5; white-space: pre-wrap;">
+                Loading address...
+            </div>
+            <button type="button" onclick="toggleAddressList()" style="background: none; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='rgba(0,243,255,0.1)'" onmouseout="this.style.background='none'">
+                Change
+            </button>
+        </div>
+
+<div style="flex: 1;">
+    <?php if($addr['is_default']): ?>
+        <span style="background: var(--accent-blue); color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-bottom: 5px; display: inline-block;">Default</span><br>
+    <?php endif; ?>
+    
+    <span style="font-weight: bold; color: var(--text-main); font-size: 0.95rem; display: block; margin-bottom: 4px;">
+        <?php echo htmlspecialchars($addr['recipient_name'] ?? 'Sheng Wing Gan'); ?> | <?php echo htmlspecialchars($addr['phone_number'] ?? '0162058560'); ?>
+    </span>
+    
+    <span style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; display: block;">
+        <?php 
+            if (!empty($addr['address_line1'])) {
+                echo htmlspecialchars($addr['address_line1']) . "<br>";
+                if (!empty($addr['address_line2'])) echo htmlspecialchars($addr['address_line2']) . "<br>";
+                echo htmlspecialchars($addr['postcode']) . " " . htmlspecialchars($addr['city']) . ", " . htmlspecialchars($addr['state']) . "<br>";
+                echo htmlspecialchars($addr['country']);
+            } else {
+                echo nl2br(htmlspecialchars($addr['full_address'])); 
+            }
+        ?>
+    </span>
 </div>
+    <?php else: ?>
+        <div style="padding: 20px; text-align: center; border: 1px dashed #ff4d4d; border-radius: 8px;">
+            <p style="color: #ff4d4d;">Please add a shipping address in your profile first.</p>
+        </div>
+    <?php endif; ?>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const defaultRadio = document.querySelector('input[name="shipping_address"]:checked');
+        if (defaultRadio) {
+            updateActiveAddress(defaultRadio);
+        }
+    });
+
+    function toggleAddressList() {
+        const list = document.getElementById('address_selection_list');
+        const btn = event.target;
+        if (list.style.display === 'none') {
+            list.style.display = 'block';
+            btn.innerText = 'Cancel';
+        } else {
+            list.style.display = 'none';
+            btn.innerText = 'Change';
+        }
+    }
+
+    function updateActiveAddress(radio) {
+        const addressText = radio.value;
+        document.getElementById('current_address_text').innerText = addressText;
+        
+        document.getElementById('address_selection_list').style.display = 'none';
+        
+        const changeBtn = document.querySelector('#active_address_display button');
+        if(changeBtn) changeBtn.innerText = 'Change';
+    }
+</script>
 
                     <?php if ($current_coins >= 10): ?>
                     <div class="form-group" style="background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
@@ -208,15 +367,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <?php endif; ?>
 
-                    <div class="form-group input-group">
-                        <label class="form-label" for="payment_method">Payment Method</label>
-                        <select id="payment_method" name="payment_method" class="form-control" required>
-                            <option value="E-Wallet">GridCitY E-Wallet (Bal: RM <?php echo number_format($current_balance, 2); ?>)</option>
-                            <option value="Credit Card">Credit Card (Mock Payment)</option>
-                            <option value="Online Banking">Online Banking (FPX)</option>
-                            <option value="Cash on Delivery">Cash on Delivery (COD)</option>
-                        </select>
-                    </div>
+<div class="form-group input-group">
+    <label class="form-label" style="display: flex; justify-content: space-between;">
+        <span>Payment Method</span>
+    </label>
+    
+    <select id="payment_method" name="payment_method" class="form-control" required onchange="toggleCardSection()" style="background-color: var(--bg-surface); color: var(--text-main);">
+        <option value="">-- Select Payment Method --</option>
+        <option value="E-Wallet">GridCitY E-Wallet (Bal: RM <?php echo number_format($current_balance, 2); ?>)</option>
+        <option value="Credit Card">💳 Credit / Debit Card</option>
+        <option value="Online Banking (FPX)">🏦 Online Banking (FPX)</option>
+        <option value="Cash on Delivery">🚚 Cash on Delivery (COD)</option>
+    </select>
+</div>
+
+<div id="credit_card_section" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 243, 255, 0.2); padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+    <h4 style="color: var(--accent-blue); margin-top: 0; margin-bottom: 15px; font-size: 1rem;"><i class="fa-regular fa-credit-card"></i> Select or Enter Card Details</h4>
+    
+    <?php if(!empty($saved_cards)): ?>
+        <?php foreach ($saved_cards as $index => $card): ?>
+            <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 10px; color: var(--text-muted); padding: 12px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                <input type="radio" name="selected_card" value="<?php echo htmlspecialchars($card['card_id']); ?>" style="margin-right: 15px;" onchange="toggleNewCardForm()" <?php echo $card['is_default'] ? 'checked' : ''; ?>>
+                <div style="flex: 1;">
+                    <strong style="color: var(--text-main);"><?php echo htmlspecialchars($card['card_brand']); ?> ending in <?php echo htmlspecialchars($card['last_four_digits']); ?></strong>
+                    <?php echo $card['is_default'] ? '<span style="margin-left: 8px; background: var(--accent-blue); color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">Default</span>' : ''; ?>
+                </div>
+            </label>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
+    <label style="display: flex; align-items: center; cursor: pointer; color: var(--text-main); padding: 12px; background: rgba(0, 243, 255, 0.05); border-radius: 6px; border: 1px dashed rgba(0, 243, 255, 0.5);">
+        <input type="radio" name="selected_card" value="new" style="margin-right: 15px;" onchange="toggleNewCardForm()">
+        <strong>➕ Pay with a New Card</strong>
+    </label>
+
+    <div id="new_card_form" style="display: none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+        <p style="font-size: 0.85rem; color: #ffcc00; margin-top: 0; margin-bottom: 15px;">
+            <i class="fa-solid fa-shield-halved"></i> <strong>FYP System Note:</strong> Details entered here will be verified against the Dummy Bank database before processing.
+        </p>
+        <div class="form-group" style="margin-bottom: 15px;">
+            <input type="text" name="dummy_card_name" placeholder="Name on Card (e.g., Ali Bin Abu)" class="form-control">
+        </div>
+        <div style="display: flex; gap: 15px;">
+            <input type="text" name="dummy_card_number" placeholder="Card Number (16 digits)" class="form-control" style="flex: 2;">
+            <input type="text" name="dummy_card_cvc" placeholder="CVC" class="form-control" style="flex: 1;" maxlength="3">
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleCardSection() {
+        var method = document.getElementById('payment_method').value;
+        var section = document.getElementById('credit_card_section');
+        
+        if (method === 'Credit Card') {
+            section.style.display = 'block';
+            toggleNewCardForm(); // 打開時檢查預設狀態
+        } else {
+            section.style.display = 'none';
+            document.getElementById('new_card_form').style.display = 'none';
+        }
+    }
+
+    function toggleNewCardForm() {
+        var radios = document.getElementsByName('selected_card');
+        var newCardForm = document.getElementById('new_card_form');
+        
+        for (var i = 0; i < radios.length; i++) {
+            if (radios[i].checked && radios[i].value === 'new') {
+                newCardForm.style.display = 'block';
+                return;
+            }
+        }
+        newCardForm.style.display = 'none';
+    }
+</script>
 
                     <button type="submit" class="btn btn-primary btn-submit-login" style="width: 100%; margin-top: 10px;">
                         <i class="fa-solid fa-check-double"></i> Confirm & Place Order

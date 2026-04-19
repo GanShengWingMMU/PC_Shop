@@ -46,14 +46,13 @@ if (isset($_GET['code'])) {
             $first_name = mysqli_real_escape_string($conn, $profile_data['given_name'] ?? 'Google');
             $last_name = mysqli_real_escape_string($conn, $profile_data['family_name'] ?? 'User');
 
-            $check_sql = "SELECT customer_id, first_name, last_name FROM customers WHERE email = '$email'";
+            $check_sql = "SELECT customer_id, username FROM customers WHERE email = '$email'";
             $result = $conn->query($check_sql);
 
             if ($result->num_rows > 0) {
                 $row = $result->fetch_assoc();
                 $_SESSION['customer_id'] = $row['customer_id'];
-                $_SESSION['first_name'] = $row['first_name'];
-                $_SESSION['last_name'] = $row['last_name'];
+                $_SESSION['username'] = $row['username'];
             } else {
                 $random_password = md5(time() . rand(1, 1000)); 
                 $insert_sql = "INSERT INTO customers (first_name, last_name, email, password, account_status) 
@@ -61,8 +60,7 @@ if (isset($_GET['code'])) {
                 
                 if ($conn->query($insert_sql) === TRUE) {
                     $_SESSION['customer_id'] = $conn->insert_id; 
-                    $_SESSION['first_name'] = $first_name;
-                    $_SESSION['last_name'] = $last_name;
+                    $_SESSION['username'] = $first_name . ' ' . $last_name;
                 }
             }
 

@@ -52,7 +52,7 @@ if (isset($_SESSION['customer_id'])) {
         <?php if(isset($_SESSION['customer_id'])): ?>
 <div class="profile-dropdown" style="position: relative; display: inline-block; margin-right: 15px;">
     <a href="profile.php" style="color: #00f2fe; text-decoration: none; padding-bottom: 5px;">
-        <i class="fas fa-user-astronaut"></i> Hi, <?php echo htmlspecialchars($_SESSION['first_name']); ?> <i class="fa-solid fa-chevron-down" style="font-size: 0.8rem; margin-left: 5px;"></i>
+        <i class="fas fa-user-astronaut"></i> Hi, <?php echo htmlspecialchars($_SESSION['username']); ?> <i class="fa-solid fa-chevron-down" style="font-size: 0.8rem; margin-left: 5px;"></i>
     </a>
     
     <div class="dropdown-content">

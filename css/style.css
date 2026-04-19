@@ -625,3 +625,39 @@ select.form-control option {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+        .order-tabs { display: flex; background: rgba(0,0,0,0.3); border-radius: 8px; margin-bottom: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+        .order-tabs a { flex: 1; text-align: center; padding: 15px 0; color: var(--text-muted); text-decoration: none; font-weight: bold; transition: 0.3s; border-bottom: 3px solid transparent; }
+        .order-tabs a:hover { color: var(--text-main); background: rgba(255,255,255,0.02); }
+        .order-tabs a.active { color: var(--accent-blue); border-bottom: 3px solid var(--accent-blue); background: rgba(0, 243, 255, 0.05); }
+
+        /* 全域進度條 (放在 Tabs 下方) */
+        .global-timeline { background: rgba(15, 20, 30, 0.95); border: 1px solid rgba(0, 243, 255, 0.3); border-radius: 10px; padding: 25px 10px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
+        .timeline { display: flex; justify-content: space-between; align-items: center; position: relative; max-width: 650px; margin: 0 auto; }
+        .timeline::before { content: ''; position: absolute; top: 15px; left: 40px; right: 40px; height: 3px; background: rgba(255,255,255,0.1); z-index: 1; }
+        .step { position: relative; z-index: 2; text-align: center; width: 90px; }
+        .step .icon { width: 32px; height: 32px; border-radius: 50%; background: #11151c; border: 3px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px auto; font-size: 0.85rem; transition: 0.4s; }
+        .step .text { font-size: 0.85rem; color: var(--text-muted); font-weight: bold; }
+        .step.active .icon { background: var(--accent-blue); border-color: rgba(0, 243, 255, 0.4); color: #000; box-shadow: 0 0 10px rgba(0, 243, 255, 0.4); }
+        .step.active .text { color: var(--text-main); }
+        .step.active ~ .step::after { display: none; }
+
+        .order-card { background: #11151c; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; margin-bottom: 30px; overflow: hidden; transition: 0.3s; }
+        .order-card:hover { border-color: rgba(0, 243, 255, 0.3); box-shadow: 0 5px 15px rgba(0, 243, 255, 0.1); }
+        .order-header { background: rgba(255, 255, 255, 0.02); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .order-body { padding: 25px; }
+        .order-item { display: flex; justify-content: space-between; padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px dashed rgba(255, 255, 255, 0.1); }
+        .order-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .order-footer { background: #0b0e14; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+        
+        .status-badge { padding: 4px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: bold; border: 1px solid; }
+        .badge-Pending { color: #ff9800; border-color: rgba(255, 152, 0, 0.3); background: rgba(255, 152, 0, 0.1); }
+        .badge-Processing { color: #03a9f4; border-color: rgba(3, 169, 244, 0.3); background: rgba(3, 169, 244, 0.1); }
+        .badge-Shipped { color: #00bcd4; border-color: rgba(0, 188, 212, 0.3); background: rgba(0, 188, 212, 0.1); }
+        .badge-Delivered { color: #8bc34a; border-color: rgba(139, 195, 74, 0.3); background: rgba(139, 195, 74, 0.1); }
+        .badge-Completed { color: #4caf50; border-color: rgba(76, 175, 80, 0.3); background: rgba(76, 175, 80, 0.1); }
+
+        .btn-rename { background: none; border: none; color: var(--text-muted); cursor: pointer; margin-left: 10px; transition: 0.3s; }
+        .btn-rename:hover { color: var(--accent-blue); }
+        .btn-received { background: var(--accent-blue); color: #000; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-received:hover { background: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
