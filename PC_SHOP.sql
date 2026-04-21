@@ -250,16 +250,18 @@ INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `full_address`, `
 --
 
 CREATE TABLE `orders` (
-  `order_id` int(11) NOT NULL,
-  `customer_id` int(11) NOT NULL,
-  `order_date` datetime DEFAULT current_timestamp(),
-  `total_amount` decimal(10,2) NOT NULL,
-  `coins_used` int(11) NOT NULL DEFAULT 0,
-  `discount_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `shipping_address` text NOT NULL,
-  `contact_number` varchar(20) NOT NULL,
-  `order_status` varchar(20) DEFAULT 'Pending'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  `order_id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL COMMENT '买家ID (对应users表的user_id)',
+  `total_amount` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '订单总金额',
+  `status` enum('Pending','Processing','Shipped','Completed','Cancelled') NOT NULL DEFAULT 'Pending' COMMENT '订单状态',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '下单时间',
+  PRIMARY KEY (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT INTO `orders` (`user_id`, `total_amount`, `status`, `created_at`) VALUES
+(1, 4599.00, 'Pending', '2026-04-20 10:30:00'),
+(2, 1250.50, 'Processing', '2026-04-21 14:15:00'),
+(1, 850.00, 'Shipped', '2026-04-19 09:20:00'),
+(3, 150.00, 'Completed', '2026-04-18 16:45:00');
 
 -- --------------------------------------------------------
 
@@ -837,3 +839,18 @@ ALTER TABLE `users` MODIFY `role` ENUM('superadmin', 'admin', 'customer') NOT NU
 
 INSERT INTO `users` (`username`, `password`, `email`, `role`) 
 VALUES ('superadmin', 'password', 'boss@pcshop.com', 'superadmin');
+
+CREATE TABLE `packages` (
+  `package_id` int(11) NOT NULL AUTO_INCREMENT,
+  `package_name` varchar(255) NOT NULL,
+  `description` text,
+  `price` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `image_url` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`package_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+INSERT INTO `packages` (`package_name`, `description`, `price`, `image_url`) VALUES
+('Esports Starter Pack', 'Ryzen 5 + RTX 3060, 16GB RAM. Perfect for 1080p gaming.', 3599.00, ''),
+('Ultimate Creator Pro', 'Intel i9 + RTX 4080, 64GB RAM, 2TB SSD. Built for heavy rendering.', 12999.00, '');
