@@ -39,7 +39,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_build'])) {
         $stmt->close();
 
         // [步骤 B]：把购物车里的零件，一个个打上这个文件夹的 ID 烙印，存入 build_items 表
-       
         $stmt_items = $conn->prepare("INSERT INTO build_items (pc_build, product_id, quantity) VALUES (?, ?, 1)");
         foreach ($cart as $cat_id => $item) {
             $pid = $item['product_id'];
@@ -47,6 +46,40 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_build'])) {
             $stmt_items->execute();
         }
         $stmt_items->close();
+
+        // ==========================================
+        // 🧠 核心黑科技 V2.0：基于花销比例的防偏见追踪
+        // (Component-Level Budget Allocation Analysis)
+        // ==========================================
+        $add_gamer = 0; $add_creator = 0; $add_student = 0;
+
+        // 1. 算出各大件花了多少钱 (1=CPU, 3=RAM, 4=GPU)
+        $gpu_spend = isset($cart[4]) ? $cart[4]['price'] : 0;
+        $cpu_spend = isset($cart[1]) ? $cart[1]['price'] : 0;
+        $ram_spend = isset($cart[3]) ? $cart[3]['price'] : 0;
+
+        // 2. 计算花销比例 (防除以 0 报错)
+        $gpu_ratio = $total_price > 0 ? ($gpu_spend / $total_price) : 0;
+        $cpu_ratio = $total_price > 0 ? ($cpu_spend / $total_price) : 0;
+
+        // 3. 终极无偏见判定
+        if ($gpu_ratio >= 0.35) {
+            // 只要显卡占了总价 35% 以上，绝对是打游戏的
+            $add_gamer = 5; $add_creator = 1; 
+        } elseif ($cpu_ratio >= 0.25 || $ram_spend >= 600) {
+            // CPU 占比极高，或者买了极贵的内存，说明是吃 CPU 的渲染/剪辑工作站
+            $add_creator = 5; $add_gamer = 2; $add_student = 1;
+        } else {
+            // 显卡占比低或没买独立显卡，判定为均衡型 / 学生 / 高端休闲机
+            $add_student = 5; $add_creator = 2; $add_gamer = 1;
+        }
+
+        // 悄悄更新数据库里的 DNA 分数
+        $stmt_dna = $conn->prepare("UPDATE customers SET pref_gamer = pref_gamer + ?, pref_creator = pref_creator + ?, pref_student = pref_student + ? WHERE customer_id = ?");
+        $stmt_dna->bind_param("iiii", $add_gamer, $add_creator, $add_student, $customer_id);
+        $stmt_dna->execute();
+        $stmt_dna->close();
+        // ==========================================
 
         $conn->commit();
         

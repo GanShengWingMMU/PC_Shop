@@ -36,7 +36,6 @@ if (isset($_GET['action'])) {
         header("Location: builder.php"); 
         exit();
     }
-    // 🌟 重新激活的“核爆级”一键清空引擎
     if ($_GET['action'] == 'clear') {
         unset($_SESSION['pc_build']); 
         header("Location: builder.php"); 
@@ -44,12 +43,12 @@ if (isset($_GET['action'])) {
     }
 }
 
-// initialize system situation （pc_build的诞生地）
 if (!isset($_SESSION['pc_build'])) { $_SESSION['pc_build'] = []; }
 $cart = $_SESSION['pc_build'];
+
+// 🌟 统一算价：这里只算原价总和，不打折
 $total_price = 0; $total_wattage = 0;
 foreach ($cart as $p) { $total_price += $p['price']; $total_wattage += $p['wattage']; }
-
 
 // ==========================================
 // 3. 动态属性嗅探 (Transitive Property Sniffer)
@@ -74,19 +73,19 @@ $rec_psu = ceil(($total_wattage + 100) / 50) * 50;
 // 4. 木桶效应与 AI 评级 (Tier & Bottleneck AI)
 // ==========================================
 $system_tier = "AWAITING CORE PARTS";
-$tier_color = "#555"; // 默认颜色
+$tier_color = "#555"; 
 $bottleneck_warning = "";
 
 if (isset($cart[1]) && isset($cart[2]) && isset($cart[4]) && isset($cart[6])) {
     if ($total_price >= 8000) {
         $system_tier = "GOD TIER (Enthusiast)";
-        $tier_color = "#ff007f"; //  重新激活的赛博粉色
+        $tier_color = "#ff007f"; 
     } elseif ($total_price >= 4000) {
         $system_tier = "HIGH-END (Pro Gaming)";
-        $tier_color = "#00e676"; //  重新激活的毒液绿色
+        $tier_color = "#00e676"; 
     } else {
         $system_tier = "MAINSTREAM (Entry)";
-        $tier_color = "#00f2fe"; //  重新激活的霓虹蓝色
+        $tier_color = "#00f2fe"; 
     }
 
     $cpu_price = $cart[1]['price'];
@@ -130,33 +129,40 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 
 <link rel="stylesheet" href="css/builder.css">
 <style>
-    /* 注入极其华丽的 CSS */
     :root { --accent: #00f2fe; --dark-card: rgba(255,255,255,0.03); }
     .builder-body { max-width: 1000px; margin: 2rem auto; padding: 0 20px; font-family: 'Inter', sans-serif; padding-bottom: 120px; }
-    
     .phase-title { margin: 40px 0 15px; color: var(--accent); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; font-size: 0.85rem; border-bottom: 1px solid rgba(0,242,254,0.2); padding-bottom: 8px; }
-    
     .slot-card { background: var(--dark-card); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px 25px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s; }
     .slot-card:hover { transform: translateY(-3px); }
-    
     .slot-locked { opacity: 0.35; filter: grayscale(1) blur(1px); pointer-events: none; user-select: none; background: rgba(0,0,0,0.2); }
     .slot-filled { border-color: var(--accent) !important; background: rgba(0,242,254,0.04); box-shadow: 0 4px 15px rgba(0,242,254,0.05); }
-
     .btn-action { padding: 8px 20px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; text-decoration: none; transition: 0.2s; cursor: pointer; border: 1px solid transparent; }
     .btn-select { background: var(--accent); color: #000; }
     .btn-select:hover { background: #fff; box-shadow: 0 0 15px var(--accent); }
     .btn-change { border-color: var(--accent); color: var(--accent); background: transparent; }
     .btn-change:hover { background: var(--accent); color: #000; }
     .lock-badge { background: #ff4d4d; color: #fff; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; font-weight: 800; letter-spacing: 1px; }
-
     .sticky-footer { display: flex; justify-content: space-between; align-items: center; background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(15px); padding: 15px 30px; border-top: 1px solid rgba(0,242,254,0.3); position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 -5px 30px rgba(0,0,0,0.6); }
-    .summary-stats { display: flex; gap: 30px; align-items: center; }
+    .summary-stats { display: flex; gap: 30px; align-items: flex-end; }
     .stat-box { display: flex; flex-direction: column; }
     .stat-label { font-size: 0.75rem; color: #888; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
     .stat-value { font-size: 1.2rem; font-weight: 900; color: #fff; }
 </style>
 
 <div class="builder-body">
+    
+    <?php if (isset($_SESSION['error_msg'])): ?>
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold;">
+            <i class="fas fa-exclamation-triangle"></i> <?php echo $_SESSION['error_msg']; unset($_SESSION['error_msg']); ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['success_msg'])): ?>
+        <div style="background: rgba(0, 230, 118, 0.1); border: 1px solid #00e676; color: #00e676; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold;">
+            <i class="fas fa-check-circle"></i> <?php echo $_SESSION['success_msg']; unset($_SESSION['success_msg']); ?>
+        </div>
+    <?php endif; ?>
+
     <div style="margin-bottom: 40px;">
         <h1 style="font-size: 2.8rem; font-weight: 900; margin: 0; letter-spacing: -1px; color: #fff;">SYSTEM <span style="color:var(--accent); text-shadow: 0 0 20px rgba(0,242,254,0.4);">ARCHITECT</span></h1>
         <p style="color: #888; font-size: 1.1rem;">Smart topological dependency engine & bottleneck AI active.</p>
@@ -183,7 +189,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         <?php foreach ($slots as $slot): 
             $cid = $slot['id'];
             $is_filled = isset($cart[$cid]);
-            
             $is_locked = false;
             foreach ($slot['req'] as $req_id) {
                 if (!isset($cart[$req_id])) { $is_locked = true; break; }
@@ -226,7 +231,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 
 <div class="sticky-footer">
     <div class="summary-stats">
-        <div class="stat-box" style="min-width: 150px;">
+        <div class="stat-box" style="min-width: 150px; justify-content: flex-end;">
             <span class="stat-label">SYSTEM TIER</span>
             <span class="stat-value" style="color: <?php echo $tier_color; ?>; text-shadow: 0 0 15px <?php echo $tier_color; ?>88;">
                 <?php echo $system_tier; ?>
@@ -237,12 +242,12 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                 </div>
             <?php endif; ?>
         </div>
-        <div class="stat-box">
+        <div class="stat-box" style="justify-content: flex-end;">
             <span class="stat-label">SYSTEM LOAD</span>
             <span class="stat-value"><i class="fas fa-bolt" style="color:#fbbf24; text-shadow: 0 0 10px rgba(251,191,36,0.4);"></i> <?php echo $total_wattage; ?> <small>W</small></span>
         </div>
-        <div class="stat-box">
-            <span class="stat-label">TOTAL PAYABLE</span>
+        <div class="stat-box" style="justify-content: flex-end; text-align: right; margin-left: 20px;">
+            <span class="stat-label">RAW COMPONENT VALUE</span>
             <span class="stat-value" style="color: var(--accent); font-size: 1.6rem; text-shadow: 0 0 15px rgba(0,242,254,0.4);">RM <?php echo number_format($total_price, 2); ?></span>
         </div>
     </div>
@@ -253,7 +258,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         </a>
         
         <?php if ($progress == 100): ?>
-            <a href="name_build.php" class="btn-action btn-select" style="font-size: 1.1rem; padding: 10px 30px; display: flex; align-items: center; box-shadow: 0 0 20px rgba(0,242,254,0.5);">
+            <a href="name_build.php" class="btn-action btn-select" style="font-size: 1.1rem; padding: 10px 30px; display: flex; align-items: center; box-shadow: 0 0 20px rgba(0,242,254,0.5);" title="Discounts applied at checkout!">
                 CHECKOUT <i class="fas fa-shopping-cart" style="margin-left: 8px;"></i>
             </a>
         <?php else: ?>

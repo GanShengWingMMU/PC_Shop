@@ -27,7 +27,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             unset($_SESSION['reset_email']);
             unset($_SESSION['demo_otp']);
 
-            header("Location: login.php?reset=success");
+            $safe_email = urlencode($email);
+            header("Location: login.php?reset=success&email=$safe_email");
             exit();
         } else {
             $message = "Database error. Please try again later.";
@@ -43,7 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GridCitY PC - Create New Password</title>
+    <title>GridCitY PC - Reset Password</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -66,12 +67,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 
                 <div class="form-group">
                     <label class="form-label" for="new_password">New Password</label>
-                    <input type="password" id="new_password" name="new_password" required placeholder="Enter new password" minlength="6" class="form-control">
+                    <div style="position: relative;">
+                        <input type="password" id="new_password" name="new_password" required placeholder="Enter new password" minlength="6" class="form-control" style="padding-right: 40px;">
+                        <i class="fas fa-eye toggle-password" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; transition: 0.2s;"></i>
+                    </div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="confirm_password">Confirm New Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" required placeholder="Confirm your new password" minlength="6" class="form-control">
+                    <div style="position: relative;">
+                        <input type="password" id="confirm_password" name="confirm_password" required placeholder="Confirm your new password" minlength="6" class="form-control" style="padding-right: 40px;">
+                        <i class="fas fa-eye toggle-password" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; transition: 0.2s;"></i>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-submit-login">Save Password</button>
@@ -79,6 +86,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
     </main>
 
+    <?php include 'includes/footer.php'; ?>
 
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleIcons = document.querySelectorAll('.toggle-password');
+        toggleIcons.forEach(function(icon) {
+            icon.addEventListener('click', function() {
+                const inputField = this.previousElementSibling;
+                if (inputField.type === 'password') {
+                    inputField.type = 'text';
+                    this.classList.remove('fa-eye');
+                    this.classList.add('fa-eye-slash');
+                    this.style.color = 'var(--accent-blue)';
+                } else {
+                    inputField.type = 'password';
+                    this.classList.remove('fa-eye-slash');
+                    this.classList.add('fa-eye');
+                    this.style.color = '#888';
+                }
+            });
+        });
+    });
+    </script>
 </body>
 </html>
