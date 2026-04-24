@@ -8,7 +8,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
     $password = $_POST['password'];
 
-    $sql = "SELECT * FROM users WHERE username = '$username' AND role = 'admin'";
+  $sql = "SELECT * FROM users WHERE username = '$username' AND (role = 'admin' OR role = 'superadmin')";
     $result = mysqli_query($conn, $sql);
 
     if (mysqli_num_rows($result) === 1) {
@@ -32,7 +32,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Login - PC SHOP</title>
+    <title>Admin Login - GridCity PC</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -121,7 +121,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <div class="login-container">
         <div class="login-header">
-            <h1>PC SHOP</h1>
+            <h1>GridCity PC</h1>
             <p>System Administration</p>
         </div>
 

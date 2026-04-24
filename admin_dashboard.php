@@ -2,9 +2,7 @@
 session_start();
 include 'db_connect.php'; 
 
-
-// 安全检查：必须是 admin 才能进入
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
@@ -33,15 +31,17 @@ $total_orders = mysqli_fetch_assoc($res_orders)['total'] ?? 0;
 $res_products = mysqli_query($conn, "SELECT COUNT(*) as total FROM products");
 $total_products = mysqli_fetch_assoc($res_products)['total'] ?? 0;
 
-$res_users = mysqli_query($conn, "SELECT COUNT(*) as total FROM customers");
+// 修正：数据库里记录顾客的表如果是 users，那就改成 users，如果真的是 customers 就不用动
+// 这里我先帮你默认成 users，因为前面我们都是用 users 表的
+$res_users = mysqli_query($conn, "SELECT COUNT(*) as total FROM users WHERE role = 'customer'");
 $total_users = mysqli_fetch_assoc($res_users)['total'] ?? 0;
 
-// --- PART B: 准备图表数据 ---
+// --- PART B: 准备图表数据 (✅ 这里已经完美改成 created_at) ---
 $dates_arr = [];
 $amounts_arr = [];
-$sql_trend = "SELECT DATE(order_date) as date, SUM(total_amount) as daily_total 
+$sql_trend = "SELECT DATE(created_at) as date, SUM(total_amount) as daily_total 
               FROM orders 
-              GROUP BY DATE(order_date) ORDER BY date DESC LIMIT 7"; 
+              GROUP BY DATE(created_at) ORDER BY date DESC LIMIT 7"; 
 $res_trend = mysqli_query($conn, $sql_trend);
 
 if ($res_trend) {
@@ -78,33 +78,39 @@ try {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - PC Shop Admin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/admin_style.css">
+    <title>Dashboard - GridCity PC Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/admin_style.css?v=<?php echo time(); ?>">
 </head>
 <body>
     <div class="sidebar">
         <h2>
             <img src="image/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
-            <span>PC SHOP</span>
+            <span>GridCity PC</span>
         </h2>
         <ul>
-            <li><a href="admin_dashboard.php">Dashboard</a></li>
+            <li><a href="admin_dashboard.php" class="active">Dashboard</a></li>
             <li><a href="manage_products.php">Products</a></li> 
             <li><a href="manage_categories.php">Categories</a></li>
             <li><a href="manage_orders.php">Orders</a></li>
             <li><a href="admin_builder.php">Build System</a></li>
-            <li><a href="manage_users.php">Users</a></li>
+            
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'superadmin'): ?>
+                <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                <li><a href="manage_users.php">Manage Customers</a></li>
+            <?php endif; ?>
+            
             <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
         </ul>
     </div>
 
     <div class="main-content">
         <div class="header">
-            <h1>Dashboard Overview</h1>
+            <h1 style="margin: 0; font-size: 28px; color: var(--text-main);">Dashboard Overview</h1>
         </div>
 
-        <div class="dashboard-cards">
+        <div class="dashboard-cards" style="margin-top: 20px;">
             <div class="card">
                 <h3>Total Revenue</h3>
                 <div class="number">RM <?php echo number_format($total_sales, 2); ?></div>
@@ -130,12 +136,12 @@ try {
 
         <div class="bottom-sections">
             <div class="table-section">
-                <h3>Recent builds</h3>
+                <h3>Recent orders</h3>
                 <table>
                     <thead>
                         <tr>
-                            <th>Orders ID</th>
-                            <th>Customers Ordered Spec</th>
+                            <th>Order ID</th>
+                            <th>Description</th>
                             <th>Price</th>
                             <th>Status</th>
                             <th>Actions</th>
@@ -143,33 +149,34 @@ try {
                     </thead>
                     <tbody>
                         <?php
-                        $sql_recent = "SELECT * FROM orders ORDER BY order_date DESC LIMIT 5";
+                        // ✅ 修正：正确抓取最近的 5 个订单
+                        $sql_recent = "SELECT * FROM orders ORDER BY created_at DESC LIMIT 5";
                         $res_recent = mysqli_query($conn, $sql_recent);
 
                         if ($res_recent && mysqli_num_rows($res_recent) > 0) {
                             while($row = mysqli_fetch_assoc($res_recent)) {
                                 $status = isset($row['status']) ? $row['status'] : 'Completed';
-                                $status_badge = ($status == 'Pending') ? 'status-pending' : 'status-completed';
+                                // 赋予颜色
+                                $status_badge = 'status-pending'; 
+                                if ($status == 'Completed' || $status == 'Shipped') $status_badge = 'status-completed';
 
                                 echo "<tr>";
-                                echo "<td>#" . (isset($row['order_id']) ? $row['order_id'] : 'N/A') . "</td>";
+                                echo "<td><strong>#" . $row['order_id'] . "</strong></td>";
                                 
-                                $specs = isset($row['specs']) ? $row['specs'] : "Custom PC Build"; 
-                                echo "<td>" . $specs . "</td>";
+                                echo "<td>Custom PC Build / Order items</td>";
                                 
                                 $amount = isset($row['total_amount']) ? $row['total_amount'] : 0;
-                                echo "<td>RM " . number_format($amount, 2) . "</td>";
+                                echo "<td><strong style='color: var(--accent-blue);'>RM " . number_format($amount, 2) . "</strong></td>";
                                 
                                 echo "<td><span class='status-badge {$status_badge}'>" . $status . "</span></td>";
                                 
-                                $order_id_link = isset($row['order_id']) ? $row['order_id'] : '#';
-                                echo "<td><a href='view_order.php?id=" . $order_id_link . "' class='btn-action' style='text-decoration: none; display: inline-block;'>View</a></td>";
+                                echo "<td><a href='manage_orders.php' class='btn-action' style='text-decoration: none; display: inline-block;'>View</a></td>";
                                 echo "</tr>";
                             }
                         } else {
                             echo "<tr>
-                                    <td colspan='5' style='text-align: center; padding: 30px; color: #888; font-style: italic; font-weight: bold;'>
-                                        (there is not any products included)
+                                    <td colspan='5' style='text-align: center; padding: 30px; color: var(--text-muted); font-style: italic;'>
+                                        (No recent orders found)
                                     </td>
                                   </tr>";
                         }
@@ -180,20 +187,20 @@ try {
 
             <div class="side-section">
                 <div class="widget-box">
-                    <h3 style="color: #8a2be2; margin-top:0;">Stock Alert</h3>
-                    <p><strong>Remaining quantity:</strong></p>
-                    <ul style="color: #666; font-size: 14px; padding-left: 20px;">
-                        <li>ROG Strix B650-A (2 left)</li>
-                        <li>Corsair 850W Gold (Out of stock)</li>
+                    <h3 style="color: var(--accent-purple); margin-top:0;">Stock Alert</h3>
+                    <p style="color: var(--text-muted);"><strong>Remaining quantity:</strong></p>
+                    <ul style="color: var(--text-main); font-size: 14px; padding-left: 20px;">
+                        <li>ROG Strix B650-A <span style="color: var(--accent-danger);">(2 left)</span></li>
+                        <li>Corsair 850W Gold <span style="color: var(--accent-danger);">(Out of stock)</span></li>
                     </ul>
-                    <a href="inventory_status.php" style="font-size: 12px; color: #8a2be2; text-decoration: none; font-weight: bold;">Check the fully remaining quantity &rarr;</a>
+                    <a href="manage_products.php" style="font-size: 12px; color: var(--accent-purple); text-decoration: none; font-weight: bold;">Check all inventory &rarr;</a>
                 </div>
 
                 <div class="widget-box">
-                    <h3 style="margin-top:0;">Quick action</h3>
-                    <a href="add_product.php" class="quick-action-btn">+ Add product</a>
-                    <a href="manage_products.php" class="quick-action-btn">Edit products</a>
-                    <a href="pending_orders.php" class="quick-action-btn">Pending Builds</a>
+                    <h3 style="margin-top:0; color: var(--text-main);">Quick action</h3>
+                    <a href="add_product.php" class="quick-action-btn"><i class="fas fa-plus"></i> Add product</a>
+                    <a href="manage_products.php" class="quick-action-btn" style="background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue);"><i class="fas fa-edit"></i> Edit products</a>
+                    <a href="manage_orders.php" class="quick-action-btn" style="background: transparent; border: 1px solid var(--accent-purple); color: var(--accent-purple);"><i class="fas fa-box"></i> Manage Orders</a>
                 </div>
             </div>
         </div>

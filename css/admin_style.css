@@ -467,3 +467,20 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); backgro
 
 .price-display { display: flex; justify-content: space-between; color: var(--text-muted); font-weight: bold; font-size: 14px; }
 .price-display span span { color: var(--accent-blue); font-size: 16px; text-shadow: 0 0 5px rgba(0,242,254,0.3); }
+
+.manage_order 
+{.badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+.badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .badge-pending { background: rgba(243, 156, 18, 0.1); color: var(--accent-warning); border: 1px solid rgba(243, 156, 18, 0.3); }
+        .badge-processing { background: rgba(0, 242, 254, 0.1); color: var(--accent-blue); border: 1px solid rgba(0, 242, 254, 0.3); }
+        .badge-shipped { background: rgba(155, 89, 182, 0.1); color: #9b59b6; border: 1px solid rgba(155, 89, 182, 0.3); }
+        .badge-completed { background: rgba(0, 230, 118, 0.1); color: #00e676; border: 1px solid rgba(0, 230, 118, 0.3); }
+        .badge-cancelled { background: rgba(255, 77, 77, 0.1); color: var(--accent-danger); border: 1px solid rgba(255, 77, 77, 0.3); }
+        
+        /* 下拉菜单暗黑美化 */
+        .status-select 
+        {
+            background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color);
+            padding: 6px; border-radius: 4px; font-family: 'Inter', sans-serif; cursor: pointer;
+        }
+}

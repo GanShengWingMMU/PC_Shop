@@ -1,0 +1,279 @@
+<?php
+session_start();
+require_once 'config.php';
+
+
+$categories = [];
+$cat_query = "SELECT * FROM categories ORDER BY category_name ASC";
+$cat_result = $conn->query($cat_query);
+while ($row = $cat_result->fetch_assoc()) {
+    $categories[] = $row;
+}
+
+
+$active_category_id = isset($_GET['category']) ? intval($_GET['category']) : 0; 
+$min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? floatval($_GET['min_price']) : 0;
+$max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? floatval($_GET['max_price']) : 0;
+
+
+$conditions = ["stock_quantity > 0"]; 
+$params = [];
+$types = "";
+
+if ($active_category_id > 0) {
+    $conditions[] = "category_id = ?";
+    $params[] = $active_category_id;
+    $types .= "i";
+}
+
+if ($min_price > 0) {
+    $conditions[] = "price >= ?";
+    $params[] = $min_price;
+    $types .= "d";
+}
+
+if ($max_price > 0) {
+    $conditions[] = "price <= ?";
+    $params[] = $max_price;
+    $types .= "d";
+}
+
+
+$where_clause = implode(" AND ", $conditions);
+$prod_query = "SELECT * FROM products WHERE $where_clause ORDER BY product_name ASC";
+
+
+$stmt = $conn->prepare($prod_query);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params); 
+}
+$stmt->execute();
+$prod_result = $stmt->get_result();
+
+$products = [];
+while ($row = $prod_result->fetch_assoc()) {
+    $products[] = $row;
+}
+$stmt->close();
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Components Shop - GridCitY PC</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .shop-layout {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+            align-items: flex-start;
+        }
+
+
+        .shop-sidebar {
+            width: 250px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            position: sticky;
+            top: 90px; 
+        }
+        .shop-sidebar h3 {
+            color: var(--text-main);
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+        .cat-link {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            transition: 0.3s;
+        }
+        .cat-link:hover {
+            background: rgba(0, 243, 255, 0.05);
+            color: var(--accent-blue);
+        }
+        .cat-link.active {
+            background: var(--accent-blue);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .shop-main {
+            flex: 1;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+        
+        .product-card {
+            background: var(--bg-surface);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 243, 255, 0.1);
+            border-color: rgba(0, 243, 255, 0.3);
+        }
+        .product-img {
+            width: 100%;
+            height: 180px;
+            object-fit: contain;
+            margin-bottom: 15px;
+            transition: transform 0.3s;
+        }
+        .product-card:hover .product-img {
+            transform: scale(1.05); 
+        }
+        .product-title {
+            color: var(--text-main);
+            font-size: 1rem;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            flex-grow: 1; 
+        }
+        .product-price {
+            color: var(--accent-blue);
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .btn-add-cart {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            color: var(--accent-blue);
+            border: 1px solid var(--accent-blue);
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-add-cart:hover {
+            background: var(--accent-blue);
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+<?php include 'includes/header.php'; ?>
+
+<main class="main-container">
+    <div class="auth-title" style="text-align: left; margin-bottom: 10px;">
+        <h2><i class="fa-solid fa-microchip"></i> Components Shop</h2>
+        <p class="specs">Upgrade your rig with top-tier hardware.</p>
+    </div>
+
+    <div class="shop-layout">
+        
+<aside class="shop-sidebar">
+            <h3>Categories</h3>
+            
+            <?php
+            $price_params = "";
+            if ($min_price > 0) $price_params .= "&min_price=" . $min_price;
+            if ($max_price > 0) $price_params .= "&max_price=" . $max_price;
+            ?>
+
+            <a href="components.php?category=0<?php echo $price_params; ?>" class="cat-link <?php echo ($active_category_id == 0) ? 'active' : ''; ?>">
+                <span><i class="fa-solid fa-border-all" style="margin-right: 8px;"></i> All Components</span>
+            </a>
+            
+            <?php foreach ($categories as $cat): ?>
+                <a href="components.php?category=<?php echo $cat['category_id'] . $price_params; ?>" 
+                   class="cat-link <?php echo ($active_category_id == $cat['category_id']) ? 'active' : ''; ?>">
+                    <span><?php echo htmlspecialchars($cat['category_name']); ?></span>
+                </a>
+            <?php endforeach; ?>
+
+            <h3 style="margin-top: 30px;"><i class="fa-solid fa-filter" style="font-size: 0.9rem;"></i> Filter by Price</h3>
+            <form action="components.php" method="GET" style="padding-top: 10px;">
+                
+                <?php if ($active_category_id > 0): ?>
+                    <input type="hidden" name="category" value="<?php echo $active_category_id; ?>">
+                <?php endif; ?>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="number" name="min_price" placeholder="Min RM" value="<?php echo $min_price > 0 ? $min_price : ''; ?>" min="0" style="width: 100%; padding: 8px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-main); font-size: 0.9rem; outline: none; transition: 0.3s;" onfocus="this.style.borderColor='var(--accent-blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+
+                    <input type="number" name="max_price" placeholder="Max RM" value="<?php echo $max_price > 0 ? $max_price : ''; ?>" min="0" style="width: 100%; padding: 8px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-main); font-size: 0.9rem; outline: none; transition: 0.3s;" onfocus="this.style.borderColor='var(--accent-blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                </div>
+
+                <button type="submit" style="width: 100%; padding: 10px; background: var(--accent-blue); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow='0 0 15px rgba(0,243,255,0.4)'" onmouseout="this.style.boxShadow='none'">
+                    Apply Filter
+                </button>
+
+                <?php if ($min_price > 0 || $max_price > 0): ?>
+                    <a href="components.php<?php echo $active_category_id > 0 ? '?category='.$active_category_id : ''; ?>" style="display: block; text-align: center; margin-top: 15px; color: #ff4d4d; font-size: 0.85rem; text-decoration: none; transition: 0.3s;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                        <i class="fa-solid fa-xmark"></i> Clear Price Filter
+                    </a>
+                <?php endif; ?>
+            </form>
+        </aside>
+
+        <main class="shop-main">
+            <?php if (empty($products)): ?>
+                <div style="padding: 50px; text-align: center; border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px;">
+                    <i class="fa-solid fa-box-open" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 15px;"></i>
+                    <h3 style="color: var(--text-main);">No products found</h3>
+                    <p style="color: var(--text-muted);">We are restocking soon. Please check another category.</p>
+                </div>
+            <?php else: ?>
+                <div class="product-grid">
+                    <?php foreach ($products as $p): ?>
+                        <div class="product-card">
+                            
+                            <a href="product_detail.php?id=<?php echo $p['product_id']; ?>" style="text-decoration: none;">
+                                <img src="<?php echo htmlspecialchars($p['image_url'] ? $p['image_url'] : 'image/placeholder.png'); ?>" alt="Product" class="product-img">
+                                <h4 class="product-title"><?php echo htmlspecialchars($p['product_name']); ?></h4>
+                            </a>
+                            
+                            <div>
+                                <div class="product-price">RM <?php echo number_format($p['price'], 2); ?></div>
+                                
+                                <form action="add_to_cart.php" method="POST">
+                                    <input type="hidden" name="product_id" value="<?php echo $p['product_id']; ?>">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="btn-add-cart">
+                                        <i class="fa-solid fa-cart-plus"></i> Add to Cart
+                                    </button>
+                                </form>
+                            </div>
+
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </main>
+
+    </div>
+</main>
+
+<?php include 'includes/footer.php'; ?>
+
+</body>
+</html>

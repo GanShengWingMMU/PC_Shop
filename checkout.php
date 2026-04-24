@@ -22,18 +22,29 @@ $stmt_user->close();
 $current_balance = $user_data['wallet_balance'];
 $current_coins = $user_data['reward_coins'];
 
-$default_address = "";
-$address_query = "SELECT full_address FROM customer_addresses WHERE customer_id = ? AND is_default = 1 LIMIT 1";
+// 取得所有地址
+$saved_addresses = [];
+$address_query = "SELECT * FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
 $stmt_addr = $conn->prepare($address_query);
 $stmt_addr->bind_param("i", $customer_id);
 $stmt_addr->execute();
 $addr_result = $stmt_addr->get_result();
-
-if ($addr_result->num_rows > 0) {
-    $addr_data = $addr_result->fetch_assoc();
-    $default_address = $addr_data['full_address'];
+while ($addr = $addr_result->fetch_assoc()) {
+    $saved_addresses[] = $addr;
 }
 $stmt_addr->close();
+
+// 取得綁定的信用卡
+$saved_cards = [];
+$query_cards = "SELECT * FROM saved_cards WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
+$stmt_cards = $conn->prepare($query_cards);
+$stmt_cards->bind_param("i", $customer_id);
+$stmt_cards->execute();
+$res_cards = $stmt_cards->get_result();
+while ($card = $res_cards->fetch_assoc()) {
+    $saved_cards[] = $card;
+}
+$stmt_cards->close();
 
 // 取得購物車內容與計算原始總價
 $cart_query = "SELECT c.cart_id, c.quantity, 
@@ -65,7 +76,6 @@ $stmt->close();
 
 // ==========================================
 // 🧠 企业级动态结算引擎 (Enterprise Checkout Engine)
-// 统一根据购买力度进行划档打折
 // ==========================================
 $system_discount_amount = 0;
 $system_discount_name = "";
@@ -81,13 +91,16 @@ if ($total_amount >= 8000) {
     $system_discount_amount = $total_amount * 0.03;
 }
 
-
-// 處理結帳送出表單 (POST Request)
+// ==========================================
+// 🚀 核心重构：处理结账表单 (POST Request)
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $shipping_address = mysqli_real_escape_string($conn, $_POST['shipping_address']);
-    $payment_method = mysqli_real_escape_string($conn, $_POST['payment_method']);
     
-    // 計算金幣折扣邏輯 (10 Coins = RM 1)
+    // 1. 抓取表单核心数据
+    $shipping_address = $_POST['shipping_address'] ?? '';
+    $payment_method = $_POST['payment_method'] ?? '';
+    
+    // 2. 计算金币与最终总额
     $use_coins = isset($_POST['use_coins']) ? true : false;
     $coins_used = 0;
     $coins_discount_amount = 0;
@@ -97,19 +110,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $coins_discount_amount = floor($current_coins / 10); 
     }
 
-    // 🌟 计算最终总折扣和应付总额
     $total_discount = $system_discount_amount + $coins_discount_amount;
-    $final_amount = $total_amount - $total_discount;
-    if ($final_amount < 0) $final_amount = 0; 
+    $final_amount = max(0, $total_amount - $total_discount); 
 
-    // 金流安全檢查
-    if ($payment_method === 'E-Wallet' && $current_balance < $final_amount) {
-        $error_message = "Insufficient E-Wallet balance! Please top up or choose another payment method.";
-    } else {
+    // 3. 支付方式深度校验 (Payment Validation Logic)
+    $final_payment_method = $payment_method;
+    $payment_is_valid = true;
+
+    if (empty($shipping_address)) {
+        $error_message = "Delivery address is missing.";
+        $payment_is_valid = false;
+    } elseif (empty($payment_method)) {
+        $error_message = "Please select a payment method.";
+        $payment_is_valid = false;
+    } elseif ($payment_method === 'E-Wallet') {
+        if ($current_balance < $final_amount) {
+            $error_message = "Insufficient E-Wallet balance! Please top up.";
+            $payment_is_valid = false;
+        }
+    } elseif ($payment_method === 'Online Banking (FPX)') {
+        $selected_bank = $_POST['selected_bank'] ?? '';
+        if (empty($selected_bank)) {
+            $error_message = "Please select a bank for Online Banking.";
+            $payment_is_valid = false;
+        } else {
+            $final_payment_method = "FPX - " . $selected_bank;
+        }
+    } elseif ($payment_method === 'Credit Card') {
+        $selected_card = $_POST['selected_card'] ?? '';
+        if ($selected_card === 'new') {
+            $dummy_num = $_POST['dummy_card_number'] ?? '';
+            // FYP 级别验证：只要卡号不少于15位即可，不查真实数据库
+            if (empty($dummy_num) || strlen($dummy_num) < 15) {
+                $error_message = "Please enter a valid 16-digit card number.";
+                $payment_is_valid = false;
+            } else {
+                $final_payment_method = "Credit Card ending in " . substr($dummy_num, -4);
+            }
+        } else {
+            $card_id = intval($selected_card);
+            $saved_query = "SELECT card_brand, last_four_digits FROM saved_cards WHERE card_id = ? AND customer_id = ?";
+            $saved_stmt = $conn->prepare($saved_query);
+            $saved_stmt->bind_param("ii", $card_id, $customer_id);
+            $saved_stmt->execute();
+            $saved_result = $saved_stmt->get_result();
+            if ($saved_row = $saved_result->fetch_assoc()) {
+                $final_payment_method = $saved_row['card_brand'] . " ending in " . $saved_row['last_four_digits'];
+            } else {
+                $error_message = "Invalid saved card selected.";
+                $payment_is_valid = false;
+            }
+            $saved_stmt->close();
+        }
+    }
+
+    // 4. 执行 ACID 数据库事务 (Transaction)
+    if ($payment_is_valid) {
         $conn->begin_transaction();
 
         try {
-            // A. 寫入 orders 表 (记录总折扣额)
+            // A. 寫入 orders 表
             $order_status = 'Pending';
             $insert_order = "INSERT INTO orders (customer_id, total_amount, discount_amount, coins_used, order_status, shipping_address) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt_order = $conn->prepare($insert_order);
@@ -135,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $payment_status = ($payment_method == 'Cash on Delivery') ? 'Pending' : 'Paid';
             $insert_payment = "INSERT INTO payments (order_id, payment_method, payment_status) VALUES (?, ?, ?)";
             $stmt_payment = $conn->prepare($insert_payment);
-            $stmt_payment->bind_param("iss", $order_id, $payment_method, $payment_status);
+            $stmt_payment->bind_param("iss", $order_id, $final_payment_method, $payment_status);
             $stmt_payment->execute();
             $stmt_payment->close();
 
@@ -199,7 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $conn->commit();
             $_SESSION['success_msg'] = "Order placed successfully! Your Order ID is #$order_id";
-            header("Location: profile.php");
+            header("Location: my_orders.php"); // 跳转到订单历史
             exit();
 
         } catch (Exception $e) {
@@ -229,7 +289,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="specs">Complete your order details below. Automatic volume discounts apply.</p>
         </div>
 
-        <?php if (!empty($error_message)) echo "<div class='text-danger' style='margin-bottom: 20px; border: 1px solid #ff4d4d; padding: 15px; border-radius: 8px; background: rgba(255,77,77,0.1);'><i class='fa-solid fa-circle-exclamation'></i> $error_message</div>"; ?>
+        <?php 
+        if (isset($_SESSION['error_msg'])) {
+            echo "<div class='text-danger' style='margin-bottom: 20px; border-left: 4px solid #ff4d4d; padding-left: 10px; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 8px;'><i class='fa-solid fa-circle-exclamation'></i> " . $_SESSION['error_msg'] . "</div>";
+            unset($_SESSION['error_msg']);
+        }
+        if (!empty($error_message)) {
+            echo "<div class='text-danger' style='margin-bottom: 20px; border-left: 4px solid #ff4d4d; padding-left: 10px; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 8px;'><i class='fa-solid fa-circle-exclamation'></i> $error_message</div>";
+        }
+        ?>
 
         <div class="checkout-grid">
             
@@ -237,9 +305,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h3 style="margin-bottom: 20px; color: var(--text-main);"><i class="fa-solid fa-truck-fast"></i> Shipping & Payment</h3>
                 
                 <form action="checkout.php" method="POST" class="form" id="checkoutForm">
+                    
                     <div class="form-group input-group">
-                        <label class="form-label" for="shipping_address">Full Delivery Address</label>
-                        <textarea id="shipping_address" name="shipping_address" class="form-control" rows="3" required placeholder="Enter your full home address..."><?php echo htmlspecialchars($default_address); ?></textarea>
+                        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <span><i class="fa-solid fa-location-dot"></i> Delivery Address</span>
+                            <a href="profile.php" style="color: var(--accent-blue); font-size: 0.85rem; text-decoration: none;">
+                                <i class="fa-solid fa-plus"></i> Add New Address
+                            </a>
+                        </label>
+
+                        <?php if(!empty($saved_addresses)): ?>
+                            <div id="active_address_display" style="padding: 15px; background: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.3); border-radius: 8px; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                <div id="current_address_text" style="color: var(--text-main); line-height: 1.5; white-space: pre-wrap;">
+                                    Loading address...
+                                </div>
+                                <button type="button" onclick="toggleAddressList()" style="background: none; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='rgba(0,243,255,0.1)'" onmouseout="this.style.background='none'">
+                                    Change
+                                </button>
+                            </div>
+
+                            <div id="address_selection_list" style="display: none; margin-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+                                <?php foreach ($saved_addresses as $addr): ?>
+                                    <?php 
+                                        $recipient = !empty($addr['recipient_name']) ? $addr['recipient_name'] : 'Sheng Wing Gan';
+                                        $phone = !empty($addr['phone_number']) ? $addr['phone_number'] : '0162058560';
+                                        if (!empty($addr['address_line1'])) {
+                                            $full_text = $recipient . " | " . $phone . "\n" . $addr['address_line1'] . ", " . $addr['postcode'] . " " . $addr['city'] . ", " . $addr['state'];
+                                        } else {
+                                            if (strpos($addr['full_address'], '|') !== false) {
+                                                $full_text = $addr['full_address'];
+                                            } else {
+                                                $full_text = $recipient . " | " . $phone . "\n" . $addr['full_address'];
+                                            }
+                                        }
+                                    ?>
+                                    <label style="display: flex; align-items: flex-start; cursor: pointer; margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" class="address-option">
+                                        <input type="radio" name="shipping_address" value="<?php echo htmlspecialchars($full_text); ?>" style="margin-right: 15px; margin-top: 5px;" onchange="updateActiveAddress(this)" <?php echo $addr['is_default'] ? 'checked' : ''; ?>>
+                                        <div style="flex: 1;">
+                                            <?php if($addr['is_default']): ?>
+                                                <span style="background: var(--accent-blue); color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-bottom: 5px; display: inline-block;">Default</span><br>
+                                            <?php endif; ?>
+                                            
+                                            <?php if (!(empty($addr['address_line1']) && strpos($addr['full_address'], '|') !== false)): ?>
+                                                <span style="font-weight: bold; color: var(--text-main); font-size: 0.95rem; display: block; margin-bottom: 4px;">
+                                                    <?php echo htmlspecialchars($recipient); ?> | <?php echo htmlspecialchars($phone); ?>
+                                                </span>
+                                            <?php endif; ?>
+                                            
+                                            <span style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; display: block;">
+                                                <?php 
+                                                    if (!empty($addr['address_line1'])) {
+                                                        echo htmlspecialchars($addr['address_line1']) . "<br>";
+                                                        if (!empty($addr['address_line2'])) echo htmlspecialchars($addr['address_line2']) . "<br>";
+                                                        echo htmlspecialchars($addr['postcode']) . " " . htmlspecialchars($addr['city']) . ", " . htmlspecialchars($addr['state']) . "<br>";
+                                                        echo htmlspecialchars($addr['country'] ?? 'Malaysia');
+                                                    } else {
+                                                        echo nl2br(htmlspecialchars($addr['full_address'])); 
+                                                    }
+                                                ?>
+                                            </span>
+                                        </div>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div style="padding: 20px; text-align: center; border: 1px dashed #ff4d4d; border-radius: 8px;">
+                                <p style="color: #ff4d4d;">Please add a shipping address in your profile first.</p>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <?php if ($current_coins >= 10): ?>
@@ -255,13 +388,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endif; ?>
 
                     <div class="form-group input-group">
-                        <label class="form-label" for="payment_method">Payment Method</label>
-                        <select id="payment_method" name="payment_method" class="form-control" required>
+                        <label class="form-label" style="display: flex; justify-content: space-between;">
+                            <span>Payment Method</span>
+                        </label>
+                        
+                        <select id="payment_method" name="payment_method" class="form-control" required onchange="togglePaymentSections()" style="background-color: var(--bg-surface); color: var(--text-main);">
+                            <option value="">-- Select Payment Method --</option>
                             <option value="E-Wallet">GridCitY E-Wallet (Bal: RM <?php echo number_format($current_balance, 2); ?>)</option>
-                            <option value="Credit Card">Credit Card (Mock Payment)</option>
-                            <option value="Online Banking">Online Banking (FPX)</option>
-                            <option value="Cash on Delivery">Cash on Delivery (COD)</option>
+                            <option value="Credit Card">💳 Credit / Debit Card</option>
+                            <option value="Online Banking (FPX)">🏦 Online Banking (FPX)</option>
+                            <option value="Cash on Delivery">🚚 Cash on Delivery (COD)</option>
                         </select>
+                    </div>
+
+                    <div id="credit_card_section" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 243, 255, 0.2); padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+                        <h4 style="color: var(--accent-blue); margin-top: 0; margin-bottom: 15px; font-size: 1rem;"><i class="fa-regular fa-credit-card"></i> Select or Enter Card Details</h4>
+                        
+                        <?php if(!empty($saved_cards)): ?>
+                            <?php foreach ($saved_cards as $index => $card): ?>
+                                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 10px; color: var(--text-muted); padding: 12px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                                    <input type="radio" name="selected_card" value="<?php echo htmlspecialchars($card['card_id']); ?>" style="margin-right: 15px;" onchange="toggleNewCardForm()" <?php echo $card['is_default'] ? 'checked' : ''; ?>>
+                                    <div style="flex: 1;">
+                                        <strong style="color: var(--text-main);"><?php echo htmlspecialchars($card['card_brand']); ?> ending in <?php echo htmlspecialchars($card['last_four_digits']); ?></strong>
+                                        <?php echo $card['is_default'] ? '<span style="margin-left: 8px; background: var(--accent-blue); color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">Default</span>' : ''; ?>
+                                    </div>
+                                </label>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+
+                        <label style="display: flex; align-items: center; cursor: pointer; color: var(--text-main); padding: 12px; background: rgba(0, 243, 255, 0.05); border-radius: 6px; border: 1px dashed rgba(0, 243, 255, 0.5);">
+                            <input type="radio" name="selected_card" value="new" style="margin-right: 15px;" onchange="toggleNewCardForm()" <?php echo empty($saved_cards) ? 'checked' : ''; ?>>
+                            <strong>➕ Pay with a New Card</strong>
+                        </label>
+
+                        <div id="new_card_form" style="<?php echo empty($saved_cards) ? 'block' : 'none'; ?>; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                            <p style="font-size: 0.85rem; color: #ffcc00; margin-top: 0; margin-bottom: 15px;">
+                                <i class="fa-solid fa-shield-halved"></i> <strong>FYP System Note:</strong> Please enter any 16-digit number for simulation.
+                            </p>
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <input type="text" name="dummy_card_name" placeholder="Name on Card (e.g., Ali Bin Abu)" class="form-control">
+                            </div>
+                            <div style="display: flex; gap: 15px;">
+                                <input type="text" name="dummy_card_number" placeholder="Card Number (16 digits)" class="form-control" style="flex: 2;" maxlength="16">
+                                <input type="text" name="dummy_card_cvc" placeholder="CVC" class="form-control" style="flex: 1;" maxlength="3">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="fpx_section" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 243, 255, 0.2); padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+                        <h4 style="color: var(--accent-blue); margin-top: 0; margin-bottom: 15px; font-size: 1rem;"><i class="fa-solid fa-building-columns"></i> Select Your Bank</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                            
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                                <input type="radio" name="selected_bank" value="Maybank2U" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;">
+                                <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
+                                    <img src="image/maybank.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                                </div>
+                            </label>
+
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                                <input type="radio" name="selected_bank" value="CIMB Clicks" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;">
+                                <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
+                                    <img src="image/cimb.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                                </div>
+                            </label>
+
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                                <input type="radio" name="selected_bank" value="Public Bank" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;">
+                                <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
+                                    <img src="image/public.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                                </div>
+                            </label>
+
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                                <input type="radio" name="selected_bank" value="RHB Now" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;">
+                                <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
+                                    <img src="image/rhb.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                                </div>
+                            </label>
+
+                        </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary btn-submit-login" style="width: 100%; margin-top: 10px; padding: 15px; font-size: 1.1rem;">
@@ -321,32 +527,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Address Script
+            const defaultRadio = document.querySelector('input[name="shipping_address"]:checked');
+            if (defaultRadio) {
+                updateActiveAddress(defaultRadio);
+            }
+
+            // Calculation Script
             const useCoinsCheckbox = document.getElementById('use_coins');
             const discountRow = document.getElementById('discount-row');
             const finalTotalDisplay = document.getElementById('final-total-display');
-            
-            // 抓取 PHP 算好的基底数据
             const subtotal = <?php echo $total_amount; ?>;
             const systemDiscount = <?php echo $system_discount_amount; ?>;
             
             if (useCoinsCheckbox) {
                 const coinDiscount = parseFloat(document.getElementById('discount-display').getAttribute('data-discount'));
-
                 useCoinsCheckbox.addEventListener('change', function() {
-                    let finalAmount = subtotal - systemDiscount; // 先扣除梯队折扣
-                    
+                    let finalAmount = subtotal - systemDiscount; 
                     if (this.checked) {
                         discountRow.style.display = 'flex';
-                        finalAmount = finalAmount - coinDiscount; // 再扣除金币
+                        finalAmount = finalAmount - coinDiscount; 
                     } else {
                         discountRow.style.display = 'none';
                     }
-                    
                     if (finalAmount < 0) finalAmount = 0;
                     finalTotalDisplay.innerHTML = 'RM ' + finalAmount.toFixed(2);
                 });
             }
         });
+
+        function toggleAddressList() {
+            const list = document.getElementById('address_selection_list');
+            const btn = event.target;
+            if (list.style.display === 'none') {
+                list.style.display = 'block';
+                btn.innerText = 'Cancel';
+            } else {
+                list.style.display = 'none';
+                btn.innerText = 'Change';
+            }
+        }
+
+        function updateActiveAddress(radio) {
+            document.getElementById('current_address_text').innerText = radio.value;
+            document.getElementById('address_selection_list').style.display = 'none';
+            const changeBtn = document.querySelector('#active_address_display button');
+            if(changeBtn) changeBtn.innerText = 'Change';
+        }
+
+        function togglePaymentSections() {
+            var method = document.getElementById('payment_method').value;
+            var ccSection = document.getElementById('credit_card_section');
+            var fpxSection = document.getElementById('fpx_section');
+            var newCardForm = document.getElementById('new_card_form');
+            
+            ccSection.style.display = 'none';
+            fpxSection.style.display = 'none';
+            newCardForm.style.display = 'none';
+
+            if (method === 'Credit Card') {
+                ccSection.style.display = 'block';
+                toggleNewCardForm(); 
+            } else if (method === 'Online Banking (FPX)') {
+                fpxSection.style.display = 'block';
+            }
+        }
+
+        function toggleNewCardForm() {
+            var radios = document.getElementsByName('selected_card');
+            var newCardForm = document.getElementById('new_card_form');
+            for (var i = 0; i < radios.length; i++) {
+                if (radios[i].checked && radios[i].value === 'new') {
+                    newCardForm.style.display = 'block';
+                    return;
+                }
+            }
+            newCardForm.style.display = 'none';
+        }
     </script>
 </body>
 </html>

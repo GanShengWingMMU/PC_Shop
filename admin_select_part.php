@@ -2,7 +2,8 @@
 session_start();
 include 'db_connect.php'; 
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+
+if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
@@ -50,7 +51,7 @@ if ($res_c && mysqli_num_rows($res_c) > 0) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title><?php echo $cat_name; ?> - PC Shop Admin</title>
+    <title><?php echo $cat_name; ?> -GridCity PC Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -61,15 +62,20 @@ if ($res_c && mysqli_num_rows($res_c) > 0) {
     <div class="sidebar">
         <h2>
             <img src="image/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
-            <span>PC SHOP</span>
+            <span>GridCity PC</span>
         </h2>
         <ul>
             <li><a href="admin_dashboard.php">Dashboard</a></li>
             <li><a href="manage_products.php">Products</a></li> 
             <li><a href="manage_categories.php">Categories</a></li>
             <li><a href="manage_orders.php">Orders</a></li>
-            <li><a href="admin_builder.php" class="active">Build System</a></li>
-            <li><a href="manage_users.php">Users</a></li>
+            <li><a href="admin_builder.php">Build System</a></li>
+            
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'superadmin'): ?>
+                <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                <li><a href="manage_users.php">Manage Customers</a></li>
+            <?php endif; ?>
+            
             <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
         </ul>
     </div>
