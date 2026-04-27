@@ -2,7 +2,7 @@
 $servername = "127.0.0.1"; // Use IP to avoid DNS issues
 $username = "root";
 $password = "";
-$dbname = "pc_shop"; 
+$dbname = "pcshop"; 
 $port = 3306; // Check XAMPP MySQL port (usually 3306 or 3307)
 
 // Createconnection
