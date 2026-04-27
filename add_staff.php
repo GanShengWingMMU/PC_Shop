@@ -15,27 +15,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     $password = $_POST['password'];
-    $role = mysqli_real_escape_string($conn, $_POST['role']); // 可以选择添加 admin 或 superadmin
+    $role = mysqli_real_escape_string($conn, $_POST['role']); 
     
-    // 检查这个账号名是否已经被用过了
-    $check_sql = "SELECT * FROM users WHERE username = '$username'";
-    $check_res = mysqli_query($conn, $check_sql);
+    // 🛡️ 核心新增：PHP 后端强密码验证 (至少12位，包含大小写、数字和特殊符号)
+    $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=]).{12,}$/';
     
-    if (mysqli_num_rows($check_res) > 0) {
-        $error = "Username already exists. Please choose another one.";
+    if (!preg_match($pattern, $password)) {
+        $error = "Password must be at least 12 characters long and contain uppercase, lowercase, numbers, and special symbols (!@#$%^&*()).";
     } else {
-        // 安全起见，把密码进行加密处理 (你的登录代码已经支持这种加密了)
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        // 检查这个账号名是否已经被用过了
+        $check_sql = "SELECT * FROM users WHERE username = '$username'";
+        $check_res = mysqli_query($conn, $check_sql);
         
-        $insert_sql = "INSERT INTO users (username, password, email, role) 
-                       VALUES ('$username', '$hashed_password', '$email', '$role')";
-                       
-        if (mysqli_query($conn, $insert_sql)) {
-            // 添加成功，跳回员工列表页并显示成功信息
-            header("Location: manage_staff.php?success=1");
-            exit();
+        if (mysqli_num_rows($check_res) > 0) {
+            $error = "Username already exists. Please choose another one.";
         } else {
-            $error = "Database Error: Failed to add new staff.";
+            // 密码合格且账号没重复，进行加密处理
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            
+            $insert_sql = "INSERT INTO users (username, password, email, role) 
+                           VALUES ('$username', '$hashed_password', '$email', '$role')";
+                           
+            if (mysqli_query($conn, $insert_sql)) {
+                header("Location: manage_staff.php?success=1");
+                exit();
+            } else {
+                $error = "Database Error: Failed to add new staff.";
+            }
         }
     }
 }
@@ -49,21 +55,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css?v=<?php echo time(); ?>">
     <style>
-        /* 给表单加一点专属的外框阴影，让它看起来像一张高级的通行证 */
         .staff-form-card {
-            background: var(--bg-surface);
-            padding: 40px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            max-width: 600px;
-            margin: 0 auto;
-            position: relative;
-            overflow: hidden;
+            background: var(--bg-surface); padding: 40px; border-radius: 12px;
+            border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            max-width: 600px; margin: 0 auto; position: relative; overflow: hidden;
         }
         .staff-form-card::before {
             content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: linear-gradient(to right, #f39c12, #e67e22); /* 老板专属橙色渐变 */
+            background: linear-gradient(to right, #f39c12, #e67e22); 
         }
     </style>
 </head>
@@ -72,7 +71,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="sidebar">
         <h2>
             <img src="image/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
-            <span>GridCity PC</span>
+            <span>PC SHOP</span>
         </h2>
         <ul>
             <li><a href="admin_dashboard.php">Dashboard</a></li>
@@ -117,7 +116,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label style="display: block; color: var(--text-muted); font-weight: bold; margin-bottom: 8px;">Password *</label>
-                    <input type="password" name="password" class="form-control" required placeholder="Set a strong password">
+                    <input type="password" name="password" class="form-control" required 
+                           pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_\-+=]).{16,}" 
+                           title="Must be at least 16 characters long, contain at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*)."
+                           placeholder="Enter a secure password">
+                    <small style="color: var(--accent-warning); margin-top: 8px; display: block; font-weight: 600;">
+                        <i class="fas fa-shield-alt"></i> Must be at least 16 characters, including Uppercase, Lowercase, Number & Symbol (!@#$%^&*).
+                    </small>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 30px;">
