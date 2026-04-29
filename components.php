@@ -73,7 +73,6 @@ $stmt->close();
             align-items: flex-start;
         }
 
-
         .shop-sidebar {
             width: 250px;
             background: rgba(255, 255, 255, 0.02);
@@ -176,6 +175,89 @@ $stmt->close();
             background: var(--accent-blue);
             color: #000;
         }
+
+        /* --- 高级双向价格过滤器样式 --- */
+        .price-filter-widget {
+            background: transparent;
+            padding: 10px 0;
+        }
+        .price-input-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .price-field {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+        .price-field label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .price-field input {
+            width: 100%;
+            padding: 8px 10px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.3s;
+            text-align: center;
+        }
+        .price-field input:focus {
+            border-color: #34d399; 
+        }
+        .price-field input[type="number"]::-webkit-inner-spin-button,
+        .price-field input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .slider-container {
+            position: relative;
+            height: 5px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .slider-container .slider-track-fill {
+            position: absolute;
+            height: 100%;
+            left: 0%; 
+            right: 0%;
+            background: #34d399; 
+            border-radius: 5px;
+            pointer-events: none;
+        }
+        .range-inputs {
+            position: relative;
+        }
+        .range-inputs input {
+            position: absolute;
+            top: -10px;
+            height: 5px;
+            width: 100%;
+            background: none;
+            pointer-events: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .range-inputs input::-webkit-slider-thumb {
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #fff;
+            pointer-events: auto;
+            -webkit-appearance: none;
+            box-shadow: 0 0 6px rgba(0,0,0,0.5);
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -189,8 +271,7 @@ $stmt->close();
     </div>
 
     <div class="shop-layout">
-        
-<aside class="shop-sidebar">
+        <aside class="shop-sidebar">
             <h3>Categories</h3>
             
             <?php
@@ -217,13 +298,29 @@ $stmt->close();
                     <input type="hidden" name="category" value="<?php echo $active_category_id; ?>">
                 <?php endif; ?>
 
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <input type="number" name="min_price" placeholder="Min RM" value="<?php echo $min_price > 0 ? $min_price : ''; ?>" min="0" style="width: 100%; padding: 8px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-main); font-size: 0.9rem; outline: none; transition: 0.3s;" onfocus="this.style.borderColor='var(--accent-blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                <div class="price-filter-widget">
+                    <div class="price-input-group">
+                        <div class="price-field">
+                            <label>Min (RM)</label>
+                            <input type="number" class="input-min" name="min_price" value="<?php echo $min_price > 0 ? $min_price : '0'; ?>">
+                        </div>
+                        <div style="color: #888;">—</div>
+                        <div class="price-field">
+                            <label>Max (RM)</label>
+                            <input type="number" class="input-max" name="max_price" value="<?php echo $max_price > 0 ? $max_price : '10000'; ?>">
+                        </div>
+                    </div>
 
-                    <input type="number" name="max_price" placeholder="Max RM" value="<?php echo $max_price > 0 ? $max_price : ''; ?>" min="0" style="width: 100%; padding: 8px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-main); font-size: 0.9rem; outline: none; transition: 0.3s;" onfocus="this.style.borderColor='var(--accent-blue)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                    <div class="slider-container">
+                        <div class="slider-track-fill"></div>
+                    </div>
+                    <div class="range-inputs">
+                        <input type="range" class="range-min" min="0" max="10000" value="<?php echo $min_price > 0 ? $min_price : '0'; ?>" step="10">
+                        <input type="range" class="range-max" min="0" max="10000" value="<?php echo $max_price > 0 ? $max_price : '10000'; ?>" step="10">
+                    </div>
                 </div>
 
-                <button type="submit" style="width: 100%; padding: 10px; background: var(--accent-blue); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow='0 0 15px rgba(0,243,255,0.4)'" onmouseout="this.style.boxShadow='none'">
+                <button type="submit" style="width: 100%; padding: 10px; background: var(--accent-blue); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 15px;" onmouseover="this.style.boxShadow='0 0 15px rgba(0,243,255,0.4)'" onmouseout="this.style.boxShadow='none'">
                     Apply Filter
                 </button>
 
@@ -275,5 +372,81 @@ $stmt->close();
 
 <?php include 'includes/footer.php'; ?>
 
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const rangeInputs = document.querySelectorAll(".range-inputs input");
+    const priceInputs = document.querySelectorAll(".price-input-group input");
+    const trackFill = document.querySelector(".slider-track-fill");
+    
+    // 设定最大价格限制，与 HTML 中 max="10000" 对应
+    const maxRange = 10000; 
+    // 设定两个滑块之间允许的最小差值
+    const priceGap = 100;
+
+    // 更新绿色高亮条的宽度和位置
+    function updateTrackFill(minVal, maxVal) {
+        trackFill.style.left = (minVal / maxRange) * 100 + "%";
+        trackFill.style.right = 100 - (maxVal / maxRange) * 100 + "%";
+    }
+
+    // 初始化执行
+    updateTrackFill(parseInt(rangeInputs[0].value), parseInt(rangeInputs[1].value));
+
+    // 1. 监听滑块拖动 -> 更新输入框
+    rangeInputs.forEach(input => {
+        input.addEventListener("input", e => {
+            let minVal = parseInt(rangeInputs[0].value);
+            let maxVal = parseInt(rangeInputs[1].value);
+
+            if ((maxVal - minVal) < priceGap) {
+                if (e.target.className === "range-min") {
+                    rangeInputs[0].value = maxVal - priceGap;
+                } else {
+                    rangeInputs[1].value = minVal + priceGap;
+                }
+            } else {
+                priceInputs[0].value = minVal;
+                priceInputs[1].value = maxVal;
+                updateTrackFill(minVal, maxVal);
+            }
+        });
+    });
+
+    // 2. 监听输入框修改 -> 更新滑块
+    priceInputs.forEach(input => {
+        input.addEventListener("input", e => {
+            if(priceInputs[0].value === "" || priceInputs[1].value === "") return;
+
+            let minPrice = parseInt(priceInputs[0].value);
+            let maxPrice = parseInt(priceInputs[1].value);
+
+            if ((maxPrice - minPrice >= priceGap) && maxPrice <= maxRange && minPrice >= 0) {
+                if (e.target.className === "input-min") {
+                    rangeInputs[0].value = minPrice;
+                } else {
+                    rangeInputs[1].value = maxPrice;
+                }
+                updateTrackFill(minPrice, maxPrice);
+            }
+        });
+        
+        // 失去焦点时校正极限值
+        input.addEventListener("blur", e => {
+            let minPrice = parseInt(priceInputs[0].value) || 0;
+            let maxPrice = parseInt(priceInputs[1].value) || maxRange;
+            
+            if (minPrice < 0) minPrice = 0;
+            if (maxPrice > maxRange) maxPrice = maxRange;
+            if (minPrice > maxPrice - priceGap) minPrice = maxPrice - priceGap;
+
+            priceInputs[0].value = minPrice;
+            priceInputs[1].value = maxPrice;
+            rangeInputs[0].value = minPrice;
+            rangeInputs[1].value = maxPrice;
+            updateTrackFill(minPrice, maxPrice);
+        });
+    });
+});
+</script>
 </body>
 </html>

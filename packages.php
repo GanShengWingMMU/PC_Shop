@@ -45,7 +45,7 @@ if (array_sum($user_dna) > 0) {
                 (SELECT COALESCE(SUM(p.price), pk.price) 
                  FROM package_items pi JOIN products p ON pi.product_id = p.product_id 
                  WHERE pi.package_id = pk.package_id) AS real_price
-               FROM packages pk WHERE pk.stock_status = 'Available'";
+                FROM packages pk WHERE pk.stock_status = 'Available'";
     $ai_res = mysqli_query($conn, $ai_sql);
     while ($pkg = mysqli_fetch_assoc($ai_res)) {
         $pkg_dna = ['g' => $pkg['score_gamer'], 'c' => $pkg['score_creator'], 's' => $pkg['score_student'], 'e' => $pkg['score_enthusiast']];
@@ -65,7 +65,7 @@ $persona_filter = isset($_GET['persona']) ? $conn->real_escape_string($_GET['per
 $price_range = isset($_GET['price']) ? $_GET['price'] : '';
 $sort_by = isset($_GET['sort']) ? $_GET['sort'] : '';
 
-// 🌟 将动态算价包装成一个虚拟表 (Subquery)，这样才能用它进行价格过滤！
+// 🌟 将动态算价包装成一个虚拟表 (Subquery)
 $sql = "SELECT * FROM (
             SELECT pk.*, 
             (SELECT COALESCE(SUM(p.price), pk.price) 
@@ -102,6 +102,8 @@ include 'includes/header.php';
 <style>
     :root { --accent: #00f2fe; --dark-bg: #0a0a0a; --card-bg: rgba(255,255,255,0.03); }
     .page-container { max-width: 1200px; margin: 2rem auto; padding: 0 20px; font-family: 'Inter', sans-serif; }
+    
+    /* 模块一 & 模块二样式 */
     .ai-hero { background: linear-gradient(135deg, rgba(0,242,254,0.1) 0%, rgba(10,10,10,0.8) 100%); border: 1px solid var(--accent); border-radius: 15px; padding: 30px; margin-bottom: 40px; display: flex; gap: 30px; align-items: center; box-shadow: 0 0 30px rgba(0,242,254,0.15); position: relative; overflow: hidden; }
     .ai-badge { position: absolute; top: 0; left: 0; background: var(--accent); color: #000; padding: 5px 15px; font-weight: 900; font-size: 0.8rem; border-bottom-right-radius: 10px; letter-spacing: 1px; }
     .filter-bar { background: var(--card-bg); border: 1px solid rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 12px; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between; }
@@ -122,7 +124,30 @@ include 'includes/header.php';
     .btn-buy:hover { background: #fff; box-shadow: 0 0 15px var(--accent); }
     .btn-cust { flex: 1; background: transparent; border: 1px solid var(--accent); color: var(--accent); text-align: center; padding: 10px; border-radius: 6px; font-weight: bold; text-decoration: none; transition: 0.2s; }
     .btn-cust:hover { background: var(--accent); color: #000; }
-    .engine2-box { margin-top: 60px; padding: 40px; background: rgba(0,0,0,0.6); border: 1px dashed rgba(255,255,255,0.2); border-radius: 15px; text-align: center; }
+    
+    /* 模块三：高级交互 AI 控制台样式 */
+    .ai-command-center { margin: 60px auto 40px; max-width: 800px; background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(0, 242, 254, 0.15); border-radius: 16px; padding: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.02); }
+    .ai-cc-header { text-align: center; margin-bottom: 40px; }
+    .ai-cc-badge { display: inline-block; background: rgba(0,242,254,0.1); color: var(--accent); padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; font-weight: 900; border: 1px solid var(--accent); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; }
+    .budget-display-area { text-align: center; margin-bottom: 30px; }
+    .budget-amount { font-size: 4rem; font-weight: 900; color: #fff; letter-spacing: -2px; margin: 10px 0; text-shadow: 0 0 20px rgba(0, 242, 254, 0.3); display: flex; justify-content: center; align-items: baseline; gap: 10px; }
+    .budget-currency { font-size: 1.5rem; color: #888; }
+    .custom-range { -webkit-appearance: none; width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 5px; outline: none; margin-bottom: 15px; }
+    .custom-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 15px var(--accent); transition: transform 0.1s; }
+    .custom-range::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    .tier-feedback { font-size: 0.9rem; color: #a855f7; font-weight: bold; letter-spacing: 1px; transition: color 0.3s; }
+    .persona-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 40px; }
+    .persona-option { position: relative; cursor: pointer; }
+    .persona-option input[type="radio"] { display: none; }
+    .persona-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 20px 15px; text-align: center; color: #888; transition: all 0.3s ease; }
+    .persona-card i { font-size: 1.8rem; margin-bottom: 10px; display: block; }
+    .persona-card span { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+    .persona-option input:checked + .persona-card[data-theme="gamer"] { background: rgba(0, 242, 254, 0.1); border-color: #00f2fe; color: #00f2fe; box-shadow: 0 0 20px rgba(0,242,254,0.2); }
+    .persona-option input:checked + .persona-card[data-theme="creator"] { background: rgba(168, 85, 247, 0.1); border-color: #a855f7; color: #a855f7; box-shadow: 0 0 20px rgba(168,85,247,0.2); }
+    .persona-option input:checked + .persona-card[data-theme="student"] { background: rgba(250, 204, 21, 0.1); border-color: #facc15; color: #facc15; box-shadow: 0 0 20px rgba(250,204,21,0.2); }
+    .btn-generate { display: block; width: 100%; background: linear-gradient(90deg, #00f2fe, #4facfe); color: #000; border: none; padding: 20px; border-radius: 10px; font-size: 1.2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 10px 30px rgba(0,242,254,0.3); }
+    .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(0,242,254,0.5); }
+    @media (max-width: 600px) { .persona-selector { grid-template-columns: 1fr; } .budget-amount { font-size: 3rem; } }
 </style>
 
 <div class="page-container">
@@ -217,6 +242,103 @@ include 'includes/header.php';
             </div>
         <?php endif; ?>
     </div>
+
+    <div class="ai-command-center">
+        <div class="ai-cc-header">
+            <div class="ai-cc-badge"><i class="fas fa-microchip"></i> Heuristic Blueprint Engine</div>
+            <h2 style="font-size: 2.2rem; color: #fff; margin: 0 0 10px 0; font-weight: 900;">Auto-Generate <span style="color: var(--accent);">Your Rig</span></h2>
+            <p style="color: #888; font-size: 1rem; margin: 0;">Set your parameters. Let the algorithm handle the bottlenecks.</p>
+        </div>
+        
+        <form action="auto_generate.php" method="POST">
+            <div class="budget-display-area">
+                <div style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Target Budget</div>
+                <div class="budget-amount">
+                    <span class="budget-currency">RM</span>
+                    <span id="budget-value">4000</span>
+                </div>
+                
+                <input type="hidden" name="budget" id="hidden-budget" value="4000">
+                <input type="range" class="custom-range" id="budget-slider" min="1500" max="15000" step="100" value="4000">
+                
+                <div class="tier-feedback" id="tier-feedback">
+                    <i class="fas fa-radar"></i> Estimated: Solid 1080p Performance
+                </div>
+            </div>
+
+            <div style="color: #888; font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; text-align: center;">Primary Workload</div>
+            <div class="persona-selector">
+                <label class="persona-option">
+                    <input type="radio" name="target_persona" value="Gamer" checked>
+                    <div class="persona-card" data-theme="gamer">
+                        <i class="fas fa-gamepad"></i>
+                        <span>Extreme Gamer</span>
+                    </div>
+                </label>
+                
+                <label class="persona-option">
+                    <input type="radio" name="target_persona" value="Creator">
+                    <div class="persona-card" data-theme="creator">
+                        <i class="fas fa-palette"></i>
+                        <span>Creator / Editor</span>
+                    </div>
+                </label>
+                
+                <label class="persona-option">
+                    <input type="radio" name="target_persona" value="Student">
+                    <div class="persona-card" data-theme="student">
+                        <i class="fas fa-code"></i>
+                        <span>Student / Dev</span>
+                    </div>
+                </label>
+            </div>
+
+            <button type="submit" class="btn-generate">
+                <i class="fas fa-bolt"></i> Generate Blueprint
+            </button>
+        </form>
+    </div>
+
 </div>
 
 <?php include 'includes/footer.php'; ?>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const slider = document.getElementById("budget-slider");
+    const display = document.getElementById("budget-value");
+    const hiddenInput = document.getElementById("hidden-budget");
+    const feedback = document.getElementById("tier-feedback");
+
+    function updateFeedback(value) {
+        let text = "";
+        let color = "";
+
+        if (value < 2500) {
+            text = "Estimated: Entry-level 1080p & Office tasks";
+            color = "#facc15"; 
+        } else if (value < 4500) {
+            text = "Estimated: Solid 1080p / Entry 1440p Gaming";
+            color = "#00f2fe"; 
+        } else if (value < 8000) {
+            text = "Estimated: High-End 1440p / Entry 4K Powerhouse";
+            color = "#a855f7"; 
+        } else {
+            text = "Estimated: Enthusiast God-Tier (Flawless 4K)";
+            color = "#ff007f"; 
+        }
+
+        feedback.innerHTML = `<i class="fas fa-satellite-dish"></i> ${text}`;
+        feedback.style.color = color;
+    }
+
+    slider.addEventListener("input", function() {
+        const val = this.value;
+        display.textContent = Number(val).toLocaleString(); 
+        hiddenInput.value = val; 
+        updateFeedback(val);
+    });
+
+    updateFeedback(slider.value);
+});
+</script>
