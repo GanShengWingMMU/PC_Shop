@@ -264,6 +264,18 @@ $stmt->close();
 
 <?php include 'includes/header.php'; ?>
 
+<?php if (isset($_SESSION['success_msg'])): ?>
+    <div style="background: rgba(0, 255, 0, 0.1); border: 1px solid rgba(0, 255, 0, 0.3); color: #00ff00; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold;">
+        <i class="fa-solid fa-circle-check"></i> <?php echo $_SESSION['success_msg']; unset($_SESSION['success_msg']); ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['error_msg'])): ?>
+    <div style="background: rgba(255, 0, 0, 0.1); border: 1px solid rgba(255, 0, 0, 0.3); color: #ff4d4d; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold;">
+        <i class="fa-solid fa-circle-exclamation"></i> <?php echo $_SESSION['error_msg']; unset($_SESSION['error_msg']); ?>
+    </div>
+<?php endif; ?>
+
 <main class="main-container">
     <div class="auth-title" style="text-align: left; margin-bottom: 10px;">
         <h2><i class="fa-solid fa-microchip"></i> Components Shop</h2>
@@ -369,6 +381,7 @@ $stmt->close();
 
     </div>
 </main>
+
 
 <?php include 'includes/footer.php'; ?>
 
