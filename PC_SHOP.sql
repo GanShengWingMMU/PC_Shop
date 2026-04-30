@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- 主机： 127.0.0.1
--- 生成日期： 2026-04-29 15:18:20
--- 服务器版本： 10.4.32-MariaDB
--- PHP 版本： 8.2.12
+-- Host: 127.0.0.1
+-- Generation Time: Apr 29, 2026 at 06:12 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- 数据库： `pcshop`
+-- Database: `pcshop`
 --
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `admins`
+-- Table structure for table `admins`
 --
 
 CREATE TABLE `admins` (
@@ -37,7 +37,7 @@ CREATE TABLE `admins` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `admins`
+-- Dumping data for table `admins`
 --
 
 INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `created_at`) VALUES
@@ -46,7 +46,29 @@ INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `crea
 -- --------------------------------------------------------
 
 --
--- 表的结构 `build_items`
+-- Table structure for table `bank`
+--
+
+CREATE TABLE `bank` (
+  `id` int(11) NOT NULL,
+  `cardholder_name` varchar(100) NOT NULL,
+  `card_number` varchar(16) NOT NULL,
+  `cvc` varchar(3) NOT NULL,
+  `balance` decimal(10,2) DEFAULT 50000.00
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `bank`
+--
+
+INSERT INTO `bank` (`id`, `cardholder_name`, `card_number`, `cvc`, `balance`) VALUES
+(1, 'Ali Bin Abu', '1111222233334444', '123', 8303.00),
+(2, 'Gan Sheng Wing', '9999888877776666', '999', 99999.00);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `build_items`
 --
 
 CREATE TABLE `build_items` (
@@ -57,7 +79,7 @@ CREATE TABLE `build_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `build_items`
+-- Dumping data for table `build_items`
 --
 
 INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`) VALUES
@@ -150,69 +172,98 @@ INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`
 (91, 14, 19, 1),
 (92, 14, 18, 1),
 (93, 15, 2, 1),
-(94, 15, 4, 1),
-(95, 15, 9, 1),
+(94, 15, 5, 1),
+(95, 15, 7, 1),
 (96, 15, 11, 1),
 (97, 15, 16, 1),
 (98, 15, 18, 1),
-(99, 15, 15, 1),
+(99, 15, 14, 1),
 (100, 15, 19, 1),
-(101, 15, 21, 1),
-(102, 15, 24, 1),
+(101, 15, 22, 1),
+(102, 15, 23, 1),
 (103, 15, 25, 1),
-(104, 16, 3, 1),
-(105, 16, 6, 1),
-(106, 16, 8, 1),
-(107, 16, 10, 1),
-(108, 16, 16, 1),
-(109, 16, 18, 1),
-(110, 16, 14, 1),
-(111, 16, 21, 1),
-(112, 16, 23, 1),
-(113, 16, 25, 1),
-(114, 16, 19, 1),
+(104, 16, 1, 1),
+(105, 16, 4, 1),
+(106, 16, 10, 1),
+(107, 16, 13, 1),
+(108, 16, 8, 1),
+(109, 16, 16, 1),
+(110, 16, 19, 1),
+(111, 16, 18, 1),
+(112, 16, 21, 1),
+(113, 16, 23, 1),
+(114, 16, 25, 1),
 (115, 17, 1, 1),
-(116, 17, 5, 1),
-(117, 17, 7, 1),
-(118, 17, 11, 1),
-(119, 17, 17, 1),
-(120, 17, 13, 1),
-(121, 17, 18, 1),
-(122, 17, 19, 1),
+(116, 17, 4, 1),
+(117, 17, 10, 1),
+(118, 17, 13, 1),
+(119, 17, 8, 1),
+(120, 17, 16, 1),
+(121, 17, 19, 1),
+(122, 17, 18, 1),
 (123, 17, 21, 1),
 (124, 17, 23, 1),
 (125, 17, 25, 1),
-(126, 18, 2, 1),
+(126, 18, 1, 1),
 (127, 18, 4, 1),
-(128, 18, 11, 1),
-(129, 18, 14, 1),
-(130, 19, 17, 1),
-(131, 19, 18, 1),
-(132, 19, 21, 1),
-(133, 19, 23, 1),
-(134, 19, 25, 1),
-(135, 19, 1, 1),
-(136, 19, 5, 1),
-(137, 19, 10, 1),
-(138, 20, 1, 1),
-(139, 20, 5, 1),
-(140, 20, 7, 1),
-(141, 20, 10, 1),
-(142, 20, 17, 1),
-(143, 20, 18, 1),
-(144, 20, 13, 1),
-(145, 21, 3, 1),
-(146, 21, 6, 1),
-(147, 21, 8, 1),
-(148, 21, 11, 1),
-(149, 21, 16, 1),
-(150, 21, 18, 1),
-(151, 21, 14, 1);
+(128, 18, 10, 1),
+(129, 18, 13, 1),
+(130, 18, 8, 1),
+(131, 18, 16, 1),
+(132, 18, 19, 1),
+(133, 18, 18, 1),
+(134, 18, 21, 1),
+(135, 18, 23, 1),
+(136, 18, 26, 1),
+(137, 19, 1, 1),
+(138, 19, 4, 1),
+(139, 19, 10, 1),
+(140, 19, 13, 1),
+(141, 19, 8, 1),
+(142, 19, 16, 1),
+(143, 19, 19, 1),
+(144, 19, 18, 1),
+(145, 19, 21, 1),
+(146, 19, 23, 1),
+(147, 19, 25, 1),
+(148, 20, 1, 1),
+(149, 20, 4, 1),
+(150, 20, 10, 1),
+(151, 20, 13, 1),
+(152, 20, 8, 1),
+(153, 20, 16, 1),
+(154, 20, 19, 1),
+(155, 20, 18, 1),
+(156, 20, 21, 1),
+(157, 20, 23, 1),
+(158, 20, 25, 1),
+(159, 21, 1, 1),
+(160, 21, 4, 1),
+(161, 21, 10, 1),
+(162, 21, 13, 1),
+(163, 21, 8, 1),
+(164, 21, 16, 1),
+(165, 21, 19, 1),
+(166, 21, 18, 1),
+(167, 21, 21, 1),
+(168, 21, 23, 1),
+(169, 21, 25, 1),
+(170, 22, 1, 1),
+(171, 22, 4, 1),
+(172, 22, 10, 1),
+(173, 22, 13, 1),
+(174, 22, 8, 1),
+(175, 22, 16, 1),
+(176, 22, 19, 1),
+(177, 22, 18, 1),
+(178, 22, 21, 1),
+(179, 22, 23, 1),
+(180, 22, 25, 1);
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `categories`
+-- Table structure for table `categories`
 --
 
 CREATE TABLE `categories` (
@@ -222,7 +273,7 @@ CREATE TABLE `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `categories`
+-- Dumping data for table `categories`
 --
 
 INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
@@ -241,7 +292,7 @@ INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
 -- --------------------------------------------------------
 
 --
--- 表的结构 `consultations`
+-- Table structure for table `consultations`
 --
 
 CREATE TABLE `consultations` (
@@ -256,14 +307,12 @@ CREATE TABLE `consultations` (
 -- --------------------------------------------------------
 
 --
--- 表的结构 `customers`
+-- Table structure for table `customers`
 --
 
 CREATE TABLE `customers` (
   `customer_id` int(11) NOT NULL,
-  `username` varchar(50) DEFAULT NULL,
-  `first_name` varchar(50) DEFAULT NULL,
-  `last_name` varchar(50) DEFAULT NULL,
+  `username` varchar(150) DEFAULT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
   `phone_number` varchar(20) DEFAULT NULL,
@@ -280,46 +329,53 @@ CREATE TABLE `customers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `customers`
+-- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `wallet_balance`, `reward_coins`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`) VALUES
-(1, NULL, 'Sheng Wing', 'Gan', 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, 99999999.99, 1000000888, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
-(2, NULL, 'Sheng', 'Gan', 'ganshengwing11226@gmail.com', '$2y$10$vW1.TGCWwWQMw8qP57pjjuoePphWACuonBYU6YnK6u/Kkvhd7bJ4a', NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
-(3, NULL, 'Sheng', 'Gan', 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
-(4, NULL, '何桥月光下', '奈', 'queit0126@gmail.com', '$2y$10$DzPOD3/1Ln0HhzWooDcRaezPQP.JpILRav1LWDZxzQZdMockoXyLu', NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
-(5, 'MrSuhaimi', NULL, NULL, 'suhaimi779@gmail.com', '$2y$10$GcvYMmlBEu3AltEA2OLMY.EPquQtgsSZZOyZbQcOo.INrus7l222K', NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 15, 14, 7, 0);
+INSERT INTO `customers` (`customer_id`, `username`, `email`, `password`, `phone_number`, `wallet_balance`, `reward_coins`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`) VALUES
+(1, 'Sheng Wing Gan', 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, 99972177.99, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
+(2, 'Sheng Gan', 'ganshengwing11226@gmail.com', '$2y$10$vW1.TGCWwWQMw8qP57pjjuoePphWACuonBYU6YnK6u/Kkvhd7bJ4a', NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
+(3, 'Sheng Gan', 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0);
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `customer_addresses`
+-- Table structure for table `customer_addresses`
 --
 
 CREATE TABLE `customer_addresses` (
   `address_id` int(11) NOT NULL,
   `customer_id` int(11) NOT NULL,
+  `recipient_name` varchar(100) NOT NULL,
+  `phone_number` varchar(20) NOT NULL,
+  `address_line1` varchar(255) NOT NULL,
+  `address_line2` varchar(255) DEFAULT NULL,
+  `city` varchar(100) NOT NULL,
+  `state` varchar(100) NOT NULL,
+  `postcode` varchar(20) NOT NULL,
+  `country` varchar(100) DEFAULT 'Malaysia',
   `full_address` text NOT NULL,
   `is_default` tinyint(1) DEFAULT 0 COMMENT '1=Default, 0=Normal',
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `customer_addresses`
+-- Dumping data for table `customer_addresses`
 --
 
-INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `full_address`, `is_default`, `created_at`) VALUES
-(1, 1, 'No 123, Jalan Multimedia, 63100 Cyberjaya, Selangor', 0, '2026-04-09 13:23:19'),
-(2, 1, 'Sheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', 1, '2026-04-09 17:17:21');
+INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `recipient_name`, `phone_number`, `address_line1`, `address_line2`, `city`, `state`, `postcode`, `country`, `full_address`, `is_default`, `created_at`) VALUES
+(1, 1, '', '', '', NULL, '', '', '', 'Malaysia', 'No 123, Jalan Multimedia, 63100 Cyberjaya, Selangor', 0, '2026-04-09 13:23:19'),
+(2, 1, '', '', '', NULL, '', '', '', 'Malaysia', 'Sheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', 1, '2026-04-09 17:17:21');
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `orders`
+-- Table structure for table `orders`
 --
 
 CREATE TABLE `orders` (
   `order_id` int(11) NOT NULL,
+  `order_name` varchar(100) DEFAULT 'My Custom Order',
   `customer_id` int(11) NOT NULL,
   `order_date` datetime DEFAULT current_timestamp(),
   `total_amount` decimal(10,2) NOT NULL,
@@ -331,33 +387,58 @@ CREATE TABLE `orders` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `orders`
+-- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`order_id`, `customer_id`, `order_date`, `total_amount`, `coins_used`, `discount_amount`, `shipping_address`, `contact_number`, `order_status`) VALUES
-(6, 1, '2026-04-20 10:30:00', 4599.00, 0, 0.00, 'Teammate Test Address', '0123456789', 'Pending'),
-(7, 2, '2026-04-21 14:15:00', 1250.50, 0, 0.00, 'Teammate Test Address', '0123456789', 'Processing'),
-(8, 1, '2026-04-19 09:20:00', 850.00, 0, 0.00, 'Teammate Test Address', '0123456789', 'Shipped'),
-(9, 3, '2026-04-18 16:45:00', 150.00, 0, 0.00, 'Teammate Test Address', '0123456789', 'Completed');
+INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `total_amount`, `coins_used`, `discount_amount`, `shipping_address`, `contact_number`, `order_status`) VALUES
+(7, 'My Custom Order', 1, '2026-04-09 19:20:44', 21680.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(8, 'My Custom Order', 1, '2026-04-09 19:22:37', 0.00, 1000000888, 99999999.99, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(9, 'My Custom Order', 1, '2026-04-09 19:30:08', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(10, 'My Custom Order', 1, '2026-04-09 19:35:48', 6692.00, 55, 5.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(11, 's', 1, '2026-04-09 23:11:35', 6047.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(12, 'My Custom Order', 1, '2026-04-09 23:28:54', 950.00, 0, 0.00, 'Gan Sheng Wing | 012-3456789\nMMU Cyberjaya', '012-3456789', 'Completed'),
+(13, 'My Custom Order', 1, '2026-04-11 17:26:52', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(14, 'My Custom Order', 1, '2026-04-11 17:41:34', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(15, 'My Custom Order', 1, '2026-04-19 23:30:46', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending');
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `order_details`
+-- Table structure for table `order_details`
 --
 
 CREATE TABLE `order_details` (
   `order_detail_id` int(11) NOT NULL,
   `order_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
+  `pc_build` int(11) DEFAULT NULL,
+  `package_id` int(11) DEFAULT NULL,
   `quantity` int(11) NOT NULL,
   `unit_price` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `order_details`
+--
+
+INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_build`, `package_id`, `quantity`, `unit_price`) VALUES
+(1, 7, NULL, 9, NULL, 1, 4620.00),
+(2, 7, NULL, 10, NULL, 1, 7820.00),
+(3, 7, NULL, 11, NULL, 1, 4620.00),
+(4, 7, NULL, 13, NULL, 1, 4620.00),
+(5, 8, NULL, 15, NULL, 1, 10677.00),
+(6, 9, NULL, 16, NULL, 1, 6697.00),
+(7, 10, NULL, 17, NULL, 1, 6697.00),
+(8, 11, NULL, 18, NULL, 1, 6047.00),
+(9, 12, 1, NULL, NULL, 1, 950.00),
+(10, 13, NULL, 20, NULL, 1, 6697.00),
+(11, 14, NULL, 21, NULL, 1, 6697.00),
+(12, 15, NULL, 22, NULL, 1, 6697.00);
+
 -- --------------------------------------------------------
 
 --
--- 表的结构 `packages`
+-- Table structure for table `packages`
 --
 
 CREATE TABLE `packages` (
@@ -376,21 +457,19 @@ CREATE TABLE `packages` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `packages`
+-- Dumping data for table `packages`
 --
 
 INSERT INTO `packages` (`package_id`, `package_name`, `description`, `price`, `image_url`, `target_persona`, `stock_status`, `score_gamer`, `score_creator`, `score_student`, `score_enthusiast`, `created_at`) VALUES
 (1, 'Esports Predator V1', 'Intel i5-13400F + RTX 4060. The ultimate sweet spot for 1080p competitive gaming and esports titles like Valorant and CS2.', 3499.00, 'https://via.placeholder.com/300x200/ff007f/FFF?text=Esports+Predator', 'Gamer', 'Available', 9, 3, 1, 4, '2026-04-09 10:59:36'),
 (2, 'Studio Pro Workstation', 'AMD Ryzen 9 7950X + 64GB DDR5 + RTX 4080. Built for 3D rendering, video editing, and heavy creative workloads.', 9899.00, 'https://via.placeholder.com/300x200/0078D4/FFF?text=Studio+Pro', 'Creator', 'Available', 7, 10, 0, 5, '2026-04-09 10:59:36'),
 (3, 'Campus Starter Box', 'Intel Core i3-12100 + 16GB RAM + 512GB NVMe. Fast, reliable, and affordable. Perfect for assignments, web browsing, and media consumption.', 1599.00, 'https://via.placeholder.com/300x200/00e676/000?text=Campus+Starter', 'Student', 'Available', 1, 2, 10, 0, '2026-04-09 10:59:36'),
-(4, 'Neon Liquid Beast', 'Intel Core i9-14900K + RTX 4090 + Custom Hard-Tube Liquid Cooling. For those who demand absolute perfection and maximum RGB aesthetics.', 18500.00, 'https://via.placeholder.com/300x200/8a2be2/FFF?text=Neon+Liquid+Beast', 'Enthusiast', 'Available', 10, 8, 0, 10, '2026-04-09 10:59:36'),
-(5, 'Esports Starter Pack', 'Ryzen 5 + RTX 3060, 16GB RAM. Perfect for 1080p gaming.', 3599.00, 'https://via.placeholder.com/300x200/ff007f/FFF?text=Esports+Starter', 'Gamer', 'Available', 8, 4, 2, 2, '2026-04-29 13:17:21'),
-(6, 'Ultimate Creator Pro', 'Intel i9 + RTX 4080, 64GB RAM, 2TB SSD. Built for heavy rendering.', 12999.00, 'https://via.placeholder.com/300x200/0078D4/FFF?text=Creator+Pro', 'Creator', 'Available', 8, 10, 0, 8, '2026-04-29 13:17:21');
+(4, 'Neon Liquid Beast', 'Intel Core i9-14900K + RTX 4090 + Custom Hard-Tube Liquid Cooling. For those who demand absolute perfection and maximum RGB aesthetics.', 18500.00, 'https://via.placeholder.com/300x200/8a2be2/FFF?text=Neon+Liquid+Beast', 'Enthusiast', 'Available', 10, 8, 0, 10, '2026-04-09 10:59:36');
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `package_items`
+-- Table structure for table `package_items`
 --
 
 CREATE TABLE `package_items` (
@@ -400,7 +479,7 @@ CREATE TABLE `package_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `package_items`
+-- Dumping data for table `package_items`
 --
 
 INSERT INTO `package_items` (`id`, `package_id`, `product_id`) VALUES
@@ -440,7 +519,7 @@ INSERT INTO `package_items` (`id`, `package_id`, `product_id`) VALUES
 -- --------------------------------------------------------
 
 --
--- 表的结构 `payments`
+-- Table structure for table `payments`
 --
 
 CREATE TABLE `payments` (
@@ -451,10 +530,24 @@ CREATE TABLE `payments` (
   `transaction_date` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `payments`
+--
+
+INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `payment_status`, `transaction_date`) VALUES
+(1, 7, 'E-Wallet', 'Paid', '2026-04-09 19:20:44'),
+(2, 8, 'E-Wallet', 'Paid', '2026-04-09 19:22:37'),
+(3, 9, 'Online Banking', 'Paid', '2026-04-09 19:30:08'),
+(4, 10, 'E-Wallet', 'Paid', '2026-04-09 19:35:48'),
+(5, 11, 'Online Banking (FPX)', 'Paid', '2026-04-09 23:11:35'),
+(6, 13, 'Online Banking (FPX)', 'Paid', '2026-04-11 17:26:52'),
+(7, 14, 'Visa ending in 4444', 'Paid', '2026-04-11 17:41:34'),
+(8, 15, 'FPX - Maybank2U', 'Paid', '2026-04-19 23:30:46');
+
 -- --------------------------------------------------------
 
 --
--- 表的结构 `products`
+-- Table structure for table `products`
 --
 
 CREATE TABLE `products` (
@@ -471,7 +564,7 @@ CREATE TABLE `products` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `products`
+-- Dumping data for table `products`
 --
 
 INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `description`, `price`, `stock_quantity`, `image_url`, `status`, `tdp_wattage`, `is_package`) VALUES
@@ -495,17 +588,17 @@ INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `descriptio
 (18, 7, 'NZXT H5 Flow Black', 'High airflow premium chassis.', 400.00, 10, NULL, 'Available', 0, 0),
 (19, 8, 'Deepcool AK400 Air Cooler', 'Efficient standard air cooler.', 150.00, 20, NULL, 'Available', 0, 0),
 (20, 8, 'NZXT Kraken 360 RGB AIO', 'Premium liquid cooler with LCD.', 850.00, 8, NULL, 'Available', 15, 0),
-(21, 9, 'Microsoft Windows 11 Home 64-bit', 'Standard edition for gamers and home users. USB Flash Drive included.', 549.00, 5, 'https://via.placeholder.com/280x180/0078D4/FFF?text=Windows+11+Home', 'Available', 0, 0),
-(22, 9, 'Microsoft Windows 11 Pro 64-bit', 'Advanced features for professionals and developers. BitLocker included.', 899.00, 8, 'https://via.placeholder.com/280x180/111/FFF?text=Windows+11+Pro', 'Available', 0, 0),
-(23, 10, 'Corsair iCUE AR120 RGB 120mm (3-Pack)', 'High performance cooling fans with customizable RGB lighting sync.', 229.00, 9, 'https://via.placeholder.com/280x180/FF007F/FFF?text=Corsair+RGB+Fans', 'Available', 5, 0),
-(24, 10, 'ARCTIC P12 PWM PST 120mm', 'Pressure-optimized quiet fan for excellent airflow and low noise.', 45.00, 8, 'https://via.placeholder.com/280x180/333/FFF?text=Arctic+P12', 'Available', 2, 0),
-(25, 11, 'ASUS TUF Gaming VG27AQ 27\" 165Hz', '27-inch WQHD (2560x1440) IPS gaming monitor with ultrafast 165Hz refresh rate.', 1299.00, 8, 'https://via.placeholder.com/280x180/000/FFF?text=ASUS+TUF+27', 'Available', 0, 0),
+(21, 9, 'Microsoft Windows 11 Home 64-bit', 'Standard edition for gamers and home users. USB Flash Drive included.', 549.00, 0, 'https://via.placeholder.com/280x180/0078D4/FFF?text=Windows+11+Home', 'Available', 0, 0),
+(22, 9, 'Microsoft Windows 11 Pro 64-bit', 'Advanced features for professionals and developers. BitLocker included.', 899.00, 0, 'https://via.placeholder.com/280x180/111/FFF?text=Windows+11+Pro', 'Available', 0, 0),
+(23, 10, 'Corsair iCUE AR120 RGB 120mm (3-Pack)', 'High performance cooling fans with customizable RGB lighting sync.', 229.00, 0, 'https://via.placeholder.com/280x180/FF007F/FFF?text=Corsair+RGB+Fans', 'Available', 5, 0),
+(24, 10, 'ARCTIC P12 PWM PST 120mm', 'Pressure-optimized quiet fan for excellent airflow and low noise.', 45.00, 0, 'https://via.placeholder.com/280x180/333/FFF?text=Arctic+P12', 'Available', 2, 0),
+(25, 11, 'ASUS TUF Gaming VG27AQ 27\" 165Hz', '27-inch WQHD (2560x1440) IPS gaming monitor with ultrafast 165Hz refresh rate.', 1299.00, 0, 'https://via.placeholder.com/280x180/000/FFF?text=ASUS+TUF+27', 'Available', 0, 0),
 (26, 11, 'AOC 24G2SP 24\" 165Hz IPS', '24-inch Full HD (1920x1080) gaming monitor, perfect for esports.', 649.00, 0, 'https://via.placeholder.com/280x180/ff0000/FFF?text=AOC+24G2', 'Available', 0, 0);
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `product_specifications`
+-- Table structure for table `product_specifications`
 --
 
 CREATE TABLE `product_specifications` (
@@ -518,7 +611,7 @@ CREATE TABLE `product_specifications` (
 -- --------------------------------------------------------
 
 --
--- 表的结构 `reviews`
+-- Table structure for table `reviews`
 --
 
 CREATE TABLE `reviews` (
@@ -530,10 +623,17 @@ CREATE TABLE `reviews` (
   `review_date` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `reviews`
+--
+
+INSERT INTO `reviews` (`review_id`, `product_id`, `customer_id`, `rating`, `comment`, `review_date`) VALUES
+(1, 1, 1, 5, 'henbang', '2026-04-09 23:29:14');
+
 -- --------------------------------------------------------
 
 --
--- 表的结构 `saved_builds`
+-- Table structure for table `saved_builds`
 --
 
 CREATE TABLE `saved_builds` (
@@ -545,7 +645,7 @@ CREATE TABLE `saved_builds` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `saved_builds`
+-- Dumping data for table `saved_builds`
 --
 
 INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_price`, `created_at`) VALUES
@@ -563,18 +663,19 @@ INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_pric
 (12, 1, '超級吊', 4620.00, '2026-04-05 14:39:39'),
 (13, 1, 'My Custom Build', 4620.00, '2026-04-05 15:17:12'),
 (14, 3, 'yeaaaaaaa', 4620.00, '2026-04-06 09:17:24'),
-(15, 5, 'shengwing', 13043.00, '2026-04-11 17:30:24'),
-(16, 5, 'k', 7127.00, '2026-04-12 23:07:16'),
-(17, 5, 'getit', 7747.00, '2026-04-24 20:42:58'),
-(18, 5, 'eee', 7950.00, '2026-04-27 11:05:03'),
-(19, 5, 'eee', 4327.00, '2026-04-27 11:06:52'),
-(20, 5, '真不错', 2670.00, '2026-04-27 11:07:50'),
-(21, 5, 'rt', 7750.00, '2026-04-27 11:08:26');
+(15, 1, 'q', 10677.00, '2026-04-09 19:22:33'),
+(16, 1, 'e', 6697.00, '2026-04-09 19:29:53'),
+(17, 1, 'qw', 6697.00, '2026-04-09 19:30:46'),
+(18, 1, 's', 6047.00, '2026-04-09 23:02:07'),
+(19, 1, 'x', 6697.00, '2026-04-11 16:44:47'),
+(20, 1, 'd', 6697.00, '2026-04-11 16:59:53'),
+(21, 1, '4tgrrg', 6697.00, '2026-04-11 17:27:51'),
+(22, 1, 'i', 6697.00, '2026-04-12 22:40:26');
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `saved_cards`
+-- Table structure for table `saved_cards`
 --
 
 CREATE TABLE `saved_cards` (
@@ -588,10 +689,18 @@ CREATE TABLE `saved_cards` (
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `saved_cards`
+--
+
+INSERT INTO `saved_cards` (`card_id`, `customer_id`, `cardholder_name`, `last_four_digits`, `expiry_date`, `card_brand`, `is_default`, `created_at`) VALUES
+(1, 1, '22', '5353', '11/24', 'Credit Card', 0, '2026-04-09 23:11:21'),
+(2, 1, '日人人日r', '2331', '22/11', 'Credit Card', 1, '2026-04-11 17:06:45');
+
 -- --------------------------------------------------------
 
 --
--- 表的结构 `shopping_cart`
+-- Table structure for table `shopping_cart`
 --
 
 CREATE TABLE `shopping_cart` (
@@ -599,25 +708,24 @@ CREATE TABLE `shopping_cart` (
   `customer_id` int(11) NOT NULL,
   `product_id` int(11) DEFAULT NULL,
   `pc_build` int(11) DEFAULT NULL,
+  `package_id` int(11) DEFAULT NULL,
   `quantity` int(11) NOT NULL DEFAULT 1,
   `added_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ;
 
 --
--- 转存表中的数据 `shopping_cart`
+-- Dumping data for table `shopping_cart`
 --
 
-INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `quantity`, `added_at`) VALUES
-(5, 1, NULL, 9, 1, '2026-03-31 17:24:22'),
-(6, 1, NULL, 10, 1, '2026-04-04 17:49:41'),
-(7, 1, NULL, 11, 1, '2026-04-04 18:52:47'),
-(8, 1, NULL, 13, 1, '2026-04-05 15:17:12'),
-(9, 3, NULL, 14, 1, '2026-04-06 09:17:24');
+INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `package_id`, `quantity`, `added_at`) VALUES
+(9, 3, NULL, 14, NULL, 1, '2026-04-06 09:17:24'),
+(19, 1, 4, NULL, NULL, 1, '2026-04-29 23:38:35'),
+(20, 1, NULL, NULL, 4, 2, '2026-04-30 00:06:55');
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `wallet_transactions`
+-- Table structure for table `wallet_transactions`
 --
 
 CREATE TABLE `wallet_transactions` (
@@ -630,19 +738,24 @@ CREATE TABLE `wallet_transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `wallet_transactions`
+-- Dumping data for table `wallet_transactions`
 --
 
 INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amount`, `coins_earned`, `created_at`) VALUES
 (1, 1, 'Top-up', 8888.00, 888, '2026-04-09 13:04:35'),
-(2, 1, 'Top-up', 99999999.99, 1000000000, '2026-04-09 17:25:22');
+(2, 1, 'Top-up', 99999999.99, 1000000000, '2026-04-09 17:25:22'),
+(3, 1, 'Payment', -21680.00, 0, '2026-04-09 19:20:44'),
+(4, 1, 'Payment', 0.00, 0, '2026-04-09 19:22:37'),
+(5, 1, 'Top-up', 50.00, 5, '2026-04-09 19:31:06'),
+(6, 1, 'Top-up', 500.00, 50, '2026-04-09 19:31:24'),
+(7, 1, 'Payment', -6692.00, 0, '2026-04-09 19:35:48');
 
 --
--- 转储表的索引
+-- Indexes for dumped tables
 --
 
 --
--- 表的索引 `admins`
+-- Indexes for table `admins`
 --
 ALTER TABLE `admins`
   ADD PRIMARY KEY (`admin_id`),
@@ -650,7 +763,13 @@ ALTER TABLE `admins`
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- 表的索引 `build_items`
+-- Indexes for table `bank`
+--
+ALTER TABLE `bank`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `build_items`
 --
 ALTER TABLE `build_items`
   ADD PRIMARY KEY (`build_item_id`),
@@ -658,56 +777,56 @@ ALTER TABLE `build_items`
   ADD KEY `product_id` (`product_id`);
 
 --
--- 表的索引 `categories`
+-- Indexes for table `categories`
 --
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`category_id`);
 
 --
--- 表的索引 `consultations`
+-- Indexes for table `consultations`
 --
 ALTER TABLE `consultations`
   ADD PRIMARY KEY (`consultation_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `customers`
+-- Indexes for table `customers`
 --
 ALTER TABLE `customers`
   ADD PRIMARY KEY (`customer_id`),
-  ADD UNIQUE KEY `email` (`email`),
-  ADD UNIQUE KEY `username` (`username`);
+  ADD UNIQUE KEY `email` (`email`);
 
 --
--- 表的索引 `customer_addresses`
+-- Indexes for table `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   ADD PRIMARY KEY (`address_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `orders`
+-- Indexes for table `orders`
 --
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`order_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `order_details`
+-- Indexes for table `order_details`
 --
 ALTER TABLE `order_details`
   ADD PRIMARY KEY (`order_detail_id`),
   ADD KEY `order_id` (`order_id`),
-  ADD KEY `product_id` (`product_id`);
+  ADD KEY `product_id` (`product_id`),
+  ADD KEY `fk_order_details_build` (`pc_build`);
 
 --
--- 表的索引 `packages`
+-- Indexes for table `packages`
 --
 ALTER TABLE `packages`
   ADD PRIMARY KEY (`package_id`);
 
 --
--- 表的索引 `package_items`
+-- Indexes for table `package_items`
 --
 ALTER TABLE `package_items`
   ADD PRIMARY KEY (`id`),
@@ -715,21 +834,21 @@ ALTER TABLE `package_items`
   ADD KEY `product_id` (`product_id`);
 
 --
--- 表的索引 `payments`
+-- Indexes for table `payments`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`payment_id`),
   ADD KEY `order_id` (`order_id`);
 
 --
--- 表的索引 `products`
+-- Indexes for table `products`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`product_id`),
   ADD KEY `category_id` (`category_id`);
 
 --
--- 表的索引 `product_specifications`
+-- Indexes for table `product_specifications`
 --
 ALTER TABLE `product_specifications`
   ADD PRIMARY KEY (`spec_id`),
@@ -737,7 +856,7 @@ ALTER TABLE `product_specifications`
   ADD KEY `idx_spec_search` (`spec_name`,`spec_value`);
 
 --
--- 表的索引 `reviews`
+-- Indexes for table `reviews`
 --
 ALTER TABLE `reviews`
   ADD PRIMARY KEY (`review_id`),
@@ -745,21 +864,21 @@ ALTER TABLE `reviews`
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `saved_builds`
+-- Indexes for table `saved_builds`
 --
 ALTER TABLE `saved_builds`
   ADD PRIMARY KEY (`pc_build`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `saved_cards`
+-- Indexes for table `saved_cards`
 --
 ALTER TABLE `saved_cards`
   ADD PRIMARY KEY (`card_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `shopping_cart`
+-- Indexes for table `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
   ADD PRIMARY KEY (`cart_id`),
@@ -768,206 +887,200 @@ ALTER TABLE `shopping_cart`
   ADD KEY `fk_shopping_cart_pc_build` (`pc_build`);
 
 --
--- 表的索引 `wallet_transactions`
+-- Indexes for table `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
   ADD PRIMARY KEY (`transaction_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 在导出的表使用AUTO_INCREMENT
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- 使用表AUTO_INCREMENT `admins`
+-- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
   MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- 使用表AUTO_INCREMENT `build_items`
+-- AUTO_INCREMENT for table `bank`
 --
-ALTER TABLE `build_items`
-  MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=152;
+ALTER TABLE `bank`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- 使用表AUTO_INCREMENT `categories`
+-- AUTO_INCREMENT for table `build_items`
+--
+ALTER TABLE `build_items`
+  MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=181;
+
+--
+-- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
   MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
--- 使用表AUTO_INCREMENT `consultations`
+-- AUTO_INCREMENT for table `consultations`
 --
 ALTER TABLE `consultations`
   MODIFY `consultation_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- 使用表AUTO_INCREMENT `customers`
+-- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- 使用表AUTO_INCREMENT `customer_addresses`
+-- AUTO_INCREMENT for table `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- 使用表AUTO_INCREMENT `orders`
+-- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
--- 使用表AUTO_INCREMENT `order_details`
+-- AUTO_INCREMENT for table `order_details`
 --
 ALTER TABLE `order_details`
-  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
--- 使用表AUTO_INCREMENT `packages`
+-- AUTO_INCREMENT for table `packages`
 --
 ALTER TABLE `packages`
-  MODIFY `package_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `package_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- 使用表AUTO_INCREMENT `package_items`
---
-ALTER TABLE `package_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
-
---
--- 使用表AUTO_INCREMENT `payments`
+-- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- 使用表AUTO_INCREMENT `products`
+-- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
   MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
--- 使用表AUTO_INCREMENT `product_specifications`
+-- AUTO_INCREMENT for table `product_specifications`
 --
 ALTER TABLE `product_specifications`
   MODIFY `spec_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- 使用表AUTO_INCREMENT `reviews`
+-- AUTO_INCREMENT for table `reviews`
 --
 ALTER TABLE `reviews`
-  MODIFY `review_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `review_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- 使用表AUTO_INCREMENT `saved_builds`
+-- AUTO_INCREMENT for table `saved_builds`
 --
 ALTER TABLE `saved_builds`
-  MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
--- 使用表AUTO_INCREMENT `saved_cards`
+-- AUTO_INCREMENT for table `saved_cards`
 --
 ALTER TABLE `saved_cards`
-  MODIFY `card_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `card_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- 使用表AUTO_INCREMENT `shopping_cart`
+-- AUTO_INCREMENT for table `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
-  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- 使用表AUTO_INCREMENT `wallet_transactions`
+-- AUTO_INCREMENT for table `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- 限制导出的表
+-- Constraints for dumped tables
 --
 
 --
--- 限制表 `build_items`
+-- Constraints for table `build_items`
 --
 ALTER TABLE `build_items`
   ADD CONSTRAINT `build_items_ibfk_1` FOREIGN KEY (`pc_build`) REFERENCES `saved_builds` (`pc_build`) ON DELETE CASCADE,
   ADD CONSTRAINT `build_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `consultations`
+-- Constraints for table `consultations`
 --
 ALTER TABLE `consultations`
   ADD CONSTRAINT `consultations_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `customer_addresses`
+-- Constraints for table `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   ADD CONSTRAINT `customer_addresses_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `orders`
+-- Constraints for table `orders`
 --
 ALTER TABLE `orders`
   ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `order_details`
+-- Constraints for table `order_details`
 --
 ALTER TABLE `order_details`
+  ADD CONSTRAINT `fk_order_details_build` FOREIGN KEY (`pc_build`) REFERENCES `saved_builds` (`pc_build`) ON DELETE SET NULL,
   ADD CONSTRAINT `order_details_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `order_details_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE SET NULL;
 
 --
--- 限制表 `package_items`
---
-ALTER TABLE `package_items`
-  ADD CONSTRAINT `package_items_ibfk_1` FOREIGN KEY (`package_id`) REFERENCES `packages` (`package_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `package_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
-
---
--- 限制表 `payments`
+-- Constraints for table `payments`
 --
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `products`
+-- Constraints for table `products`
 --
 ALTER TABLE `products`
   ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `product_specifications`
+-- Constraints for table `product_specifications`
 --
 ALTER TABLE `product_specifications`
   ADD CONSTRAINT `product_specifications_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `reviews`
+-- Constraints for table `reviews`
 --
 ALTER TABLE `reviews`
   ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `saved_builds`
+-- Constraints for table `saved_builds`
 --
 ALTER TABLE `saved_builds`
   ADD CONSTRAINT `saved_builds_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `saved_cards`
+-- Constraints for table `saved_cards`
 --
 ALTER TABLE `saved_cards`
   ADD CONSTRAINT `saved_cards_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `shopping_cart`
+-- Constraints for table `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
   ADD CONSTRAINT `fk_shopping_cart_pc_build` FOREIGN KEY (`pc_build`) REFERENCES `saved_builds` (`pc_build`) ON DELETE CASCADE,
@@ -975,7 +1088,7 @@ ALTER TABLE `shopping_cart`
   ADD CONSTRAINT `shopping_cart_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `wallet_transactions`
+-- Constraints for table `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
   ADD CONSTRAINT `wallet_transactions_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;

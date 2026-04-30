@@ -14,8 +14,11 @@ $message = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = mysqli_real_escape_string($conn, $_POST['email']);
     
-    $check_sql = "SELECT customer_id, first_name FROM customers WHERE email = '$email'";
-    $result = $conn->query($check_sql);
+    // 🌟 A+ 级安全修复：使用 Prepared Statement
+    $stmt = $conn->prepare("SELECT customer_id, first_name FROM customers WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     if ($result->num_rows > 0) {
         $row = $result->fetch_assoc();
@@ -24,65 +27,54 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $otp = sprintf("%06d", mt_rand(1, 999999)); 
         $expiry_time = date("Y-m-d H:i:s", time() + 3600); 
 
-        $update_sql = "UPDATE customers SET reset_token = '$otp', reset_token_expire = '$expiry_time' WHERE email = '$email'";
+        // 🌟 A+ 级安全修复：Prepared Statement 更新 OTP
+        $update_stmt = $conn->prepare("UPDATE customers SET reset_token = ?, reset_token_expire = ? WHERE email = ?");
+        $update_stmt->bind_param("sss", $otp, $expiry_time, $email);
         
-        if ($conn->query($update_sql) === TRUE) {
-            
+        if ($update_stmt->execute()) {
             $mail = new PHPMailer(true);
 
             try {
-                $mail->isSMTP();                                            
-                $mail->Host       = 'smtp.gmail.com';                     
-                $mail->SMTPAuth   = true;                                   
+                // 保持你原本的 SMTP 配置不变
+                $mail->isSMTP();
+                $mail->Host       = 'smtp.gmail.com'; 
+                $mail->SMTPAuth   = true;
                 $mail->Username   = 'ganshengwing1126@gmail.com'; 
-                $mail->Password   = 'zojr bcke pnkd qgli'; 
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;            
-                $mail->Port       = 587;                                    
+                $mail->Password   = 'vyay fzmg glan quun'; 
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port       = 587;
 
-                $mail->setFrom('ganshengwing1126@gmail.com', 'PC Store Support');
-                $mail->addAddress($email, $first_name); 
+                $mail->setFrom('ganshengwing1126@gmail.com', 'GridCitY PC');
+                $mail->addAddress($email, $first_name);
 
-                $mail->isHTML(true);                                  
-                $mail->Subject = 'Your OTP for Password Reset - PC Store';
-                
+                $mail->isHTML(true);
+                $mail->Subject = 'Your Password Reset OTP';
                 $mail->Body    = "
-                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;'>
-                        <h2 style='color: #4285F4;'>PC Store - Password Reset</h2>
-                        <p>Hi <b>{$first_name}</b>,</p>
-                        <p>We received a request to reset your password. Here is your One-Time Password (OTP):</p>
-                        <div style='background-color: #f4f7f6; padding: 15px; text-align: center; border-radius: 5px; margin: 20px 0;'>
-                            <h1 style='letter-spacing: 5px; margin: 0; color: #333;'>{$otp}</h1>
-                        </div>
-                        <p>This code will expire in 1 hour. If you did not request this, please ignore this email.</p>
-                        <br>
-                        <p>Best regards,<br>The PC Store Team</p>
-                    </div>
-                ";
+                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; background-color: #0a0a0a; color: #ffffff;'>
+                        <h2 style='color: #00f2fe; text-align: center;'>GridCitY PC</h2>
+                        <p style='font-size: 16px;'>Hi <strong style='color: #00f2fe;'>$first_name</strong>,</p>
+                        <p style='font-size: 14px;'>We received a request to reset your password. Please use the following One-Time Password (OTP) to proceed:</p>
+                        <div style='background: #1a1a1a; padding: 15px; font-size: 32px; text-align: center; font-weight: bold; color: #00f2fe; border: 1px solid #00f2fe; border-radius: 8px; letter-spacing: 8px; margin: 20px 0;'>$otp</div>
+                        <p style='font-size: 12px; color: #888; text-align: center;'>This security code is valid for 1 hour. If you did not request this, please ignore this email.</p>
+                    </div>";
 
                 $mail->send();
-
                 $_SESSION['reset_email'] = $email;
-                $_SESSION['demo_otp'] = $otp;
-                
                 header("Location: verify_otp.php");
                 exit();
-
             } catch (Exception $e) {
-                $message = "<div class='text-danger' style='text-align: center; margin-bottom: 15px; border: 1px solid #ff4d4d; padding: 10px; border-radius: 6px; background: rgba(255, 77, 77, 0.1);'><i class='fas fa-exclamation-circle'></i> Message could not be sent. Mailer Error: {$mail->ErrorInfo}</div>";
+                $message = "<div class='text-danger' style='margin-bottom: 1rem; text-align: center; font-weight: bold;'><i class='fa-solid fa-circle-exclamation'></i> Mailer Error: {$mail->ErrorInfo}</div>";
             }
-
-        } else {
-            $message = "<div class='text-danger' style='text-align: center; margin-bottom: 15px; border: 1px solid #ff4d4d; padding: 10px; border-radius: 6px; background: rgba(255, 77, 77, 0.1);'><i class='fas fa-exclamation-circle'></i> Database error.</div>";
         }
+        $update_stmt->close();
     } else {
         $_SESSION['reset_email'] = $email;
-        $_SESSION['demo_otp'] = "000000"; 
         header("Location: verify_otp.php");
         exit();
     }
+    $stmt->close();
 }
 
-// 🚨 核心修复：移除多余的 doctype 和 html/body 标签，直接引入 header！
 include 'includes/header.php'; 
 ?>
 
@@ -93,7 +85,7 @@ include 'includes/header.php';
 
         <?php if (!empty($message)) echo $message; ?>
 
-        <form action="forgot_password.php" method="POST">
+        <form action="forgot_password.php" method="POST" class="form">
             <div class="form-group">
                 <label class="form-label" for="email">Email Address</label>
                 <input type="email" id="email" name="email" class="form-control" required placeholder="name@example.com">
@@ -103,9 +95,9 @@ include 'includes/header.php';
                 Send Reset Link <i class="fa-solid fa-paper-plane" style="margin-left: 5px;"></i>
             </button>
         </form>
-
-        <div style="text-align: center; margin-top: 25px; font-size: 0.9rem; color: var(--text-muted);">
-            Remember your password? <a href="login.php" style="color: var(--accent-blue); font-weight: bold;">Back to Login</a>
+        
+        <div class="specs" style="margin-top: 2rem; text-align: center;">
+            Remembered your password? <a href="login.php" class="highlight-link">Back to Login</a>
         </div>
     </div>
 </main>

@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_build'])) {
         $build_id = $conn->insert_id; 
         $stmt->close();
 
-        // [步骤 B]：把购物车里的零件，一个个打上这个文件夹的 ID 烙印，存入 build_items 表
+        // 存入 build_items 表
         $stmt_items = $conn->prepare("INSERT INTO build_items (pc_build, product_id, quantity) VALUES (?, ?, 1)");
         foreach ($cart as $cat_id => $item) {
             $pid = $item['product_id'];
@@ -49,32 +49,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_build'])) {
 
         // ==========================================
         // 🧠 核心黑科技 V2.0：基于花销比例的防偏见追踪
-        // (Component-Level Budget Allocation Analysis)
         // ==========================================
         $add_gamer = 0; $add_creator = 0; $add_student = 0;
 
-        // 1. 算出各大件花了多少钱 (1=CPU, 3=RAM, 4=GPU)
         $gpu_spend = isset($cart[4]) ? $cart[4]['price'] : 0;
         $cpu_spend = isset($cart[1]) ? $cart[1]['price'] : 0;
         $ram_spend = isset($cart[3]) ? $cart[3]['price'] : 0;
 
-        // 2. 计算花销比例 (防除以 0 报错)
         $gpu_ratio = $total_price > 0 ? ($gpu_spend / $total_price) : 0;
         $cpu_ratio = $total_price > 0 ? ($cpu_spend / $total_price) : 0;
 
-        // 3. 终极无偏见判定
         if ($gpu_ratio >= 0.35) {
-            // 只要显卡占了总价 35% 以上，绝对是打游戏的
             $add_gamer = 5; $add_creator = 1; 
         } elseif ($cpu_ratio >= 0.25 || $ram_spend >= 600) {
-            // CPU 占比极高，或者买了极贵的内存，说明是吃 CPU 的渲染/剪辑工作站
             $add_creator = 5; $add_gamer = 2; $add_student = 1;
         } else {
-            // 显卡占比低或没买独立显卡，判定为均衡型 / 学生 / 高端休闲机
             $add_student = 5; $add_creator = 2; $add_gamer = 1;
         }
 
-        // 悄悄更新数据库里的 DNA 分数
         $stmt_dna = $conn->prepare("UPDATE customers SET pref_gamer = pref_gamer + ?, pref_creator = pref_creator + ?, pref_student = pref_student + ? WHERE customer_id = ?");
         $stmt_dna->bind_param("iiii", $add_gamer, $add_creator, $add_student, $customer_id);
         $stmt_dna->execute();
@@ -83,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_build'])) {
 
         $conn->commit();
         
-        $message = "Blueprint successfully saved to your Armory!";
+        $message = "Configuration successfully secured to your armory.";
         $msg_type = "success";
         
     } catch (Exception $e) {
@@ -92,69 +84,143 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_build'])) {
         $msg_type = "error";
     }
 }
-
-include 'includes/header.php';
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Save Configuration - GridCitY PC</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* 🌟 全局深空材质与环境光 */
+        body { background-color: #030305; color: #fff; position: relative; overflow-x: hidden; font-family: 'Inter', sans-serif; }
+        .cyber-grid-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-image: linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px); background-size: 40px 40px; z-index: -2; }
+        .cyber-glow-bg { position: fixed; top: -10vh; left: 50%; transform: translateX(-50%); width: 80vw; height: 60vh; background: radial-gradient(ellipse at center, rgba(0, 242, 254, 0.1) 0%, transparent 70%); filter: blur(70px); z-index: -1; pointer-events: none; }
+        
+        /* 🌟 核心表单容器 */
+        .tech-auth-card {
+            position: relative; background: rgba(10, 10, 15, 0.45); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(0, 242, 254, 0.15); border-radius: 12px; padding: 50px 45px; width: 100%; max-width: 500px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 242, 254, 0.05); overflow: hidden; margin: 60px auto;
+        }
+        /* 顶部扫描线 */
+        .tech-auth-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 1px; background: linear-gradient(90deg, transparent, #00f2fe, transparent); animation: cyber-scan 3s linear infinite; }
+        @keyframes cyber-scan { 0% { left: -100%; } 100% { left: 200%; } }
 
-<style>
-    .save-container { max-width: 500px; margin: 5rem auto; background: rgba(255,255,255,0.03); padding: 40px; border-radius: 15px; border: 1px solid rgba(0,242,254,0.2); box-shadow: 0 15px 35px rgba(0,0,0,0.5); font-family: 'Inter', sans-serif; }
-    .title { text-align: center; color: #fff; font-size: 2.2rem; font-weight: 900; margin-bottom: 10px; letter-spacing: -1px; }
-    .subtitle { text-align: center; color: #888; margin-bottom: 30px; font-size: 0.95rem; }
-    .form-group { margin-bottom: 20px; }
-    .form-control { width: 100%; padding: 12px 15px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #00f2fe; border-radius: 8px; outline: none; transition: 0.3s; font-size: 1.1rem; font-weight: bold; }
-    .form-control:focus { border-color: #00f2fe; box-shadow: 0 0 10px rgba(0,242,254,0.2); }
-    .btn-save { width: 100%; padding: 14px; background: #00f2fe; color: #000; border: none; font-weight: 900; font-size: 1.1rem; border-radius: 8px; cursor: pointer; transition: 0.3s; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
-    .btn-save:hover { background: #fff; box-shadow: 0 0 20px #00f2fe; transform: translateY(-2px); }
-    .parts-preview { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px; margin-bottom: 25px; border: 1px dashed rgba(255,255,255,0.1); }
-    .preview-item { font-size: 0.85rem; color: #cbd5e1; margin-bottom: 5px; display: flex; justify-content: space-between; }
-</style>
+        /* 🌟 黑卡账单区域 (Receipt Box) */
+        .receipt-box {
+            background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px; padding: 25px 25px 30px 25px; margin-bottom: 30px;
+        }
+        .receipt-header {
+            display: flex; justify-content: space-between; color: #64748b; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+            letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 25px; padding-bottom: 10px;
+        }
+        .receipt-item { display: flex; justify-content: space-between; margin-bottom: 14px; font-size: 0.85rem; align-items: baseline; }
+        .item-name { color: #e2e8f0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
+        .item-price { color: #94a3b8; font-family: 'JetBrains Mono', monospace; }
+        
+        .receipt-divider { border-top: 1px dashed rgba(255,255,255,0.15); margin: 25px 0 20px 0; }
+        
+        .receipt-total { display: flex; justify-content: space-between; align-items: baseline; }
+        .total-label { font-size: 0.95rem; font-weight: 800; color: #f8fafc; }
+        .total-price { font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: 800; color: #00f2fe; text-shadow: 0 0 15px rgba(0,242,254,0.3); }
 
-<div class="save-container">
-    <div class="title">Save <span style="color: #00f2fe;">Blueprint</span></div>
-    <div class="subtitle">Secure your current configuration to your armory.</div>
+        /* 🌟 输入框与按钮 */
+        .tech-label { color: #00f2fe; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block; }
+        .tech-input {
+            width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff; padding: 14px 16px; border-radius: 8px; font-size: 0.95rem; transition: 0.3s; margin-bottom: 25px;
+        }
+        .tech-input:focus { outline: none; border-color: #00f2fe; background: rgba(0, 242, 254, 0.03); box-shadow: 0 0 15px rgba(0, 242, 254, 0.15); }
+        
+        .btn-submit {
+            background: #ffffff; color: #000; font-weight: 800; padding: 16px; width: 100%; border-radius: 8px;
+            border: none; cursor: pointer; transition: 0.3s; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(255,255,255,0.1);
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(255,255,255,0.25); background: #f8fafc; }
+        
+        .btn-outline {
+            background: transparent; color: #00f2fe; border: 1px solid #00f2fe; font-weight: 700;
+            padding: 14px; width: 100%; border-radius: 8px; cursor: pointer; transition: 0.3s; text-align: center; display: block; text-decoration: none; box-sizing: border-box;
+        }
+        .btn-outline:hover { background: #00f2fe; color: #000; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
 
-    <?php if ($message): ?>
-        <?php if ($msg_type == 'success'): ?>
-            <div style="background: rgba(0, 230, 118, 0.1); color: #00e676; padding: 15px; border-radius: 8px; margin-bottom: 25px; text-align: center; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3);">
-                <i class="fas fa-check-circle" style="font-size: 1.5rem; display: block; margin-bottom: 5px;"></i> <?php echo $message; ?>
-            </div>
-            <div style="display: flex; gap: 15px; margin-top: 20px;">
-                <a href="profile.php" class="btn-save" style="text-align: center; text-decoration: none; background: transparent; border: 1px solid #00f2fe; color: #00f2fe;">View Armory</a>
-                <a href="builder.php" class="btn-save" style="text-align: center; text-decoration: none;">Keep Building</a>
-            </div>
-        <?php else: ?>
-            <div style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.3);">
-                <i class="fas fa-exclamation-triangle"></i> <?php echo $message; ?>
-            </div>
-            <a href="builder.php" style="color: #888; text-decoration: none; display: block; text-align: center;"><i class="fas fa-arrow-left"></i> Go back</a>
-        <?php endif; ?>
-    <?php else: ?>
+        .back-link { display: block; text-align: center; margin-top: 25px; color: #64748b; font-size: 0.9rem; text-decoration: none; transition: 0.3s; font-weight: 500; }
+        .back-link:hover { color: #fff; }
+    </style>
+</head>
+<body>
 
-        <div class="parts-preview">
-            <div style="color: #888; font-size: 0.75rem; font-weight: bold; margin-bottom: 10px; letter-spacing: 1px;">CURRENT LOADOUT: <?php echo count($cart); ?> PARTS</div>
-            <?php foreach ($cart as $item): ?>
-                <div class="preview-item">
-                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">- <?php echo htmlspecialchars($item['name']); ?></span>
-                    <span style="color: #00e676;">RM <?php echo number_format($item['price'], 2); ?></span>
+<?php include 'includes/header.php'; ?>
+<div class="cyber-grid-bg"></div>
+<div class="cyber-glow-bg"></div>
+
+<main style="display: flex; align-items: center; justify-content: center; min-height: 85vh; padding: 20px;">
+    <div class="tech-auth-card">
+        
+        <div style="text-align: center; margin-bottom: 35px;">
+            <h2 style="font-weight: 900; font-size: 2rem; margin: 0 0 8px 0; letter-spacing: -0.5px;">Save Configuration</h2>
+            <p style="color: #64748b; font-size: 0.95rem; margin: 0; font-weight: 400;">Secure your build payload into the armory.</p>
+        </div>
+
+        <?php if ($message): ?>
+            <?php if ($msg_type == 'success'): ?>
+                <div style="font-size: 0.85rem; color: #00e676; background: rgba(0, 230, 118, 0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(0, 230, 118, 0.2); margin-bottom: 30px; text-align: center; line-height: 1.5;">
+                    <i class="fas fa-check-circle" style="font-size: 1.5rem; display: block; margin-bottom: 10px;"></i>
+                    <?php echo $message; ?>
                 </div>
-            <?php endforeach; ?>
-            <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; font-weight: bold; color: #fff;">
-                <span>ESTIMATED TOTAL:</span>
-                <span style="color: #00f2fe;">RM <?php echo number_format($total_price, 2); ?></span>
-            </div>
-        </div>
+                <div style="display: flex; gap: 15px; flex-direction: column;">
+                    <a href="profile.php" class="btn-submit" style="text-align: center; text-decoration: none; box-sizing: border-box;">View Armory</a>
+                    <a href="builder.php" class="btn-outline">Keep Building</a>
+                </div>
+            <?php else: ?>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #ff4d4d; background: rgba(255, 77, 77, 0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 77, 77, 0.2); margin-bottom: 30px; text-align: center;">
+                    <i class="fas fa-exclamation-triangle"></i> <?php echo strtoupper($message); ?>
+                </div>
+                <a href="builder.php" class="btn-outline">Return to Builder</a>
+            <?php endif; ?>
+        <?php else: ?>
 
-        <form method="POST" action="">
-            <div class="form-group">
-                <label style="color: #888; font-size: 0.85rem; margin-bottom: 8px; display: block; font-weight: bold; letter-spacing: 1px;">BLUEPRINT NAME</label>
-                <input type="text" name="build_name" class="form-control" placeholder="e.g. Dream Gaming Rig 2026" required>
+            <!-- 🌟 黑卡账单预览区 -->
+            <div class="receipt-box">
+                <div class="receipt-header">
+                    <span>Component List</span>
+                    <span><?php echo count($cart); ?> Items</span>
+                </div>
+                
+                <?php foreach ($cart as $item): ?>
+                    <div class="receipt-item">
+                        <span class="item-name"><?php echo htmlspecialchars($item['name']); ?></span>
+                        <span class="item-price">RM <?php echo number_format($item['price'], 2); ?></span>
+                    </div>
+                <?php endforeach; ?>
+                
+                <div class="receipt-divider"></div>
+                
+                <div class="receipt-total">
+                    <span class="total-label">Est. Total</span>
+                    <span class="total-price">RM <?php echo number_format($total_price, 2); ?></span>
+                </div>
             </div>
-            <button type="submit" name="save_build" class="btn-save"><i class="fas fa-lock" style="margin-right: 5px;"></i> SECURE LOADOUT</button>
-        </form>
-        <div style="text-align: center; margin-top: 20px;">
-            <a href="builder.php" style="color: #888; text-decoration: none; font-size: 0.9rem; transition: 0.2s;" onmouseover="this.style.color='#00f2fe'" onmouseout="this.style.color='#888'"><i class="fas fa-arrow-left"></i> Return to Builder</a>
-        </div>
-    <?php endif; ?>
-</div>
+
+            <form method="POST" action="">
+                <div>
+                    <label class="tech-label">Configuration Name</label>
+                    <input type="text" name="build_name" class="tech-input" placeholder="e.g., Deep Learning Workstation" required>
+                </div>
+                <button type="submit" name="save_build" class="btn-submit">Confirm & Save</button>
+            </form>
+            
+            <a href="builder.php" class="back-link"><i class="fas fa-arrow-left" style="margin-right: 5px;"></i> Back to Builder</a>
+            
+        <?php endif; ?>
+    </div>
+</main>
 
 <?php include 'includes/footer.php'; ?>
+</body>
+</html>

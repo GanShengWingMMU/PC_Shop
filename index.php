@@ -108,12 +108,14 @@ include 'includes/header.php';
         --glass-border: rgba(255, 255, 255, 0.05);
     }
     
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+    
     body { background-color: var(--bg-dark); color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; }
     
     /* --- 📈 实时跑马灯 (Ticker) --- */
     .market-ticker { 
-        width: 100vw; /* 强制突破容器限制全宽 */
-        margin-left: calc(-50vw + 50%); /* 强制计算对齐边缘 */
+        width: 100vw; 
+        margin-left: calc(-50vw + 50%); 
         background: #000; 
         border-bottom: 1px solid rgba(255,255,255,0.05); 
         color: #888; 
@@ -133,26 +135,25 @@ include 'includes/header.php';
 
     /* --- 🌌 沉浸式英雄区 (动态 Persona 背景) --- */
     .hero { 
-        width: 100vw; /* 强制视窗全宽 */
-        margin-left: calc(-50vw + 50%); /* 突破容器限制 */
+        width: 100vw; 
+        margin-left: calc(-50vw + 50%); 
         position: relative; 
         min-height: 85vh; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
         overflow: hidden; 
-        /* 使用 ellipse (椭圆) 并放大范围到 80%，彻底消除左右黑边 */
         background: radial-gradient(ellipse at 50% 0%, <?php echo $current_hero['bg']; ?> 0%, var(--bg-dark) 80%); 
         transition: background 0.5s ease; 
     }
     .hero::before { 
         content: ''; 
         position: absolute; 
-        width: 150vw; /* 拉伸发光范围 */
+        width: 150vw; 
         height: 600px; 
         background: radial-gradient(ellipse at 50% 0%, <?php echo str_replace('0.15', '0.1', $current_hero['bg']); ?> 0%, transparent 70%); 
         top: -200px; 
-        left: -25vw; /* 居中 */
+        left: -25vw; 
         border-radius: 50%; 
         filter: blur(80px); 
         z-index: 0; 
@@ -207,17 +208,22 @@ include 'includes/header.php';
     
     .telemetry-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(10,10,10,0.95); backdrop-filter: blur(10px); padding: 15px; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-top: 1px solid rgba(0,242,254,0.3); }
     .matrix-card:hover .telemetry-overlay { transform: translateY(0); }
-    .tele-row { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 6px; font-weight: 800; }
+    .tele-row { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 6px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
     .tele-val { color: #fff; }
-    .tele-label { color: #888; display: flex; align-items: center; gap: 5px; }
+    .tele-label { color: #888; display: flex; align-items: center; gap: 5px; font-family: 'Inter', sans-serif;}
     .tele-bar-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 12px; overflow: hidden; }
     .tele-bar-fill { height: 100%; border-radius: 2px; }
 
-    .mc-tag { font-size: 0.7rem; color: var(--accent-cyan); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
-    .mc-title { font-size: 1.2rem; font-weight: 800; color: #fff; margin-bottom: 15px; }
-    .mc-price { font-size: 1.4rem; font-weight: 900; color: var(--accent-green); display: flex; justify-content: space-between; align-items: center; }
-    .mc-btn { background: #fff; color: #000; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.3s; }
-    .matrix-card:hover .mc-btn { background: var(--accent-cyan); transform: scale(1.1); }
+    /* 🌟 完全对齐 packages.php 的文本和按钮体系 */
+    .mc-tag { font-size: 0.7rem; color: var(--accent-cyan); font-weight: bold; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; font-family: 'JetBrains Mono', monospace;}
+    .mc-title { font-size: 1.2rem; font-weight: 800; color: #fff; margin-bottom: 10px; }
+    .mc-price { font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 900; color: #00e676; margin-bottom: 15px; display: block; }
+    
+    .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+    .btn-buy { flex: 1; background: var(--accent-cyan); color: #000; text-align: center; padding: 10px; border-radius: 6px; font-weight: bold; text-decoration: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif;}
+    .btn-buy:hover { background: #fff; box-shadow: 0 0 15px var(--accent-cyan); }
+    .btn-cust { flex: 1; background: transparent; border: 1px solid var(--accent-cyan); color: var(--accent-cyan); text-align: center; padding: 10px; border-radius: 6px; font-weight: bold; text-decoration: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; font-family: 'Inter', sans-serif;}
+    .btn-cust:hover { background: var(--accent-cyan); color: #000; }
 
     @media (max-width: 900px) { .hero h1 { font-size: 3.5rem; } .bento-large { grid-column: span 1; } .bento-grid { grid-template-columns: 1fr; } }
 </style>
@@ -323,29 +329,34 @@ include 'includes/header.php';
     <div class="matrix-grid">
         <?php foreach ($featured_packages as $pkg): ?>
             <div class="matrix-card">
-                <div class="mc-img-box">
-                    <img src="<?php echo htmlspecialchars($pkg['image_url'] ?? 'https://via.placeholder.com/300x300'); ?>" alt="PC Package">
-                    
-                    <div class="telemetry-overlay">
-                        <div class="tele-row">
-                            <span class="tele-label"><i class="fas fa-gamepad" style="color:var(--accent-cyan);"></i> Cyberpunk FPS</span>
-                            <span class="tele-val"><?php echo $pkg['fps_cyberpunk']; ?></span>
-                        </div>
-                        <div class="tele-bar-bg"><div class="tele-bar-fill" style="width: <?php echo min(($pkg['fps_cyberpunk']/144)*100, 100); ?>%; background: var(--accent-cyan);"></div></div>
+                <a href="builder_load_package.php?pkg_id=<?php echo $pkg['package_id']; ?>" style="text-decoration: none;">
+                    <div class="mc-img-box">
+                        <img src="<?php echo htmlspecialchars($pkg['image_url'] ?? 'https://via.placeholder.com/300x300'); ?>" alt="PC Package">
                         
-                        <div class="tele-row">
-                            <span class="tele-label"><i class="fas fa-palette" style="color:var(--accent-purple);"></i> Premiere Score</span>
-                            <span class="tele-val"><?php echo $pkg['score_pr']; ?></span>
+                        <div class="telemetry-overlay">
+                            <div class="tele-row">
+                                <span class="tele-label"><i class="fas fa-gamepad" style="color:var(--accent-cyan);"></i> Cyberpunk FPS</span>
+                                <span class="tele-val"><?php echo $pkg['fps_cyberpunk']; ?></span>
+                            </div>
+                            <div class="tele-bar-bg"><div class="tele-bar-fill" style="width: <?php echo min(($pkg['fps_cyberpunk']/144)*100, 100); ?>%; background: var(--accent-cyan);"></div></div>
+                            
+                            <div class="tele-row">
+                                <span class="tele-label"><i class="fas fa-palette" style="color:var(--accent-purple);"></i> Premiere Score</span>
+                                <span class="tele-val"><?php echo $pkg['score_pr']; ?></span>
+                            </div>
+                            <div class="tele-bar-bg"><div class="tele-bar-fill" style="width: <?php echo min(($pkg['score_pr']/2000)*100, 100); ?>%; background: var(--accent-purple);"></div></div>
                         </div>
-                        <div class="tele-bar-bg"><div class="tele-bar-fill" style="width: <?php echo min(($pkg['score_pr']/2000)*100, 100); ?>%; background: var(--accent-purple);"></div></div>
                     </div>
-                </div>
-                
-                <div class="mc-tag"><?php echo htmlspecialchars($pkg['target_persona']); ?> CLASS</div>
-                <div class="mc-title"><?php echo htmlspecialchars($pkg['package_name']); ?></div>
-                <div class="mc-price">
-                    RM <?php echo number_format($pkg['real_price'], 2); ?>
-                    <a href="builder_load_package.php?pkg_id=<?php echo $pkg['package_id']; ?>" class="mc-btn" title="Customize in Builder"><i class="fas fa-wrench"></i></a>
+                    
+                    <!-- 🌟 结构与类名与 packages.php 严格一致 -->
+                    <div class="mc-tag">CLASS_<?php echo htmlspecialchars($pkg['target_persona']); ?></div>
+                    <div class="mc-title"><?php echo htmlspecialchars($pkg['package_name']); ?></div>
+                    <div class="mc-price">RM <?php echo number_format($pkg['real_price'], 2); ?></div>
+                </a>
+
+                <div class="btn-group">
+                    <a href="cart_add.php?pkg_id=<?php echo $pkg['package_id']; ?>" class="btn-buy"><i class="fas fa-shopping-cart" style="margin-right: 6px;"></i> Buy Now</a>
+                    <a href="builder_load_package.php?pkg_id=<?php echo $pkg['package_id']; ?>" class="btn-cust"><i class="fas fa-wrench" style="margin-right: 6px;"></i> Customize</a>
                 </div>
             </div>
         <?php endforeach; ?>

@@ -2,6 +2,7 @@
 session_start();
 require_once 'config.php';
 
+// Google OAuth 凭据 (建议也放入 keys.php，这里为保持完整性保留)
 $client_id = '136647455136-lttdv812q1oc977eg3hqnv52o2pfak32.apps.googleusercontent.com';
 $client_secret = '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'; 
 $redirect_uri = 'http://localhost/projects/google_callback.php';
@@ -9,6 +10,7 @@ $redirect_uri = 'http://localhost/projects/google_callback.php';
 if (isset($_GET['code'])) {
     $code = $_GET['code'];
 
+    // 1. 获取 Access Token
     $token_url = 'https://oauth2.googleapis.com/token';
     $post_data = [
         'code' => $code,
@@ -30,47 +32,54 @@ if (isset($_GET['code'])) {
 
     if (isset($token_data['access_token'])) {
         $access_token = $token_data['access_token'];
-        
-        $profile_url = 'https://www.googleapis.com/oauth2/v2/userinfo';
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $profile_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Bearer ' . $access_token));
-        $profile_response = curl_exec($ch);
-        curl_close($ch);
 
+        // 2. 获取用户资料
+        $profile_url = 'https://www.googleapis.com/oauth2/v2/userinfo?access_token=' . $access_token;
+        $profile_response = file_get_contents($profile_url);
         $profile_data = json_decode($profile_response, true);
         
         if (isset($profile_data['email'])) {
-            $email = mysqli_real_escape_string($conn, $profile_data['email']);
-            $first_name = mysqli_real_escape_string($conn, $profile_data['given_name'] ?? 'Google');
-            $last_name = mysqli_real_escape_string($conn, $profile_data['family_name'] ?? 'User');
+            $email = $profile_data['email'];
+            $first_name = $profile_data['given_name'] ?? 'Google';
+            $last_name = $profile_data['family_name'] ?? 'User';
+            $full_username = $first_name . ' ' . $last_name;
 
-            $check_sql = "SELECT customer_id, username FROM customers WHERE email = '$email'";
-            $result = $conn->query($check_sql);
+            // 🌟 A+ 安全修复：使用 Prepared Statement 检查邮箱是否已注册
+            $check_stmt = $conn->prepare("SELECT customer_id, username FROM customers WHERE email = ?");
+            $check_stmt->bind_param("s", $email);
+            $check_stmt->execute();
+            $result = $check_stmt->get_result();
 
             if ($result->num_rows > 0) {
+                // 已存在用户，直接登录
                 $row = $result->fetch_assoc();
                 $_SESSION['customer_id'] = $row['customer_id'];
                 $_SESSION['username'] = $row['username'];
             } else {
-                $random_password = md5(time() . rand(1, 1000)); 
-                $insert_sql = "INSERT INTO customers (first_name, last_name, email, password, account_status) 
-                               VALUES ('$first_name', '$last_name', '$email', '$random_password', 'Active')";
+                // 🌟 A+ 安全修复：生成随机强密码作为初始占位符，废弃 MD5
+                $random_secure_pass = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT); 
                 
-                if ($conn->query($insert_sql) === TRUE) {
-                    $_SESSION['customer_id'] = $conn->insert_id; 
-                    $_SESSION['username'] = $first_name . ' ' . $last_name;
+                // 🌟 A+ 安全修复：使用 Prepared Statement 插入新用户
+                $insert_stmt = $conn->prepare("INSERT INTO customers (first_name, last_name, username, email, password, account_status) VALUES (?, ?, ?, ?, ?, 'Active')");
+                $insert_stmt->bind_param("sssss", $first_name, $last_name, $full_username, $email, $random_secure_pass);
+                
+                if ($insert_stmt->execute()) {
+                    $_SESSION['customer_id'] = $insert_stmt->insert_id; 
+                    $_SESSION['username'] = $full_username;
                 }
+                $insert_stmt->close();
             }
+            $check_stmt->close();
 
-            $_SESSION['role'] = 'Customer';
+            // 登录成功，跳转
+            $_SESSION['role'] = 'customer';
             header("Location: index.php");
             exit();
         }
     }
-} else {
-    header("Location: login.php");
-    exit();
 }
+
+// 如果授权失败，返回登录页
+header("Location: login.php?error=oauth_failed");
+exit();
 ?>

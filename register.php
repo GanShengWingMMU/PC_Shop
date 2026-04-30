@@ -1,262 +1,194 @@
 <?php
-ob_start();
 session_start();
 require_once 'config.php';
 
-// ==========================================
-// 1. 门卫拦截 (Auth Guard)
-// ==========================================
-if (!isset($_SESSION['customer_id'])) {
-    header("Location: login.php");
-    exit();
-}
+if (isset($_SESSION['customer_id'])) { header("Location: index.php"); exit(); }
 
-$customer_id = $_SESSION['customer_id'];
-$update_msg = "";
-$update_err = "";
+$error_msg = "";
+require_once 'keys.php'; // 包含 OAuth 密钥
 
-// ==========================================
-// 🌟 2. 处理表单提交 (Update Profile Logic)
-// ==========================================
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
-    $new_username = trim($_POST['username']);
-    $new_email = trim($_POST['email']);
-    $new_password = $_POST['new_password'];
+$google_redirect_uri = 'http://localhost/projects/google_callback.php';
+$google_login_url = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=" . $google_client_id . "&redirect_uri=" . urlencode($google_redirect_uri) . "&scope=email%20profile";
+$discord_redirect_uri = 'http://localhost/projects/discord_callback.php';
+$discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=" . $discord_client_id . "&redirect_uri=" . urlencode($discord_redirect_uri) . "&response_type=code&scope=" . urlencode("identify email");
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $first_name = trim($_POST['first_name']);
+    $last_name = trim($_POST['last_name']);
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
+    $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
 
-    if (empty($new_username) || empty($new_email)) {
-        $update_err = "Username and Email cannot be empty.";
+    if (empty($username) || empty($email) || empty($password)) {
+        $error_msg = "ERR: Core fields missing.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error_msg = "ERR: Invalid email format.";
+    } elseif ($password !== $confirm_password) {
+        $error_msg = "ERR: Passwords mismatch.";
+    } elseif (strlen($password) < 12 || !preg_match('/[A-Z]/', $password) || !preg_match('/[0-9]/', $password) || !preg_match('/[\W]/', $password)) {
+        $error_msg = "SYS_POLICY: 12+ chars, uppercase, number, symbol required.";
     } else {
-        // 检查邮箱或用户名是否被别人抢占了
-        $check_stmt = $conn->prepare("SELECT customer_id FROM customers WHERE (email = ? OR username = ?) AND customer_id != ?");
-        $check_stmt->bind_param("ssi", $new_email, $new_username, $customer_id);
+        $check_stmt = $conn->prepare("SELECT customer_id FROM customers WHERE email = ? OR username = ?");
+        $check_stmt->bind_param("ss", $email, $username);
         $check_stmt->execute();
-        $check_stmt->store_result();
-
-        if ($check_stmt->num_rows > 0) {
-            $update_err = "Username or Email is already taken by another user.";
+        if ($check_stmt->get_result()->num_rows > 0) {
+            $error_msg = "ERR: Identity already registered.";
         } else {
-            if (!empty($new_password)) {
-                // 如果用户输入了新密码，检查密码一致性和强密码规则
-                if ($new_password !== $confirm_password) {
-                    $update_err = "New passwords do not match.";
-                } elseif (strlen($new_password) < 12) {
-                    // 🌟 Lecturer 要求的：长度至少 12 位
-                    $update_err = "Password must be at least 12 characters long.";
-                } elseif (!preg_match('/[A-Z]/', $new_password) || !preg_match('/[a-z]/', $new_password) || !preg_match('/[0-9]/', $new_password) || !preg_match('/[\W]/', $new_password)) {
-                    // 🌟 Lecturer 要求的：必须包含大小写字母、数字和特殊符号
-                    $update_err = "Password must include uppercase, lowercase, numbers, and symbols.";
-                } else {
-                    $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                    $update_stmt = $conn->prepare("UPDATE customers SET username = ?, email = ?, password = ? WHERE customer_id = ?");
-                    $update_stmt->bind_param("sssi", $new_username, $new_email, $hashed_password, $customer_id);
-                    if ($update_stmt->execute()) {
-                        $update_msg = "Profile and password updated successfully!";
-                        $_SESSION['username'] = $new_username; // 更新右上角的显示
-                    } else {
-                        $update_err = "Failed to update profile.";
-                    }
-                    $update_stmt->close();
-                }
-            } else {
-                // 如果密码为空，只更新用户名和邮箱
-                $update_stmt = $conn->prepare("UPDATE customers SET username = ?, email = ? WHERE customer_id = ?");
-                $update_stmt->bind_param("ssi", $new_username, $new_email, $customer_id);
-                if ($update_stmt->execute()) {
-                    $update_msg = "Profile updated successfully!";
-                    $_SESSION['username'] = $new_username; // 更新右上角的显示
-                } else {
-                    $update_err = "Failed to update profile.";
-                }
-                $update_stmt->close();
+            $hashed = password_hash($password, PASSWORD_DEFAULT);
+            $insert_stmt = $conn->prepare("INSERT INTO customers (first_name, last_name, username, email, password, account_status) VALUES (?, ?, ?, ?, ?, 'Active')");
+            $insert_stmt->bind_param("sssss", $first_name, $last_name, $username, $email, $hashed);
+            if ($insert_stmt->execute()) {
+                $_SESSION['customer_id'] = $insert_stmt->insert_id;
+                $_SESSION['username'] = $username;
+                header("Location: index.php"); exit();
             }
         }
-        $check_stmt->close();
     }
 }
-
-// ==========================================
-// 3. 抓取玩家基础资料 (Fetch User Info)
-// ==========================================
-$stmt_user = $conn->prepare("SELECT username, email FROM customers WHERE customer_id = ?");
-$stmt_user->bind_param("i", $customer_id);
-$stmt_user->execute();
-$user_info = $stmt_user->get_result()->fetch_assoc();
-$stmt_user->close();
-
-// ==========================================
-// 4. 抓取草稿箱主单 (Fetch Saved Builds)
-// ==========================================
-$stmt_builds = $conn->prepare("SELECT pc_build, build_name, total_price, created_at FROM saved_builds WHERE customer_id = ? ORDER BY created_at DESC");
-$stmt_builds->bind_param("i", $customer_id);
-$stmt_builds->execute();
-$builds_result = $stmt_builds->get_result();
-$saved_builds = [];
-while ($row = $builds_result->fetch_assoc()) {
-    $saved_builds[] = $row;
-}
-$stmt_builds->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GridCitY PC - My Armory</title>
+    <title>Establish Profile - GridCitY PC</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .page-header { background: linear-gradient(90deg, rgba(10,10,10,1) 0%, rgba(0,242,254,0.1) 100%); padding: 40px; border-radius: 12px; margin-bottom: 30px; border: 1px solid rgba(0,242,254,0.2); }
-        .builds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-        .build-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 20px; transition: 0.3s; position: relative; overflow: hidden; }
-        .build-card:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 5px 20px rgba(0,242,254,0.1); }
-        .build-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--accent); opacity: 0; transition: 0.3s; }
-        .build-card:hover::before { opacity: 1; }
-        .part-list { margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); }
-        .part-item { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 8px; color: #aaa; }
-        .part-cat { color: var(--accent); font-weight: bold; width: 80px; flex-shrink: 0; }
-        .part-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        body { background-color: #030305; color: #fff; position: relative; overflow-x: hidden; }
+        .cyber-grid-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px; z-index: -2;
+        }
+        .cyber-glow-bg {
+            position: fixed; top: -10vh; right: -10vw; width: 60vw; height: 60vh;
+            background: radial-gradient(circle, rgba(0, 242, 254, 0.08) 0%, transparent 70%); filter: blur(80px); z-index: -1; pointer-events: none;
+        }
+        .tech-auth-card {
+            position: relative; background: rgba(10, 10, 15, 0.45); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(0, 242, 254, 0.15); border-radius: 12px; padding: 45px 40px; width: 100%; max-width: 520px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 242, 254, 0.05); overflow: hidden; margin: 40px auto;
+        }
+        .tech-auth-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 1px; background: linear-gradient(90deg, transparent, #00f2fe, transparent); animation: cyber-scan 3s linear infinite; }
+        @keyframes cyber-scan { 0% { left: -100%; } 100% { left: 200%; } }
         
-        /* Account Settings Form Styles */
-        .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 768px) { .settings-grid { grid-template-columns: 1fr; } }
+        .tech-input-group { margin-bottom: 20px; position: relative; }
+        .tech-label { font-family: 'Inter', sans-serif; color: #00f2fe; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
+        .tech-input {
+            width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 0.95rem; transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); font-family: 'Inter', sans-serif;
+        }
+        .tech-input:focus { outline: none; border-color: #00f2fe; background: rgba(0, 242, 254, 0.03); box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
+        .tech-btn {
+            background: transparent; color: #00f2fe; border: 1px solid #00f2fe; font-family: 'Inter', sans-serif; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 2px; padding: 14px; width: 100%; border-radius: 6px; cursor: pointer; transition: 0.3s;
+        }
+        .tech-btn:hover { background: #00f2fe; color: #000; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
+        
+        .oauth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
+        .oauth-btn { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; padding: 12px; border-radius: 6px; text-align: center; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: 0.3s; }
+        .oauth-btn:hover { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
 
 <?php include 'includes/header.php'; ?>
+<div class="cyber-grid-bg"></div>
+<div class="cyber-glow-bg"></div>
 
-<main class="main-container" style="padding: 40px 20px;">
-    
-    <div class="page-header">
-        <h1 style="font-size: 2.5rem; margin: 0; color: #fff;">COMMAND <span style="color: var(--accent);">CENTER</span></h1>
-        <p style="color: #aaa; margin-top: 10px; font-size: 1.1rem;">Manage your profile and custom blueprints.</p>
-    </div>
+<main style="padding: 20px;">
+    <div class="tech-auth-card">
+        
+        <div style="text-align: center; margin-bottom: 35px;">
+            <div style="display: inline-block; padding: 6px 12px; background: rgba(0,242,254,0.1); border-radius: 20px; color: #00f2fe; font-size: 0.7rem; font-weight: bold; letter-spacing: 1px; margin-bottom: 15px; border: 1px solid rgba(0,242,254,0.2);">
+                <i class="fas fa-user-plus"></i> NEW REGISTRATION
+            </div>
+            <h2 style="font-weight: 900; font-size: 1.8rem; margin: 0 0 5px 0;">Create Account</h2>
+            <p style="color: #64748b; font-size: 0.85rem; margin: 0;">Establish your GridCitY identity.</p>
+        </div>
 
-    <div class="auth-container" style="max-width: 100%; margin: 0 0 40px 0; padding: 30px;">
-        <h2 style="color: #fff; margin-bottom: 20px; font-size: 1.5rem;"><i class="fas fa-user-cog" style="color: var(--accent);"></i> Account Settings</h2>
-
-        <?php if (!empty($update_msg)): ?>
-            <div style="color: #00e676; padding: 12px; border: 1px solid #00e676; border-radius: 6px; background: rgba(0,230,118,0.1); margin-bottom: 20px; font-weight: bold;">
-                <i class="fas fa-check-circle"></i> <?php echo $update_msg; ?>
+        <?php if($error_msg): ?>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #ff4d4d; background: rgba(255,77,77,0.05); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,77,77,0.3); margin-bottom: 25px;">
+                <i class="fas fa-exclamation-triangle"></i> <?php echo $error_msg; ?>
             </div>
         <?php endif; ?>
 
-        <?php if (!empty($update_err)): ?>
-            <div style="color: #ff4d4d; padding: 12px; border: 1px solid #ff4d4d; border-radius: 6px; background: rgba(255,77,77,0.1); margin-bottom: 20px; font-weight: bold;">
-                <i class="fas fa-exclamation-circle"></i> <?php echo $update_err; ?>
+        <form action="" method="POST">
+            <div style="display: flex; gap: 15px;">
+                <div class="tech-input-group" style="flex:1;">
+                    <label class="tech-label">First Name</label>
+                    <input type="text" name="first_name" class="tech-input" required>
+                </div>
+                <div class="tech-input-group" style="flex:1;">
+                    <label class="tech-label">Last Name</label>
+                    <input type="text" name="last_name" class="tech-input" required>
+                </div>
             </div>
-        <?php endif; ?>
 
-        <form action="" method="POST" class="settings-grid">
-            <div class="form-group">
-                <label class="form-label">Username</label>
-                <input type="text" name="username" class="form-control" value="<?php echo htmlspecialchars($user_info['username'] ?? ''); ?>" required>
+            <div class="tech-input-group">
+                <label class="tech-label">Username</label>
+                <input type="text" name="username" class="tech-input" required>
+            </div>
+
+            <div class="tech-input-group">
+                <label class="tech-label">Email Address</label>
+                <input type="email" name="email" class="tech-input" required>
+            </div>
+
+            <div class="tech-input-group">
+                <label class="tech-label">Password</label>
+                <div style="position: relative;">
+                    <input type="password" id="reg_pass" name="password" class="tech-input" required placeholder="Min 12 chars" style="padding-right: 40px; font-family: 'JetBrains Mono', monospace;">
+                    <i class="fas fa-eye toggle-password" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b;"></i>
+                </div>
+                <div style="height: 2px; background: rgba(255,255,255,0.05); margin-top: 5px; overflow: hidden;"><div id="strength_bar" style="height: 100%; width: 0%; transition: 0.3s;"></div></div>
             </div>
             
-            <div class="form-group">
-                <label class="form-label">Email Address</label>
-                <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($user_info['email']); ?>" required>
+            <div class="tech-input-group" style="margin-bottom: 30px;">
+                <label class="tech-label">Confirm Password</label>
+                <input type="password" name="confirm_password" class="tech-input" required style="font-family: 'JetBrains Mono', monospace;">
             </div>
 
-            <div class="form-group">
-                <label class="form-label">New Password <span style="font-size: 0.8rem; color: #888;">(Leave blank to keep current)</span></label>
-                <div style="position: relative;">
-                    <input type="password" name="new_password" class="form-control" placeholder="Min 12 chars + Mix symbols" style="padding-right: 40px;">
-                    <i class="fas fa-eye toggle-password" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; transition: 0.2s;"></i>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Confirm New Password</label>
-                <div style="position: relative;">
-                    <input type="password" name="confirm_password" class="form-control" placeholder="Confirm Password" style="padding-right: 40px;">
-                    <i class="fas fa-eye toggle-password" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; transition: 0.2s;"></i>
-                </div>
-            </div>
-
-            <div style="grid-column: 1 / -1; margin-top: 10px;">
-                <button type="submit" name="update_profile" class="btn btn-primary" style="padding: 12px 30px;"><i class="fas fa-save"></i> Save Changes</button>
-            </div>
+            <button type="submit" class="tech-btn">Initialize Account</button>
         </form>
+
+        <div style="display: flex; align-items: center; margin: 30px 0;"><div style="flex:1; height:1px; background:rgba(255,255,255,0.05);"></div><span style="padding: 0 15px; font-size: 0.7rem; color: #64748b; font-weight: 800; letter-spacing: 1px;">EXTERNAL OAUTH</span><div style="flex:1; height:1px; background:rgba(255,255,255,0.05);"></div></div>
+
+        <div class="oauth-grid">
+            <a href="<?php echo $google_login_url; ?>" class="oauth-btn"><i class="fa-brands fa-google" style="color: #EA4335;"></i> Google</a>
+            <a href="<?php echo $discord_login_url; ?>" class="oauth-btn"><i class="fa-brands fa-discord" style="color: #5865F2;"></i> Discord</a>
+        </div>
+
+        <p style="text-align: center; margin-top: 35px; color: #64748b; font-size: 0.85rem;">Already established? <a href="login.php" style="color: #00f2fe; text-decoration: none; font-weight: 700;">Sign In</a></p>
     </div>
-
-    <h2 style="color: #fff; margin-bottom: 20px; font-size: 1.5rem;"><i class="fas fa-microchip" style="color: var(--accent);"></i> My Saved Blueprints</h2>
-    
-    <div class="builds-grid">
-        <?php if (count($saved_builds) > 0): ?>
-            <?php foreach ($saved_builds as $build): ?>
-                <div class="build-card">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                        <div>
-                            <h3 style="color: #fff; font-size: 1.2rem; margin-bottom: 5px;"><?php echo htmlspecialchars($build['build_name']); ?></h3>
-                            <div style="color: #666; font-size: 0.8rem;"><i class="far fa-calendar-alt"></i> <?php echo date('d M Y, H:i', strtotime($build['created_at'])); ?></div>
-                        </div>
-                        <div style="color: #00e676; font-size: 1.2rem; font-weight: 900;">RM <?php echo number_format($build['total_price'], 2); ?></div>
-                    </div>
-
-                    <div style="display: flex; gap: 10px;">
-                        <a href="load_build.php?id=<?php echo $build['pc_build']; ?>" class="btn-action btn-select" style="flex: 1; padding: 8px;"><i class="fas fa-upload"></i> Load to Builder</a>
-                    </div>
-
-                    <div class="part-list">
-                        <?php
-                            $stmt_items = $conn->prepare("SELECT c.category_name, p.product_name FROM build_items bi JOIN products p ON bi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id WHERE bi.pc_build = ?");
-                            $stmt_items->bind_param("i", $build['pc_build']);
-                            $stmt_items->execute();
-                            $items_res = $stmt_items->get_result();
-                            
-                            while ($item = $items_res->fetch_assoc()):
-                        ?>
-                            <div class="part-item">
-                                <div class="part-cat"><?php echo htmlspecialchars($item['category_name']); ?></div>
-                                <div class="part-name" title="<?php echo htmlspecialchars($item['product_name']); ?>">
-                                    <?php echo htmlspecialchars($item['product_name']); ?>
-                                </div>
-                            </div>
-                        <?php 
-                            endwhile; 
-                            $stmt_items->close();
-                        ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php else: ?>
-            <div style="grid-column: 1 / -1; text-align: center; background: rgba(0,0,0,0.2); padding: 40px; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">
-                <i class="fas fa-box-open" style="font-size: 3rem; color: #444; margin-bottom: 15px;"></i>
-                <h3 style="color: #fff; margin-bottom: 5px;">Armory is Empty</h3>
-                <p style="color: #888; font-size: 0.95rem;">You haven't saved any custom PC blueprints yet.</p>
-                <a href="builder.php" class="btn btn-primary" style="margin-top: 20px; display: inline-block;"><i class="fas fa-tools"></i> Start Building</a>
-            </div>
-        <?php endif; ?>
-    </div>
-
 </main>
-
-<?php include 'includes/footer.php'; ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const toggleIcons = document.querySelectorAll('.toggle-password');
-    toggleIcons.forEach(function(icon) {
+    toggleIcons.forEach(icon => {
         icon.addEventListener('click', function() {
-            const inputField = this.previousElementSibling;
-            if (inputField.type === 'password') {
-                inputField.type = 'text';
-                this.classList.remove('fa-eye');
-                this.classList.add('fa-eye-slash');
-                this.style.color = 'var(--accent-blue)';
-            } else {
-                inputField.type = 'password';
-                this.classList.remove('fa-eye-slash');
-                this.classList.add('fa-eye');
-                this.style.color = '#888';
-            }
+            const input = this.previousElementSibling;
+            input.type = input.type === 'password' ? 'text' : 'password';
+            this.classList.toggle('fa-eye-slash');
+            this.style.color = input.type === 'password' ? '#64748b' : '#00f2fe';
         });
+    });
+    document.getElementById('reg_pass').addEventListener('input', function() {
+        let val = this.value; let score = 0;
+        if(val.length >= 12) score += 40;
+        if(/[A-Z]/.test(val)) score += 20;
+        if(/[0-9]/.test(val)) score += 20;
+        if(/[^A-Za-z0-9]/.test(val)) score += 20;
+        let bar = document.getElementById('strength_bar');
+        bar.style.width = score + "%";
+        bar.style.backgroundColor = score < 50 ? "#ff4d4d" : (score < 80 ? "#facc15" : "#00e676");
     });
 });
 </script>
-
 </body>
 </html>
