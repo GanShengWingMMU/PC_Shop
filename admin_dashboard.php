@@ -2,7 +2,8 @@
 session_start();
 include 'db_connect.php'; 
 
-if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'superadmin')) {
+// 🌟 修正 1：你的数据库里写的是 "SuperAdmin" (有大写)，所以我们加上 strtolower() 把它转成小写来对比，防止你被踢出去！
+if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && strtolower($_SESSION['role']) !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
@@ -31,17 +32,16 @@ $total_orders = mysqli_fetch_assoc($res_orders)['total'] ?? 0;
 $res_products = mysqli_query($conn, "SELECT COUNT(*) as total FROM products");
 $total_products = mysqli_fetch_assoc($res_products)['total'] ?? 0;
 
-// 修正：数据库里记录顾客的表如果是 users，那就改成 users，如果真的是 customers 就不用动
-// 这里我先帮你默认成 users，因为前面我们都是用 users 表的
-$res_users = mysqli_query($conn, "SELECT COUNT(*) as total FROM users WHERE role = 'customer'");
+// 🌟 修正 2：既然你的管理员都存在 `admins` 表里，那顾客肯定是在 `customers` 表里对吧！直接连去 customers 抓人数！
+$res_users = mysqli_query($conn, "SELECT COUNT(*) as total FROM customers");
 $total_users = mysqli_fetch_assoc($res_users)['total'] ?? 0;
 
-// --- PART B: 准备图表数据 (✅ 这里已经完美改成 created_at) ---
+// --- PART B: 准备图表数据 ---
 $dates_arr = [];
 $amounts_arr = [];
-$sql_trend = "SELECT DATE(created_at) as date, SUM(total_amount) as daily_total 
+$sql_trend = "SELECT DATE(order_date) as date, SUM(total_amount) as daily_total 
               FROM orders 
-              GROUP BY DATE(created_at) ORDER BY date DESC LIMIT 7"; 
+              GROUP BY DATE(order_date) ORDER BY date DESC LIMIT 7";
 $res_trend = mysqli_query($conn, $sql_trend);
 
 if ($res_trend) {
@@ -90,13 +90,16 @@ try {
             <span>GridCity PC</span>
         </h2>
         <ul>
-            <li><a href="admin_dashboard.php" class="active">Dashboard</a></li>
+            <li><a href="admin_dashboard.php">Dashboard</a></li>
             <li><a href="manage_products.php">Products</a></li> 
+            
+            <li><a href="manage_packages.php">Packages</a></li>
+            
             <li><a href="manage_categories.php">Categories</a></li>
             <li><a href="manage_orders.php">Orders</a></li>
             <li><a href="admin_builder.php">Build System</a></li>
             
-            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'superadmin'): ?>
+            <?php if (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'superadmin'): ?>
                 <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
                 <li><a href="manage_users.php">Manage Customers</a></li>
             <?php endif; ?>
@@ -149,36 +152,26 @@ try {
                     </thead>
                     <tbody>
                         <?php
-                        // ✅ 修正：正确抓取最近的 5 个订单
-                        $sql_recent = "SELECT * FROM orders ORDER BY created_at DESC LIMIT 5";
+                        $sql_recent = "SELECT * FROM orders ORDER BY order_date DESC LIMIT 5";
                         $res_recent = mysqli_query($conn, $sql_recent);
 
                         if ($res_recent && mysqli_num_rows($res_recent) > 0) {
                             while($row = mysqli_fetch_assoc($res_recent)) {
                                 $status = isset($row['status']) ? $row['status'] : 'Completed';
-                                // 赋予颜色
                                 $status_badge = 'status-pending'; 
                                 if ($status == 'Completed' || $status == 'Shipped') $status_badge = 'status-completed';
 
                                 echo "<tr>";
                                 echo "<td><strong>#" . $row['order_id'] . "</strong></td>";
-                                
                                 echo "<td>Custom PC Build / Order items</td>";
-                                
                                 $amount = isset($row['total_amount']) ? $row['total_amount'] : 0;
                                 echo "<td><strong style='color: var(--accent-blue);'>RM " . number_format($amount, 2) . "</strong></td>";
-                                
                                 echo "<td><span class='status-badge {$status_badge}'>" . $status . "</span></td>";
-                                
                                 echo "<td><a href='manage_orders.php' class='btn-action' style='text-decoration: none; display: inline-block;'>View</a></td>";
                                 echo "</tr>";
                             }
                         } else {
-                            echo "<tr>
-                                    <td colspan='5' style='text-align: center; padding: 30px; color: var(--text-muted); font-style: italic;'>
-                                        (No recent orders found)
-                                    </td>
-                                  </tr>";
+                            echo "<tr><td colspan='5' style='text-align: center; padding: 30px; color: var(--text-muted); font-style: italic;'>(No recent orders found)</td></tr>";
                         }
                         ?>
                     </tbody>

@@ -298,8 +298,16 @@ include 'includes/header.php';
                     
                     <!-- 🌟 复原的按钮类名 btn-buy 和 btn-cust -->
                     <div class="btn-group">
-                        <a href="add_to_cart.php?pkg_id=<?php echo $pkg['package_id']; ?>" class="btn-buy"><i class="fas fa-shopping-cart" style="margin-right: 6px;"></i> Buy Now</a>
-                        <a href="builder_load_package.php?pkg_id=<?php echo $pkg['package_id']; ?>" class="btn-cust"><i class="fas fa-wrench" style="margin-right: 6px;"></i> Customize</a>
+                    <form action="add_to_cart.php" method="POST" style="display:inline-block;">
+    <input type="hidden" name="package_id" value="<?php echo $pkg['package_id']; ?>">
+    <input type="hidden" name="action" value="buy_now">
+    
+    <button type="submit" class="btn btn-primary" style="background: #00f2fe; color: #000; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow='0 0 15px rgba(0, 242, 254, 0.5)'" onmouseout="this.style.boxShadow='none'">
+        Buy Now
+    </button>
+</form>
+
+                        <a href="builder_load_package.php?pkg_id=<?php echo $pkg['package_id']; ?>" class="btn-cust"><i class="fas fa-wrench"></i> Customize</a>
                     </div>
                 </div>
             <?php endwhile; ?>

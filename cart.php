@@ -11,12 +11,15 @@ $customer_id = $_SESSION['customer_id'];
 $cart_items = [];
 $total_price = 0;
 
-$sql = "SELECT c.cart_id, c.quantity, c.product_id, c.pc_build, 
+// 🌟 升級 1：SQL 查詢加入 packages 表格的 LEFT JOIN
+$sql = "SELECT c.cart_id, c.quantity, c.product_id, c.pc_build, c.package_id, 
                p.product_name AS product_name, p.price AS product_price, p.image_url,
-               b.build_name, b.total_price AS build_price
+               b.build_name, b.total_price AS build_price,
+               pk.package_name, pk.price AS package_price, pk.image_url AS package_image
         FROM shopping_cart c 
         LEFT JOIN products p ON c.product_id = p.product_id 
         LEFT JOIN saved_builds b ON c.pc_build = b.pc_build
+        LEFT JOIN packages pk ON c.package_id = pk.package_id
         WHERE c.customer_id = ?";
 
 if ($stmt = $conn->prepare($sql)) {
@@ -26,7 +29,9 @@ if ($stmt = $conn->prepare($sql)) {
 
     while ($row = $result->fetch_assoc()) {
         
+        // 🌟 升級 2：精準計算三種不同商品的價格
         if (!empty($row['pc_build'])) {
+            // 自組電腦邏輯
             $build_id = $row['pc_build'];
             $components = [];
             
@@ -45,10 +50,14 @@ if ($stmt = $conn->prepare($sql)) {
             }
             $c_stmt->close();
             
-            // 把零件清單塞進這筆購物車資料裡
             $row['components'] = $components; 
             $total_price += ($row['build_price'] * $row['quantity']);
+            
+        } elseif (!empty($row['package_id'])) {
+            // 套餐邏輯
+            $total_price += ($row['package_price'] * $row['quantity']);
         } else {
+            // 單品零件邏輯
             $total_price += ($row['product_price'] * $row['quantity']);
         }
         
@@ -69,71 +78,42 @@ if ($stmt = $conn->prepare($sql)) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* 🌟 彈出式視窗 (Modal) 的魔法 CSS 🌟 */
+        /* Modal CSS 保持不變 */
         .modal-overlay {
-            display: none; /* 預設隱藏 */
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px); /* 磨砂玻璃背景 */
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);
+            z-index: 9999; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease;
         }
-        .modal-overlay.show {
-            display: flex;
-            opacity: 1;
-        }
+        .modal-overlay.show { display: flex; opacity: 1; }
         .build-modal {
-            background: #11151c;
-            border: 1px solid var(--accent-blue);
-            border-radius: 12px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 10px 40px rgba(0, 243, 255, 0.2);
-            transform: translateY(-20px);
-            transition: transform 0.3s ease;
-            position: relative;
+            background: #11151c; border: 1px solid var(--accent-blue); border-radius: 12px;
+            width: 90%; max-width: 600px; max-height: 80vh; display: flex; flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 243, 255, 0.2); transform: translateY(-20px);
+            transition: transform 0.3s ease; position: relative;
         }
-        .modal-overlay.show .build-modal {
-            transform: translateY(0);
-        }
-        .modal-header {
-            padding: 20px 25px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .modal-overlay.show .build-modal { transform: translateY(0); }
+        .modal-header { padding: 20px 25px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; }
         .modal-header h3 { margin: 0; color: var(--accent-blue); font-size: 1.2rem; }
-        .btn-close-modal {
-            background: transparent; border: none; color: var(--text-muted);
-            font-size: 1.5rem; cursor: pointer; transition: 0.3s;
-        }
+        .btn-close-modal { background: transparent; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; transition: 0.3s; }
         .btn-close-modal:hover { color: #ff4d4d; }
-        .modal-body {
-            padding: 20px 25px;
-            overflow-y: auto;
-        }
-        
-        /* 零件清單排版 */
-        .comp-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-        }
+        .modal-body { padding: 20px 25px; overflow-y: auto; }
+        .comp-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.1); }
         .comp-item:last-child { border-bottom: none; }
         .comp-icon { width: 40px; text-align: center; color: var(--text-muted); font-size: 1.2rem; }
         .comp-details { flex: 1; padding: 0 15px; }
         .comp-cat { font-size: 0.75rem; color: var(--accent-blue); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
         .comp-name { font-size: 0.95rem; color: var(--text-main); margin-top: 3px; }
         .comp-price { font-size: 0.9rem; color: var(--text-muted); font-weight: bold; text-align: right; }
+
+        /* 🌟 購物車商品專屬標籤設計 */
+        .item-tag {
+            font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+            padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;
+        }
+        .tag-component { color: #00f2fe; background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0, 242, 254, 0.2); }
+        .tag-package { color: #a855f7; background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.2); }
+        .tag-custom { color: #ffd700; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.2); }
     </style>
 </head>
 <body>
@@ -151,7 +131,8 @@ if ($stmt = $conn->prepare($sql)) {
         <?php if(!empty($cart_items)): ?>
             <a href="remove_cart.php?action=clear" 
                onclick="return confirm('Are you sure you want to remove ALL items from your cart?');" 
-               style="color: #ff4d4d; border: 1px solid #ff4d4d; padding: 8px 15px; text-decoration: none; border-radius: 6px; transition: 0.3s; font-weight: bold; background: rgba(255, 77, 77, 0.05);">
+               style="color: #ff4d4d; border: 1px solid #ff4d4d; padding: 8px 15px; text-decoration: none; border-radius: 6px; transition: 0.3s; font-weight: bold; background: rgba(255, 77, 77, 0.05);"
+               onmouseover="this.style.background='rgba(255, 77, 77, 0.15)'" onmouseout="this.style.background='rgba(255, 77, 77, 0.05)'">
                 <i class="fa-solid fa-trash-can"></i> Remove All
             </a>
         <?php endif; ?>
@@ -172,30 +153,45 @@ if ($stmt = $conn->prepare($sql)) {
                     <div class="cart-item-card">
                         
                         <?php if (!empty($item['pc_build'])): ?>
-                            <div class="cart-item-img" style="background: rgba(0, 242, 254, 0.1);">
-                                <i class="fa-solid fa-computer" style="font-size: 3rem; color: #00f2fe;"></i>
+                            <div class="cart-item-img" style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.2);">
+                                <i class="fa-solid fa-screwdriver-wrench" style="font-size: 3rem; color: #ffd700;"></i>
                             </div>
                             <div class="cart-item-info">
-                                <h4 style="color: #00f2fe;"><i class="fa-solid fa-wrench"></i> <?php echo htmlspecialchars($item['build_name']); ?></h4>
+                                <span class="item-tag tag-custom"><i class="fa-solid fa-gear"></i> Custom Rig</span>
+                                <h4><?php echo htmlspecialchars($item['build_name']); ?></h4>
                                 <div class="price">RM <?php echo number_format($item['build_price'], 2); ?></div>
                                 
-                                <button type="button" onclick="openModal('modal_<?php echo $item['pc_build']; ?>')" style="background: transparent; border: none; padding: 0; margin-top: 8px; font-size: 0.9rem; color: var(--text-muted); text-decoration: underline; cursor: pointer; transition: 0.3s;" onmouseover="this.style.color='#00f2fe'" onmouseout="this.style.color='var(--text-muted)'">
+                                <button type="button" onclick="openModal('modal_<?php echo $item['pc_build']; ?>')" style="background: transparent; border: none; padding: 0; margin-top: 8px; font-size: 0.9rem; color: var(--text-muted); text-decoration: underline; cursor: pointer; transition: 0.3s;" onmouseover="this.style.color='#ffd700'" onmouseout="this.style.color='var(--text-muted)'">
                                     <i class="fa-solid fa-list"></i> View Configuration
                                 </button>
                             </div>
-                        <?php else: ?>
+
+                        <?php elseif (!empty($item['package_id'])): ?>
                             <div class="cart-item-img">
-                                <img src="<?php echo htmlspecialchars($item['image_url'] ? $item['image_url'] : 'Image/placeholder.png'); ?>" alt="Product">
+                                <img src="<?php echo htmlspecialchars($item['package_image'] ? $item['package_image'] : 'image/placeholder_pc.png'); ?>" alt="Package">
                             </div>
                             <div class="cart-item-info">
+                                <span class="item-tag tag-package"><i class="fa-solid fa-box"></i> Pre-Built Package</span>
+                                <h4><?php echo htmlspecialchars($item['package_name']); ?></h4>
+                                <div class="price">RM <?php echo number_format($item['package_price'], 2); ?></div>
+                            </div>
+
+                        <?php else: ?>
+                            <div class="cart-item-img">
+                                <img src="<?php echo htmlspecialchars($item['image_url'] ? $item['image_url'] : 'image/placeholder.png'); ?>" alt="Product">
+                            </div>
+                            <div class="cart-item-info">
+                                <span class="item-tag tag-component"><i class="fa-solid fa-microchip"></i> Component</span>
                                 <h4><?php echo htmlspecialchars($item['product_name']); ?></h4>
                                 <div class="price">RM <?php echo number_format($item['product_price'], 2); ?></div>
                             </div>
                         <?php endif; ?>
 
                         <div class="cart-item-controls">
-                            <div class="qty">Qty: <strong><?php echo $item['quantity']; ?></strong></div>
-                            <a href="remove_cart.php?id=<?php echo $item['cart_id']; ?>" class="btn-remove" title="Remove Item">
+                            <div class="qty" style="background: rgba(255,255,255,0.05); padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                                Qty: <strong style="color: var(--text-main);"><?php echo $item['quantity']; ?></strong>
+                            </div>
+                            <a href="remove_cart.php?id=<?php echo $item['cart_id']; ?>" class="btn-remove" title="Remove Item" style="color: #ff4d4d; transition: 0.3s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
                                 <i class="fa-solid fa-trash-can"></i>
                             </a>
                         </div>
@@ -206,23 +202,23 @@ if ($stmt = $conn->prepare($sql)) {
         </div>
 
         <div class="order-summary-column">
-            <h3>Order Summary</h3>
+            <h3><i class="fa-solid fa-receipt" style="color: var(--accent-blue); margin-right: 10px;"></i> Order Summary</h3>
             <div class="summary-row">
                 <span>Subtotal</span>
-                <span>RM <?php echo number_format($total_price, 2); ?></span>
+                <span style="color: var(--text-main); font-weight: bold;">RM <?php echo number_format($total_price, 2); ?></span>
             </div>
-            <div class="summary-row">
+            <div class="summary-row" style="border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 15px;">
                 <span>Shipping</span>
-                <span>Calculated at checkout</span>
+                <span style="font-size: 0.85rem; color: var(--accent-blue);">Calculated at checkout</span>
             </div>
-            <div class="summary-total">
+            <div class="summary-total" style="margin-top: 15px;">
                 <span>Total</span>
-                <span class="amount">RM <?php echo number_format($total_price, 2); ?></span>
+                <span class="amount" style="color: #ffd700; font-size: 1.8rem; text-shadow: 0 0 10px rgba(255,215,0,0.2);">RM <?php echo number_format($total_price, 2); ?></span>
             </div>
 
             <?php if(!empty($cart_items)): ?>
-                <a href="checkout.php" class="btn btn-primary" style="display: block; width: 100%; text-align: center; margin-top: 25px; font-size: 1.1rem; box-sizing: border-box;">
-                    Proceed to Checkout <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i>
+                <a href="checkout.php" class="btn btn-primary" style="display: flex; justify-content: center; align-items: center; width: 100%; margin-top: 25px; padding: 15px; font-size: 1.1rem; box-sizing: border-box; background: var(--accent-blue); color: #000; border-radius: 8px; font-weight: 800; transition: 0.3s;" onmouseover="this.style.boxShadow='0 0 20px rgba(0, 243, 255, 0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
+                    Proceed to Checkout <i class="fa-solid fa-arrow-right" style="margin-left: 10px;"></i>
                 </a>
             <?php endif; ?>
         </div>
@@ -233,7 +229,8 @@ if ($stmt = $conn->prepare($sql)) {
 <?php foreach ($cart_items as $item): ?>
     <?php if (!empty($item['pc_build']) && !empty($item['components'])): ?>
         <div id="modal_<?php echo $item['pc_build']; ?>" class="modal-overlay" onclick="closeModal(event, 'modal_<?php echo $item['pc_build']; ?>')">
-            <div class="build-modal" onclick="event.stopPropagation();"> <div class="modal-header">
+            <div class="build-modal" onclick="event.stopPropagation();"> 
+                <div class="modal-header">
                     <h3><i class="fa-solid fa-microchip"></i> <?php echo htmlspecialchars($item['build_name']); ?> Components</h3>
                     <button class="btn-close-modal" onclick="forceClose('modal_<?php echo $item['pc_build']; ?>')"><i class="fa-solid fa-xmark"></i></button>
                 </div>
@@ -258,7 +255,6 @@ if ($stmt = $conn->prepare($sql)) {
                     <span style="color: var(--text-muted); font-size: 0.9rem;">Build Total: </span>
                     <strong style="color: var(--accent-blue); font-size: 1.2rem;">RM <?php echo number_format($item['build_price'], 2); ?></strong>
                 </div>
-
             </div>
         </div>
     <?php endif; ?>

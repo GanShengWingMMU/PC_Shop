@@ -8,7 +8,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
     $password = $_POST['password'];
 
-  $sql = "SELECT * FROM users WHERE username = '$username' AND (role = 'admin' OR role = 'superadmin')";
+  $sql = "SELECT * FROM admins WHERE username = '$username' AND (role = 'admin' OR role = 'superadmin')";
     $result = mysqli_query($conn, $sql);
 
     if (mysqli_num_rows($result) === 1) {
