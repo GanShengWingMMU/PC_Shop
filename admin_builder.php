@@ -2,8 +2,8 @@
 session_start();
 include 'db_connect.php'; 
 
-
-if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'superadmin')) {
+// ✅ 顶部的聪明保安（你已经改对了）
+if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && strtolower($_SESSION['role']) !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
@@ -123,11 +123,10 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         <ul>
             <li><a href="admin_dashboard.php">Dashboard</a></li>
             <li><a href="manage_products.php">Products</a></li> 
-            <li><a href="manage_categories.php">Categories</a></li>
+            <li><a href="manage_packages.php">Packages</a></li>
+             <li><a href="manage_categories.php">Categories</a></li>
             <li><a href="manage_orders.php">Orders</a></li>
-            <li><a href="admin_builder.php">Build System</a></li>
-            
-            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'superadmin'): ?>
+            <li><a href="admin_builder.php" class="active">Build System</a></li> <?php if (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'superadmin'): ?>
                 <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
                 <li><a href="manage_users.php">Manage Customers</a></li>
             <?php endif; ?>

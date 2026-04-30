@@ -3,7 +3,7 @@ session_start();
 include 'db_connect.php'; 
 
 // 🌟 终极防线：只有老板 (superadmin) 才能招人！
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'superadmin') {
+if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'superadmin') {
     header("Location: admin_dashboard.php");
     exit();
 }
@@ -24,7 +24,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $error = "Password must be at least 12 characters long and contain uppercase, lowercase, numbers, and special symbols (!@#$%^&*()).";
     } else {
         // 检查这个账号名是否已经被用过了
-        $check_sql = "SELECT * FROM users WHERE username = '$username'";
+        $check_sql = "SELECT * FROM admins WHERE username = '$username'";
         $check_res = mysqli_query($conn, $check_sql);
         
         if (mysqli_num_rows($check_res) > 0) {
@@ -33,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // 密码合格且账号没重复，进行加密处理
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             
-            $insert_sql = "INSERT INTO users (username, password, email, role) 
+            $insert_sql = "INSERT INTO admins (username, password, email, role) 
                            VALUES ('$username', '$hashed_password', '$email', '$role')";
                            
             if (mysqli_query($conn, $insert_sql)) {
