@@ -355,7 +355,7 @@ include 'includes/header.php';
                 </a>
 
                 <div class="btn-group">
-                    <a href="cart_add.php?pkg_id=<?php echo $pkg['package_id']; ?>" class="btn-buy"><i class="fas fa-shopping-cart" style="margin-right: 6px;"></i> Buy Now</a>
+                    <a href="add_to_cart.php?pkg_id=<?php echo $pkg['package_id']; ?>" class="btn-buy"><i class="fas fa-shopping-cart" style="margin-right: 6px;"></i> Buy Now</a>
                     <a href="builder_load_package.php?pkg_id=<?php echo $pkg['package_id']; ?>" class="btn-cust"><i class="fas fa-wrench" style="margin-right: 6px;"></i> Customize</a>
                 </div>
             </div>

@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Apr 29, 2026 at 06:12 PM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- 主机： 127.0.0.1
+-- 生成日期： 2026-05-01 07:32:14
+-- 服务器版本： 10.4.32-MariaDB
+-- PHP 版本： 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `pcshop`
+-- 数据库： `pcshop`
 --
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `admins`
+-- 表的结构 `admins`
 --
 
 CREATE TABLE `admins` (
@@ -37,7 +37,7 @@ CREATE TABLE `admins` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `admins`
+-- 转存表中的数据 `admins`
 --
 
 INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `created_at`) VALUES
@@ -46,7 +46,7 @@ INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `crea
 -- --------------------------------------------------------
 
 --
--- Table structure for table `bank`
+-- 表的结构 `bank`
 --
 
 CREATE TABLE `bank` (
@@ -58,7 +58,7 @@ CREATE TABLE `bank` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `bank`
+-- 转存表中的数据 `bank`
 --
 
 INSERT INTO `bank` (`id`, `cardholder_name`, `card_number`, `cvc`, `balance`) VALUES
@@ -68,7 +68,7 @@ INSERT INTO `bank` (`id`, `cardholder_name`, `card_number`, `cvc`, `balance`) VA
 -- --------------------------------------------------------
 
 --
--- Table structure for table `build_items`
+-- 表的结构 `build_items`
 --
 
 CREATE TABLE `build_items` (
@@ -79,7 +79,7 @@ CREATE TABLE `build_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `build_items`
+-- 转存表中的数据 `build_items`
 --
 
 INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`) VALUES
@@ -258,12 +258,21 @@ INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`
 (177, 22, 18, 1),
 (178, 22, 21, 1),
 (179, 22, 23, 1),
-(180, 22, 25, 1);
+(180, 22, 25, 1),
+(181, 23, 27, 1),
+(182, 23, 33, 1),
+(183, 23, 38, 1),
+(184, 23, 47, 1),
+(185, 23, 49, 1),
+(186, 23, 52, 1),
+(187, 23, 57, 1),
+(188, 23, 61, 1),
+(189, 23, 21, 1);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `categories`
+-- 表的结构 `categories`
 --
 
 CREATE TABLE `categories` (
@@ -273,7 +282,7 @@ CREATE TABLE `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `categories`
+-- 转存表中的数据 `categories`
 --
 
 INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
@@ -292,7 +301,7 @@ INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `consultations`
+-- 表的结构 `consultations`
 --
 
 CREATE TABLE `consultations` (
@@ -307,15 +316,18 @@ CREATE TABLE `consultations` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `customers`
+-- 表的结构 `customers`
 --
 
 CREATE TABLE `customers` (
   `customer_id` int(11) NOT NULL,
   `username` varchar(150) DEFAULT NULL,
+  `first_name` varchar(50) DEFAULT NULL,
+  `last_name` varchar(50) DEFAULT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
   `phone_number` varchar(20) DEFAULT NULL,
+  `birthday` date DEFAULT NULL,
   `wallet_balance` decimal(10,2) NOT NULL DEFAULT 0.00,
   `reward_coins` int(11) NOT NULL DEFAULT 0,
   `default_shipping_address` text DEFAULT NULL,
@@ -325,22 +337,24 @@ CREATE TABLE `customers` (
   `pref_gamer` int(11) DEFAULT 0,
   `pref_creator` int(11) DEFAULT 0,
   `pref_student` int(11) DEFAULT 0,
-  `pref_enthusiast` int(11) DEFAULT 0
+  `pref_enthusiast` int(11) DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `customers`
+-- 转存表中的数据 `customers`
 --
 
-INSERT INTO `customers` (`customer_id`, `username`, `email`, `password`, `phone_number`, `wallet_balance`, `reward_coins`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`) VALUES
-(1, 'Sheng Wing Gan', 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, 99972177.99, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
-(2, 'Sheng Gan', 'ganshengwing11226@gmail.com', '$2y$10$vW1.TGCWwWQMw8qP57pjjuoePphWACuonBYU6YnK6u/Kkvhd7bJ4a', NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
-(3, 'Sheng Gan', 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0);
+INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `birthday`, `wallet_balance`, `reward_coins`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`, `created_at`) VALUES
+(1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99972177.99, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
+(2, 'Sheng Gan', NULL, NULL, 'ganshengwing11226@gmail.com', '$2y$10$vW1.TGCWwWQMw8qP57pjjuoePphWACuonBYU6YnK6u/Kkvhd7bJ4a', NULL, NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
+(3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
+(4, 'MrSuhaimi', 'XUAN', 'YEOH', 'queit0126@gmail.com', '$2y$10$dcM63RgR54xx1.0OPE2YJuUYgBiE.QpTjh59y9mcxDIWbCC8mgbPy', NULL, NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 5, 1, 0, 0, '2026-04-30 20:09:29');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `customer_addresses`
+-- 表的结构 `customer_addresses`
 --
 
 CREATE TABLE `customer_addresses` (
@@ -360,7 +374,7 @@ CREATE TABLE `customer_addresses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `customer_addresses`
+-- 转存表中的数据 `customer_addresses`
 --
 
 INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `recipient_name`, `phone_number`, `address_line1`, `address_line2`, `city`, `state`, `postcode`, `country`, `full_address`, `is_default`, `created_at`) VALUES
@@ -370,7 +384,7 @@ INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `recipient_name`,
 -- --------------------------------------------------------
 
 --
--- Table structure for table `orders`
+-- 表的结构 `orders`
 --
 
 CREATE TABLE `orders` (
@@ -387,7 +401,7 @@ CREATE TABLE `orders` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `orders`
+-- 转存表中的数据 `orders`
 --
 
 INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `total_amount`, `coins_used`, `discount_amount`, `shipping_address`, `contact_number`, `order_status`) VALUES
@@ -404,7 +418,7 @@ INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `to
 -- --------------------------------------------------------
 
 --
--- Table structure for table `order_details`
+-- 表的结构 `order_details`
 --
 
 CREATE TABLE `order_details` (
@@ -418,7 +432,7 @@ CREATE TABLE `order_details` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `order_details`
+-- 转存表中的数据 `order_details`
 --
 
 INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_build`, `package_id`, `quantity`, `unit_price`) VALUES
@@ -438,7 +452,7 @@ INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_bu
 -- --------------------------------------------------------
 
 --
--- Table structure for table `packages`
+-- 表的结构 `packages`
 --
 
 CREATE TABLE `packages` (
@@ -457,19 +471,29 @@ CREATE TABLE `packages` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `packages`
+-- 转存表中的数据 `packages`
 --
 
 INSERT INTO `packages` (`package_id`, `package_name`, `description`, `price`, `image_url`, `target_persona`, `stock_status`, `score_gamer`, `score_creator`, `score_student`, `score_enthusiast`, `created_at`) VALUES
 (1, 'Esports Predator V1', 'Intel i5-13400F + RTX 4060. The ultimate sweet spot for 1080p competitive gaming and esports titles like Valorant and CS2.', 3499.00, 'https://via.placeholder.com/300x200/ff007f/FFF?text=Esports+Predator', 'Gamer', 'Available', 9, 3, 1, 4, '2026-04-09 10:59:36'),
 (2, 'Studio Pro Workstation', 'AMD Ryzen 9 7950X + 64GB DDR5 + RTX 4080. Built for 3D rendering, video editing, and heavy creative workloads.', 9899.00, 'https://via.placeholder.com/300x200/0078D4/FFF?text=Studio+Pro', 'Creator', 'Available', 7, 10, 0, 5, '2026-04-09 10:59:36'),
 (3, 'Campus Starter Box', 'Intel Core i3-12100 + 16GB RAM + 512GB NVMe. Fast, reliable, and affordable. Perfect for assignments, web browsing, and media consumption.', 1599.00, 'https://via.placeholder.com/300x200/00e676/000?text=Campus+Starter', 'Student', 'Available', 1, 2, 10, 0, '2026-04-09 10:59:36'),
-(4, 'Neon Liquid Beast', 'Intel Core i9-14900K + RTX 4090 + Custom Hard-Tube Liquid Cooling. For those who demand absolute perfection and maximum RGB aesthetics.', 18500.00, 'https://via.placeholder.com/300x200/8a2be2/FFF?text=Neon+Liquid+Beast', 'Enthusiast', 'Available', 10, 8, 0, 10, '2026-04-09 10:59:36');
+(4, 'Neon Liquid Beast', 'Intel Core i9-14900K + RTX 4090 + Custom Hard-Tube Liquid Cooling. For those who demand absolute perfection and maximum RGB aesthetics.', 18500.00, 'https://via.placeholder.com/300x200/8a2be2/FFF?text=Neon+Liquid+Beast', 'Enthusiast', 'Available', 10, 8, 0, 10, '2026-04-09 10:59:36'),
+(7, 'AMD Sweet Spot 1440p', 'Ryzen 7800X3D + RX 7800 XT. The absolute most cost-effective 1440p high-refresh-rate gaming machine available today.', 0.00, 'https://via.placeholder.com/300x200/ef4444/FFF?text=AMD+Sweet+Spot', 'Gamer', 'Available', 10, 4, 1, 5, '2026-04-30 11:22:59'),
+(8, 'The 4K Juggernaut', 'Intel i7-14700K + RTX 4080 SUPER. Zero compromises. Built inside the gorgeous Lian Li O11 Dynamic.', 0.00, 'https://via.placeholder.com/300x200/00e676/000?text=4K+Juggernaut', 'Enthusiast', 'Available', 9, 8, 1, 10, '2026-04-30 11:22:59'),
+(9, 'Video Editor Pro Mac-Killer', 'Intel i7-14700K + 64GB DDR5 + RTX 4060 Ti + 2TB Gen4 SSD. Optimized entirely for Adobe Premiere and After Effects.', 0.00, 'https://via.placeholder.com/300x200/a855f7/FFF?text=Editor+Pro', 'Creator', 'Available', 5, 10, 2, 6, '2026-04-30 11:22:59'),
+(10, 'Campus Budget Brawler', 'Ryzen 7600 + 32GB RAM + 1TB SSD. Powerful enough for coding, multitasking, and light 1080p eSports gaming on a tight budget.', 0.00, 'https://via.placeholder.com/300x200/facc15/000?text=Campus+Brawler', 'Student', 'Available', 5, 3, 10, 0, '2026-04-30 11:22:59'),
+(11, 'NVIDIA 1080p Ultra Rig', 'Intel i5-12400F + RTX 4060 Ti + 16GB RAM. Max out every setting at 1080p with DLSS 3 Frame Gen support.', 0.00, 'https://via.placeholder.com/300x200/00f2fe/000?text=1080p+Ultra', 'Gamer', 'Available', 8, 4, 5, 2, '2026-04-30 11:22:59'),
+(12, 'Red Team Flagship', 'Ryzen 7800X3D + RX 7900 XTX 24GB + 360mm AIO. Unadulterated rasterization power designed to destroy 4K gaming.', 0.00, 'https://via.placeholder.com/300x200/8b0000/FFF?text=Red+Flagship', 'Enthusiast', 'Available', 10, 6, 1, 9, '2026-04-30 11:22:59'),
+(13, 'Entry Code Compiler', 'Intel i5-12400F + RX 7600 + 32GB RAM. A highly efficient machine focused on RAM and fast storage for programming.', 0.00, 'https://via.placeholder.com/300x200/facc15/000?text=Entry+Compiler', 'Student', 'Available', 4, 3, 9, 0, '2026-04-30 11:22:59'),
+(14, 'Studio 3D Renderer', 'Ryzen 9 7950X + 64GB RAM + RTX 4070 Ti SUPER. 16 massive cores designed specifically for Blender and Cinema4D.', 0.00, 'https://via.placeholder.com/300x200/a855f7/FFF?text=3D+Renderer', 'Creator', 'Available', 7, 10, 1, 7, '2026-04-30 11:22:59'),
+(15, 'Esports 360Hz Champion', 'Ryzen 7800X3D + RTX 4070 Ti SUPER. Built to push 300+ FPS in CS2, Valorant, and Apex Legends.', 0.00, 'https://via.placeholder.com/300x200/00f2fe/000?text=Esports+360Hz', 'Gamer', 'Available', 9, 5, 1, 6, '2026-04-30 11:22:59'),
+(16, 'Liquid Nitrogen Concept', 'Intel i9-13900K + RTX 4080 SUPER + 4TB SSD + Titanium PSU. The peak of PC building excess.', 0.00, 'https://via.placeholder.com/300x200/FFF/000?text=Liquid+Nitrogen', 'Enthusiast', 'Available', 9, 9, 0, 10, '2026-04-30 11:22:59');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `package_items`
+-- 表的结构 `package_items`
 --
 
 CREATE TABLE `package_items` (
@@ -479,7 +503,7 @@ CREATE TABLE `package_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `package_items`
+-- 转存表中的数据 `package_items`
 --
 
 INSERT INTO `package_items` (`id`, `package_id`, `product_id`) VALUES
@@ -514,12 +538,102 @@ INSERT INTO `package_items` (`id`, `package_id`, `product_id`) VALUES
 (29, 4, 16),
 (30, 4, 15),
 (31, 4, 18),
-(32, 4, 20);
+(32, 4, 20),
+(33, 7, 27),
+(34, 7, 33),
+(35, 7, 38),
+(36, 7, 44),
+(37, 7, 49),
+(38, 7, 52),
+(39, 7, 57),
+(40, 7, 59),
+(41, 7, 21),
+(42, 8, 28),
+(43, 8, 34),
+(44, 8, 38),
+(45, 8, 45),
+(46, 8, 49),
+(47, 8, 53),
+(48, 8, 56),
+(49, 8, 60),
+(50, 8, 22),
+(51, 9, 28),
+(52, 9, 36),
+(53, 9, 39),
+(54, 9, 43),
+(55, 9, 49),
+(56, 9, 52),
+(57, 9, 57),
+(58, 9, 60),
+(59, 9, 22),
+(60, 10, 29),
+(61, 10, 33),
+(62, 10, 38),
+(63, 10, 48),
+(64, 10, 50),
+(65, 10, 54),
+(66, 10, 58),
+(67, 10, 59),
+(68, 10, 21),
+(69, 11, 30),
+(70, 11, 36),
+(71, 11, 40),
+(72, 11, 43),
+(73, 11, 50),
+(74, 11, 54),
+(75, 11, 58),
+(76, 11, 61),
+(77, 11, 21),
+(78, 12, 27),
+(79, 12, 37),
+(80, 12, 38),
+(81, 12, 46),
+(82, 12, 49),
+(83, 12, 53),
+(84, 12, 56),
+(85, 12, 60),
+(86, 12, 22),
+(87, 13, 30),
+(88, 13, 36),
+(89, 13, 40),
+(90, 13, 48),
+(91, 13, 50),
+(92, 13, 54),
+(93, 13, 58),
+(94, 13, 59),
+(95, 13, 21),
+(96, 14, 31),
+(97, 14, 37),
+(98, 14, 39),
+(99, 14, 47),
+(100, 14, 49),
+(101, 14, 53),
+(102, 14, 57),
+(103, 14, 60),
+(104, 14, 22),
+(105, 15, 27),
+(106, 15, 33),
+(107, 15, 38),
+(108, 15, 47),
+(109, 15, 49),
+(110, 15, 52),
+(111, 15, 57),
+(112, 15, 61),
+(113, 15, 21),
+(114, 16, 32),
+(115, 16, 34),
+(116, 16, 41),
+(117, 16, 45),
+(118, 16, 51),
+(119, 16, 55),
+(120, 16, 56),
+(121, 16, 60),
+(122, 16, 22);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `payments`
+-- 表的结构 `payments`
 --
 
 CREATE TABLE `payments` (
@@ -531,7 +645,7 @@ CREATE TABLE `payments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `payments`
+-- 转存表中的数据 `payments`
 --
 
 INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `payment_status`, `transaction_date`) VALUES
@@ -547,7 +661,7 @@ INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `payment_sta
 -- --------------------------------------------------------
 
 --
--- Table structure for table `products`
+-- 表的结构 `products`
 --
 
 CREATE TABLE `products` (
@@ -564,7 +678,7 @@ CREATE TABLE `products` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `products`
+-- 转存表中的数据 `products`
 --
 
 INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `description`, `price`, `stock_quantity`, `image_url`, `status`, `tdp_wattage`, `is_package`) VALUES
@@ -588,17 +702,52 @@ INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `descriptio
 (18, 7, 'NZXT H5 Flow Black', 'High airflow premium chassis.', 400.00, 10, NULL, 'Available', 0, 0),
 (19, 8, 'Deepcool AK400 Air Cooler', 'Efficient standard air cooler.', 150.00, 20, NULL, 'Available', 0, 0),
 (20, 8, 'NZXT Kraken 360 RGB AIO', 'Premium liquid cooler with LCD.', 850.00, 8, NULL, 'Available', 15, 0),
-(21, 9, 'Microsoft Windows 11 Home 64-bit', 'Standard edition for gamers and home users. USB Flash Drive included.', 549.00, 0, 'https://via.placeholder.com/280x180/0078D4/FFF?text=Windows+11+Home', 'Available', 0, 0),
-(22, 9, 'Microsoft Windows 11 Pro 64-bit', 'Advanced features for professionals and developers. BitLocker included.', 899.00, 0, 'https://via.placeholder.com/280x180/111/FFF?text=Windows+11+Pro', 'Available', 0, 0),
-(23, 10, 'Corsair iCUE AR120 RGB 120mm (3-Pack)', 'High performance cooling fans with customizable RGB lighting sync.', 229.00, 0, 'https://via.placeholder.com/280x180/FF007F/FFF?text=Corsair+RGB+Fans', 'Available', 5, 0),
-(24, 10, 'ARCTIC P12 PWM PST 120mm', 'Pressure-optimized quiet fan for excellent airflow and low noise.', 45.00, 0, 'https://via.placeholder.com/280x180/333/FFF?text=Arctic+P12', 'Available', 2, 0),
-(25, 11, 'ASUS TUF Gaming VG27AQ 27\" 165Hz', '27-inch WQHD (2560x1440) IPS gaming monitor with ultrafast 165Hz refresh rate.', 1299.00, 0, 'https://via.placeholder.com/280x180/000/FFF?text=ASUS+TUF+27', 'Available', 0, 0),
-(26, 11, 'AOC 24G2SP 24\" 165Hz IPS', '24-inch Full HD (1920x1080) gaming monitor, perfect for esports.', 649.00, 0, 'https://via.placeholder.com/280x180/ff0000/FFF?text=AOC+24G2', 'Available', 0, 0);
+(21, 9, 'Microsoft Windows 11 Home 64-bit', 'Standard edition for gamers and home users. USB Flash Drive included.', 549.00, 10, 'https://via.placeholder.com/280x180/0078D4/FFF?text=Windows+11+Home', 'Available', 0, 0),
+(22, 9, 'Microsoft Windows 11 Pro 64-bit', 'Advanced features for professionals and developers. BitLocker included.', 899.00, 8, 'https://via.placeholder.com/280x180/111/FFF?text=Windows+11+Pro', 'Available', 0, 0),
+(23, 10, 'Corsair iCUE AR120 RGB 120mm (3-Pack)', 'High performance cooling fans with customizable RGB lighting sync.', 229.00, 10, 'https://via.placeholder.com/280x180/FF007F/FFF?text=Corsair+RGB+Fans', 'Available', 5, 0),
+(24, 10, 'ARCTIC P12 PWM PST 120mm', 'Pressure-optimized quiet fan for excellent airflow and low noise.', 45.00, 9, 'https://via.placeholder.com/280x180/333/FFF?text=Arctic+P12', 'Available', 2, 0),
+(25, 11, 'ASUS TUF Gaming VG27AQ 27\" 165Hz', '27-inch WQHD (2560x1440) IPS gaming monitor with ultrafast 165Hz refresh rate.', 1299.00, 12, 'https://via.placeholder.com/280x180/000/FFF?text=ASUS+TUF+27', 'Available', 0, 0),
+(26, 11, 'AOC 24G2SP 24\" 165Hz IPS', '24-inch Full HD (1920x1080) gaming monitor, perfect for esports.', 649.00, 10, 'https://via.placeholder.com/280x180/ff0000/FFF?text=AOC+24G2', 'Available', 0, 0),
+(27, 1, 'AMD Ryzen 7 7800X3D', 'The undisputed king of gaming CPUs. 3D V-Cache technology. Keyword: AM5', 1850.00, 25, 'https://via.placeholder.com/280x200/ef4444/FFF?text=R7+7800X3D', 'Available', 120, 0),
+(28, 1, 'Intel Core i7-14700K', '20-core powerhouse for rendering and intense gaming. Keyword: LGA1700', 1980.00, 15, 'https://via.placeholder.com/280x200/0078D4/FFF?text=i7-14700K', 'Available', 253, 0),
+(29, 1, 'AMD Ryzen 5 7600', 'Incredible value for AM5 platform, excellent 1080p/1440p performer. Keyword: AM5', 1050.00, 40, 'https://via.placeholder.com/280x200/ef4444/FFF?text=R5+7600', 'Available', 65, 0),
+(30, 1, 'Intel Core i5-12400F', 'The ultimate budget 6-core processor. Keyword: LGA1700', 580.00, 50, 'https://via.placeholder.com/280x200/0078D4/FFF?text=i5-12400F', 'Available', 65, 0),
+(31, 1, 'AMD Ryzen 9 7950X', '16-core rendering monster for ultimate creators. Keyword: AM5', 2850.00, 10, 'https://via.placeholder.com/280x200/ef4444/FFF?text=R9+7950X', 'Available', 170, 0),
+(32, 1, 'Intel Core i9-13900K', 'Previous gen flagship, still an absolute beast. Keyword: LGA1700', 2650.00, 12, 'https://via.placeholder.com/280x200/0078D4/FFF?text=i9-13900K', 'Available', 253, 0),
+(33, 2, 'MSI MAG B650 TOMAHAWK WIFI', 'Premium AM5 board with heavy VRM heatsinks. DDR5 only.', 1150.00, 20, 'https://via.placeholder.com/280x200/111/FFF?text=B650+TOMAHAWK', 'Available', 25, 0),
+(34, 2, 'ASUS ROG STRIX B760-A GAMING WIFI', 'High-end Intel B760 DDR5 motherboard with supreme aesthetics.', 1100.00, 18, 'https://via.placeholder.com/280x200/222/FFF?text=ROG+B760-A', 'Available', 25, 0),
+(35, 2, 'Gigabyte B550M DS3H', 'Budget king for older AM4 DDR4 builds.', 420.00, 30, 'https://via.placeholder.com/280x200/333/FFF?text=B550M+DS3H', 'Available', 15, 0),
+(36, 2, 'ASRock B760M PRO RS/D4', 'Solid budget board for Intel 12th/13th/14th gen. DDR4 only.', 650.00, 25, 'https://via.placeholder.com/280x200/444/FFF?text=B760M+PRO+RS', 'Available', 20, 0),
+(37, 2, 'ASUS ROG CROSSHAIR X670E HERO', 'Flagship AM5 board for extreme overclocking.', 3200.00, 5, 'https://via.placeholder.com/280x200/000/FFF?text=ROG+X670E', 'Available', 35, 0),
+(38, 3, 'Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz CL30', 'The sweet spot speed and latency for Ryzen 7000 series.', 580.00, 40, 'https://via.placeholder.com/280x200/222/FFF?text=Vengeance+32GB+DDR5', 'Available', 10, 0),
+(39, 3, 'G.Skill Trident Z5 Neo RGB 64GB (2x32GB) DDR5 6000MHz', 'High-capacity, high-speed RAM for video editing.', 1150.00, 15, 'https://via.placeholder.com/280x200/111/FFF?text=Trident+Z5+64GB', 'Available', 12, 0),
+(40, 3, 'Kingston FURY Beast 16GB (2x8GB) DDR4 3200MHz', 'Reliable budget DDR4 kit.', 190.00, 60, 'https://via.placeholder.com/280x200/000/FFF?text=FURY+16GB+DDR4', 'Available', 5, 0),
+(41, 3, 'Corsair Dominator Titanium 32GB DDR5 7200MHz', 'Ultra-premium high-frequency memory for Intel builds.', 850.00, 10, 'https://via.placeholder.com/280x200/FFF/000?text=Dominator+Titanium', 'Available', 12, 0),
+(42, 3, 'TeamGroup T-Force Delta RGB 32GB DDR4 3600MHz', 'Flashy RGB DDR4 kit for mid-range systems.', 380.00, 25, 'https://via.placeholder.com/280x200/333/FFF?text=T-Force+Delta', 'Available', 8, 0),
+(43, 4, 'NVIDIA RTX 4060 Ti 8GB Founders', 'Excellent 1080p Ultra gaming with DLSS 3 Frame Gen.', 1850.00, 20, 'https://via.placeholder.com/280x200/00e676/000?text=RTX+4060+Ti', 'Available', 160, 0),
+(44, 4, 'AMD Radeon RX 7800 XT 16GB', 'Unbeatable 1440p value, massive VRAM for textures.', 2550.00, 18, 'https://via.placeholder.com/280x200/ef4444/FFF?text=RX+7800+XT', 'Available', 263, 0),
+(45, 4, 'NVIDIA RTX 4080 SUPER 16GB', 'Incredible 4K performance and ray tracing capabilities.', 4950.00, 10, 'https://via.placeholder.com/280x200/00e676/000?text=RTX+4080+SUPER', 'Available', 320, 0),
+(46, 4, 'AMD Radeon RX 7900 XTX 24GB', 'Raw rasterization monster, destroys 4K without breaking a sweat.', 4800.00, 8, 'https://via.placeholder.com/280x200/ef4444/FFF?text=RX+7900+XTX', 'Available', 355, 0),
+(47, 4, 'NVIDIA RTX 4070 Ti SUPER 16GB', 'Perfect 1440p high-refresh rate card.', 4100.00, 15, 'https://via.placeholder.com/280x200/00e676/000?text=RTX+4070+Ti+S', 'Available', 285, 0),
+(48, 4, 'AMD Radeon RX 7600 8GB', 'Budget king for entry-level 1080p gaming.', 1350.00, 25, 'https://via.placeholder.com/280x200/ef4444/FFF?text=RX+7600', 'Available', 165, 0),
+(49, 5, 'WD Black SN850X 2TB Gen4 NVMe', 'Top-tier speeds up to 7300MB/s.', 780.00, 25, 'https://via.placeholder.com/280x200/000/FFF?text=WD+Black+2TB', 'Available', 8, 0),
+(50, 5, 'Crucial P3 Plus 1TB Gen4 NVMe', 'Great balance of speed and affordability.', 280.00, 45, 'https://via.placeholder.com/280x200/111/FFF?text=Crucial+1TB', 'Available', 5, 0),
+(51, 5, 'Samsung 990 PRO 4TB NVMe', 'Massive fast storage for heavy video editors.', 1550.00, 8, 'https://via.placeholder.com/280x200/222/FFF?text=Samsung+4TB', 'Available', 10, 0),
+(52, 6, 'Corsair RM850e 850W 80+ Gold', 'Fully modular, ATX 3.0 ready.', 550.00, 20, 'https://via.placeholder.com/280x200/111/FFF?text=RM850e', 'Available', 850, 0),
+(53, 6, 'Seasonic Focus GX-1000 1000W Gold', 'Legendary reliability for high-end builds.', 850.00, 12, 'https://via.placeholder.com/280x200/000/FFF?text=Focus+1000W', 'Available', 1000, 0),
+(54, 6, 'MSI MAG A650BN 650W 80+ Bronze', 'Solid budget power supply.', 260.00, 30, 'https://via.placeholder.com/280x200/333/FFF?text=MAG+650W', 'Available', 650, 0),
+(55, 6, 'FSP Hydro Ti PRO 1000W Titanium', 'Ultra-premium titanium efficiency.', 1150.00, 5, 'https://via.placeholder.com/280x200/222/FFF?text=FSP+1000W', 'Available', 1000, 0),
+(56, 7, 'Lian Li O11 Dynamic EVO Black', 'The iconic showcase dual-chamber case.', 750.00, 15, 'https://via.placeholder.com/280x200/000/FFF?text=O11+EVO', 'Available', 0, 0),
+(57, 7, 'Corsair 4000D Airflow Black', 'Classic high-airflow mid-tower.', 380.00, 25, 'https://via.placeholder.com/280x200/111/FFF?text=4000D', 'Available', 0, 0),
+(58, 7, 'Montech X3 Mesh Black', 'Insane budget value, includes 6 RGB fans.', 220.00, 35, 'https://via.placeholder.com/280x200/222/FFF?text=Montech+X3', 'Available', 0, 0),
+(59, 8, 'Thermalright Peerless Assassin 120 SE', 'The dual-tower air cooler that beats 240mm AIOs.', 160.00, 40, 'https://via.placeholder.com/280x200/333/FFF?text=Peerless+Assassin', 'Available', 0, 0),
+(60, 8, 'Arctic Liquid Freezer III 360 AIO', 'Thick radiator, ultimate liquid cooling performance.', 520.00, 15, 'https://via.placeholder.com/280x200/000/FFF?text=Arctic+360', 'Available', 15, 0),
+(61, 8, 'Deepcool AK620 Digital', 'Premium air cooling with a digital temp display.', 320.00, 20, 'https://via.placeholder.com/280x200/111/FFF?text=AK620+Digital', 'Available', 0, 0);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `product_specifications`
+-- 表的结构 `product_specifications`
 --
 
 CREATE TABLE `product_specifications` (
@@ -611,7 +760,7 @@ CREATE TABLE `product_specifications` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `reviews`
+-- 表的结构 `reviews`
 --
 
 CREATE TABLE `reviews` (
@@ -624,7 +773,7 @@ CREATE TABLE `reviews` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `reviews`
+-- 转存表中的数据 `reviews`
 --
 
 INSERT INTO `reviews` (`review_id`, `product_id`, `customer_id`, `rating`, `comment`, `review_date`) VALUES
@@ -633,7 +782,7 @@ INSERT INTO `reviews` (`review_id`, `product_id`, `customer_id`, `rating`, `comm
 -- --------------------------------------------------------
 
 --
--- Table structure for table `saved_builds`
+-- 表的结构 `saved_builds`
 --
 
 CREATE TABLE `saved_builds` (
@@ -645,7 +794,7 @@ CREATE TABLE `saved_builds` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `saved_builds`
+-- 转存表中的数据 `saved_builds`
 --
 
 INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_price`, `created_at`) VALUES
@@ -670,12 +819,13 @@ INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_pric
 (19, 1, 'x', 6697.00, '2026-04-11 16:44:47'),
 (20, 1, 'd', 6697.00, '2026-04-11 16:59:53'),
 (21, 1, '4tgrrg', 6697.00, '2026-04-11 17:27:51'),
-(22, 1, 'i', 6697.00, '2026-04-12 22:40:26');
+(22, 1, 'i', 6697.00, '2026-04-12 22:40:26'),
+(23, 4, 'shengwing', 10259.00, '2026-04-30 20:03:54');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `saved_cards`
+-- 表的结构 `saved_cards`
 --
 
 CREATE TABLE `saved_cards` (
@@ -690,7 +840,7 @@ CREATE TABLE `saved_cards` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `saved_cards`
+-- 转存表中的数据 `saved_cards`
 --
 
 INSERT INTO `saved_cards` (`card_id`, `customer_id`, `cardholder_name`, `last_four_digits`, `expiry_date`, `card_brand`, `is_default`, `created_at`) VALUES
@@ -700,7 +850,7 @@ INSERT INTO `saved_cards` (`card_id`, `customer_id`, `cardholder_name`, `last_fo
 -- --------------------------------------------------------
 
 --
--- Table structure for table `shopping_cart`
+-- 表的结构 `shopping_cart`
 --
 
 CREATE TABLE `shopping_cart` (
@@ -711,21 +861,23 @@ CREATE TABLE `shopping_cart` (
   `package_id` int(11) DEFAULT NULL,
   `quantity` int(11) NOT NULL DEFAULT 1,
   `added_at` datetime DEFAULT current_timestamp()
-) ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `shopping_cart`
+-- 转存表中的数据 `shopping_cart`
 --
 
 INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `package_id`, `quantity`, `added_at`) VALUES
 (9, 3, NULL, 14, NULL, 1, '2026-04-06 09:17:24'),
 (19, 1, 4, NULL, NULL, 1, '2026-04-29 23:38:35'),
-(20, 1, NULL, NULL, 4, 2, '2026-04-30 00:06:55');
+(20, 1, NULL, NULL, 4, 2, '2026-04-30 00:06:55'),
+(21, 4, 48, NULL, NULL, 1, '2026-04-30 20:12:23'),
+(22, 4, 36, NULL, NULL, 1, '2026-04-30 20:12:35');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `wallet_transactions`
+-- 表的结构 `wallet_transactions`
 --
 
 CREATE TABLE `wallet_transactions` (
@@ -738,7 +890,7 @@ CREATE TABLE `wallet_transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `wallet_transactions`
+-- 转存表中的数据 `wallet_transactions`
 --
 
 INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amount`, `coins_earned`, `created_at`) VALUES
@@ -751,11 +903,11 @@ INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amo
 (7, 1, 'Payment', -6692.00, 0, '2026-04-09 19:35:48');
 
 --
--- Indexes for dumped tables
+-- 转储表的索引
 --
 
 --
--- Indexes for table `admins`
+-- 表的索引 `admins`
 --
 ALTER TABLE `admins`
   ADD PRIMARY KEY (`admin_id`),
@@ -763,13 +915,13 @@ ALTER TABLE `admins`
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- Indexes for table `bank`
+-- 表的索引 `bank`
 --
 ALTER TABLE `bank`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `build_items`
+-- 表的索引 `build_items`
 --
 ALTER TABLE `build_items`
   ADD PRIMARY KEY (`build_item_id`),
@@ -777,41 +929,41 @@ ALTER TABLE `build_items`
   ADD KEY `product_id` (`product_id`);
 
 --
--- Indexes for table `categories`
+-- 表的索引 `categories`
 --
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`category_id`);
 
 --
--- Indexes for table `consultations`
+-- 表的索引 `consultations`
 --
 ALTER TABLE `consultations`
   ADD PRIMARY KEY (`consultation_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `customers`
+-- 表的索引 `customers`
 --
 ALTER TABLE `customers`
   ADD PRIMARY KEY (`customer_id`),
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- Indexes for table `customer_addresses`
+-- 表的索引 `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   ADD PRIMARY KEY (`address_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `orders`
+-- 表的索引 `orders`
 --
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`order_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `order_details`
+-- 表的索引 `order_details`
 --
 ALTER TABLE `order_details`
   ADD PRIMARY KEY (`order_detail_id`),
@@ -820,13 +972,13 @@ ALTER TABLE `order_details`
   ADD KEY `fk_order_details_build` (`pc_build`);
 
 --
--- Indexes for table `packages`
+-- 表的索引 `packages`
 --
 ALTER TABLE `packages`
   ADD PRIMARY KEY (`package_id`);
 
 --
--- Indexes for table `package_items`
+-- 表的索引 `package_items`
 --
 ALTER TABLE `package_items`
   ADD PRIMARY KEY (`id`),
@@ -834,21 +986,21 @@ ALTER TABLE `package_items`
   ADD KEY `product_id` (`product_id`);
 
 --
--- Indexes for table `payments`
+-- 表的索引 `payments`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`payment_id`),
   ADD KEY `order_id` (`order_id`);
 
 --
--- Indexes for table `products`
+-- 表的索引 `products`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`product_id`),
   ADD KEY `category_id` (`category_id`);
 
 --
--- Indexes for table `product_specifications`
+-- 表的索引 `product_specifications`
 --
 ALTER TABLE `product_specifications`
   ADD PRIMARY KEY (`spec_id`),
@@ -856,7 +1008,7 @@ ALTER TABLE `product_specifications`
   ADD KEY `idx_spec_search` (`spec_name`,`spec_value`);
 
 --
--- Indexes for table `reviews`
+-- 表的索引 `reviews`
 --
 ALTER TABLE `reviews`
   ADD PRIMARY KEY (`review_id`),
@@ -864,21 +1016,21 @@ ALTER TABLE `reviews`
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `saved_builds`
+-- 表的索引 `saved_builds`
 --
 ALTER TABLE `saved_builds`
   ADD PRIMARY KEY (`pc_build`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `saved_cards`
+-- 表的索引 `saved_cards`
 --
 ALTER TABLE `saved_cards`
   ADD PRIMARY KEY (`card_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `shopping_cart`
+-- 表的索引 `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
   ADD PRIMARY KEY (`cart_id`),
@@ -887,155 +1039,161 @@ ALTER TABLE `shopping_cart`
   ADD KEY `fk_shopping_cart_pc_build` (`pc_build`);
 
 --
--- Indexes for table `wallet_transactions`
+-- 表的索引 `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
   ADD PRIMARY KEY (`transaction_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- AUTO_INCREMENT for dumped tables
+-- 在导出的表使用AUTO_INCREMENT
 --
 
 --
--- AUTO_INCREMENT for table `admins`
+-- 使用表AUTO_INCREMENT `admins`
 --
 ALTER TABLE `admins`
   MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `bank`
+-- 使用表AUTO_INCREMENT `bank`
 --
 ALTER TABLE `bank`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT for table `build_items`
+-- 使用表AUTO_INCREMENT `build_items`
 --
 ALTER TABLE `build_items`
-  MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=181;
+  MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=190;
 
 --
--- AUTO_INCREMENT for table `categories`
+-- 使用表AUTO_INCREMENT `categories`
 --
 ALTER TABLE `categories`
   MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
--- AUTO_INCREMENT for table `consultations`
+-- 使用表AUTO_INCREMENT `consultations`
 --
 ALTER TABLE `consultations`
   MODIFY `consultation_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `customers`
+-- 使用表AUTO_INCREMENT `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT for table `customer_addresses`
+-- 使用表AUTO_INCREMENT `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT for table `orders`
+-- 使用表AUTO_INCREMENT `orders`
 --
 ALTER TABLE `orders`
   MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
--- AUTO_INCREMENT for table `order_details`
+-- 使用表AUTO_INCREMENT `order_details`
 --
 ALTER TABLE `order_details`
   MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
--- AUTO_INCREMENT for table `packages`
+-- 使用表AUTO_INCREMENT `packages`
 --
 ALTER TABLE `packages`
-  MODIFY `package_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `package_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
--- AUTO_INCREMENT for table `payments`
+-- 使用表AUTO_INCREMENT `package_items`
+--
+ALTER TABLE `package_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=123;
+
+--
+-- 使用表AUTO_INCREMENT `payments`
 --
 ALTER TABLE `payments`
   MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT for table `products`
+-- 使用表AUTO_INCREMENT `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
--- AUTO_INCREMENT for table `product_specifications`
+-- 使用表AUTO_INCREMENT `product_specifications`
 --
 ALTER TABLE `product_specifications`
   MODIFY `spec_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `reviews`
+-- 使用表AUTO_INCREMENT `reviews`
 --
 ALTER TABLE `reviews`
   MODIFY `review_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `saved_builds`
+-- 使用表AUTO_INCREMENT `saved_builds`
 --
 ALTER TABLE `saved_builds`
-  MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
--- AUTO_INCREMENT for table `saved_cards`
+-- 使用表AUTO_INCREMENT `saved_cards`
 --
 ALTER TABLE `saved_cards`
   MODIFY `card_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT for table `shopping_cart`
+-- 使用表AUTO_INCREMENT `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
-  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
--- AUTO_INCREMENT for table `wallet_transactions`
+-- 使用表AUTO_INCREMENT `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
   MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- Constraints for dumped tables
+-- 限制导出的表
 --
 
 --
--- Constraints for table `build_items`
+-- 限制表 `build_items`
 --
 ALTER TABLE `build_items`
   ADD CONSTRAINT `build_items_ibfk_1` FOREIGN KEY (`pc_build`) REFERENCES `saved_builds` (`pc_build`) ON DELETE CASCADE,
   ADD CONSTRAINT `build_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `consultations`
+-- 限制表 `consultations`
 --
 ALTER TABLE `consultations`
   ADD CONSTRAINT `consultations_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `customer_addresses`
+-- 限制表 `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   ADD CONSTRAINT `customer_addresses_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `orders`
+-- 限制表 `orders`
 --
 ALTER TABLE `orders`
   ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `order_details`
+-- 限制表 `order_details`
 --
 ALTER TABLE `order_details`
   ADD CONSTRAINT `fk_order_details_build` FOREIGN KEY (`pc_build`) REFERENCES `saved_builds` (`pc_build`) ON DELETE SET NULL,
@@ -1043,44 +1201,44 @@ ALTER TABLE `order_details`
   ADD CONSTRAINT `order_details_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE SET NULL;
 
 --
--- Constraints for table `payments`
+-- 限制表 `payments`
 --
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `products`
+-- 限制表 `products`
 --
 ALTER TABLE `products`
   ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `product_specifications`
+-- 限制表 `product_specifications`
 --
 ALTER TABLE `product_specifications`
   ADD CONSTRAINT `product_specifications_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `reviews`
+-- 限制表 `reviews`
 --
 ALTER TABLE `reviews`
   ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `saved_builds`
+-- 限制表 `saved_builds`
 --
 ALTER TABLE `saved_builds`
   ADD CONSTRAINT `saved_builds_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `saved_cards`
+-- 限制表 `saved_cards`
 --
 ALTER TABLE `saved_cards`
   ADD CONSTRAINT `saved_cards_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `shopping_cart`
+-- 限制表 `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
   ADD CONSTRAINT `fk_shopping_cart_pc_build` FOREIGN KEY (`pc_build`) REFERENCES `saved_builds` (`pc_build`) ON DELETE CASCADE,
@@ -1088,7 +1246,7 @@ ALTER TABLE `shopping_cart`
   ADD CONSTRAINT `shopping_cart_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `wallet_transactions`
+-- 限制表 `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
   ADD CONSTRAINT `wallet_transactions_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
