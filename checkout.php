@@ -70,11 +70,36 @@ if ($cart_result->num_rows === 0) {
 while ($row = $cart_result->fetch_assoc()) {
     $cart_items[] = $row;
     
-    // 判斷是哪一種商品並抓取對應價格
-    if ($row['product_id']) $price = $row['product_price'];
-    elseif ($row['pc_build']) $price = $row['build_price'];
-    elseif ($row['package_id']) $price = $row['package_price'];
-    else $price = 0;
+    // 🌟 动态计算引擎：判断是哪一种商品並抓取/計算對應價格
+    if ($row['product_id']) {
+        $price = $row['product_price'];
+    } elseif ($row['pc_build']) {
+        $price = $row['build_price'];
+    } elseif ($row['package_id']) {
+        // 🚨 这里是核心升级！套餐价格不再读取数据库的固定值，而是实时计算总和！
+        $pkg_id = $row['package_id'];
+        $dynamic_pkg_price = 0;
+        
+        $pkg_sql = "SELECT p.price FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = ?";
+        $pkg_stmt = $conn->prepare($pkg_sql);
+        $pkg_stmt->bind_param("i", $pkg_id);
+        $pkg_stmt->execute();
+        $pkg_res = $pkg_stmt->get_result();
+        
+        while ($p_row = $pkg_res->fetch_assoc()) {
+            $dynamic_pkg_price += $p_row['price'];
+        }
+        $pkg_stmt->close();
+        
+        $price = $dynamic_pkg_price; // 赋给计算变量
+        
+        // 关键点：我们需要把计算出来的价格，反向塞回 $cart_items 数组里
+        // 这样后面写入 order_details 的时候（大概在 193 行），拿到的才是真正的实时总价，而不是 0
+        $cart_items[count($cart_items) - 1]['package_price'] = $dynamic_pkg_price; 
+        
+    } else {
+        $price = 0;
+    }
     
     $total_amount += ($price * $row['quantity']);
 }

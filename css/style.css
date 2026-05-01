@@ -69,10 +69,43 @@ a { text-decoration: none; color: inherit; }
 
 .navbar a:not(.logo):hover { color: var(--text-main); }
 
-/* PC Builder 特殊高亮按钮 */
-.nav-links .highlight-link {
-    color: var(--accent-blue);
-    text-shadow: 0 0 10px rgba(0, 242, 254, 0.4); /* 发光文字 */
+/* =========================================
+   3.5 Navbar Hover & Magic Line (魔术能量条)
+   ========================================= */
+.nav-links {
+    display: flex; gap: 2.5rem; align-items: center;
+    position: relative; /* 🌟 核心：为绝对定位的能量条提供参考系 */
+}
+
+.nav-links a {
+    color: var(--text-muted);
+    font-weight: 600; 
+    font-size: 0.95rem;
+    padding: 5px 0; 
+    transition: var(--transition-fast);
+    text-decoration: none;
+    z-index: 2; /* 确保文字在能量条上方 */
+}
+
+/* 🌟 悬停时：仅仅文字高亮发光 */
+.nav-links a:hover, 
+.nav-links a.active { 
+    color: var(--accent-blue); 
+    text-shadow: 0 0 10px rgba(0, 242, 254, 0.4); 
+}
+
+/* 🌟 真正的能量条（极致干脆版） */
+.nav-indicator {
+    position: absolute;
+    bottom: -4px;
+    height: 2px;
+    background-color: var(--accent-blue);
+    box-shadow: 0 0 10px var(--accent-blue);
+    border-radius: 2px;
+    z-index: 1;
+    /* 仅保留弹射滑动，没有任何拖沓的形变 */
+    transition: left 0.25s cubic-bezier(0.2, 1, 0.3, 1), 
+                width 0.25s cubic-bezier(0.2, 1, 0.3, 1);
 }
 
 /* =========================================
