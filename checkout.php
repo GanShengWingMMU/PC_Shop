@@ -44,8 +44,8 @@ while ($card = $res_cards->fetch_assoc()) {
 }
 $stmt_cards->close();
 
-// 🌟 核心升級：抓取購物車內容，包含 Product, PC Build, AND Packages!
-$cart_query = "SELECT c.cart_id, c.quantity, 
+// 🌟 核心升級：抓取購物車內容，新增抓取 affiliate_id 用於帶貨分傭！
+$cart_query = "SELECT c.cart_id, c.quantity, c.affiliate_id, 
                       p.product_id, p.product_name, p.price AS product_price,
                       b.pc_build, b.build_name, b.total_price AS build_price,
                       pk.package_id, pk.package_name, pk.price AS package_price
@@ -212,10 +212,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 🌟 核心升級：寫入 order_details 支援 package_id
         $insert_detail = "INSERT INTO order_details (order_id, product_id, pc_build, package_id, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt_detail = $conn->prepare($insert_detail);
+       // 🌟 核心升級：寫入 order_details 支援 package_id AND affiliate_id (帶貨賞金系統)
+        $insert_detail = "INSERT INTO order_details (order_id, product_id, pc_build, package_id, affiliate_id, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt_detail = $conn->prepare($insert_detail);
+        
+        // 準備發放帶貨賞金的 SQL (每帶貨一套，原作者獲得 500 金幣)
+        $reward_stmt = $conn->prepare("UPDATE customers SET reward_coins = reward_coins + ? WHERE customer_id = ?");
+        $bounty_per_build = 500; 
+
         foreach ($cart_items as $item) {
             $pid = $item['product_id'] ? $item['product_id'] : NULL;
             $build_id = $item['pc_build'] ? $item['pc_build'] : NULL;
             $pkg_id = $item['package_id'] ? $item['package_id'] : NULL;
+            // 抓取這個商品的帶貨人是誰
+            $aff_id = $item['affiliate_id'] ? $item['affiliate_id'] : NULL; 
             $qty = $item['quantity'];
             
             if ($pid) $unit_price = $item['product_price'];
@@ -223,10 +233,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             elseif ($pkg_id) $unit_price = $item['package_price'];
             else $unit_price = 0;
 
-            $stmt_detail->bind_param("iiiiid", $order_id, $pid, $build_id, $pkg_id, $qty, $unit_price);
+            // 1. 寫入訂單明細，把 affiliate_id 存進去作為歷史記錄
+            $stmt_detail->bind_param("iiiiiii", $order_id, $pid, $build_id, $pkg_id, $aff_id, $qty, $unit_price);
             $stmt_detail->execute();
+
+            // 🌟 2. 如果這筆訂單有帶貨人，立刻觸發分傭機制！
+            if ($aff_id) {
+                // 如果買了 2 套一樣的，獎金就翻倍
+                $total_bounty = $bounty_per_build * $qty; 
+                $reward_stmt->bind_param("ii", $total_bounty, $aff_id);
+                $reward_stmt->execute();
+            }
         }
         $stmt_detail->close();
+        $reward_stmt->close();
 
         $payment_status = ($final_payment_method == 'Cash on Delivery') ? 'Pending' : 'Paid';
         $insert_payment = "INSERT INTO payments (order_id, payment_method, payment_status) VALUES (?, ?, ?)";
