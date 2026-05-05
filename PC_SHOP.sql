@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： 127.0.0.1
--- 生成日期： 2026-05-01 07:32:14
+-- 生成日期： 2026-05-05 16:30:51
 -- 服务器版本： 10.4.32-MariaDB
 -- PHP 版本： 8.2.12
 
@@ -259,15 +259,68 @@ INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`
 (178, 22, 21, 1),
 (179, 22, 23, 1),
 (180, 22, 25, 1),
-(181, 23, 27, 1),
-(182, 23, 33, 1),
-(183, 23, 38, 1),
-(184, 23, 47, 1),
-(185, 23, 49, 1),
-(186, 23, 52, 1),
-(187, 23, 57, 1),
-(188, 23, 61, 1),
-(189, 23, 21, 1);
+(190, 24, 27, 1),
+(191, 24, 37, 1),
+(192, 24, 38, 1),
+(193, 24, 46, 1),
+(194, 24, 49, 1),
+(195, 24, 53, 1),
+(196, 24, 56, 1),
+(197, 24, 60, 1),
+(198, 24, 22, 1),
+(199, 25, 27, 1),
+(200, 25, 37, 1),
+(201, 25, 38, 1),
+(202, 25, 46, 1),
+(203, 25, 49, 1),
+(204, 25, 53, 1),
+(205, 25, 56, 1),
+(206, 25, 60, 1),
+(207, 25, 22, 1),
+(208, 25, 23, 1),
+(209, 25, 26, 1),
+(210, 26, 27, 1),
+(211, 26, 33, 1),
+(212, 26, 38, 1),
+(213, 26, 47, 1),
+(214, 26, 49, 1),
+(215, 26, 52, 1),
+(216, 26, 57, 1),
+(217, 26, 61, 1),
+(218, 26, 21, 1),
+(219, 26, 23, 1),
+(220, 26, 25, 1),
+(221, 27, 27, 1),
+(222, 27, 33, 1),
+(223, 27, 38, 1),
+(224, 27, 47, 1),
+(225, 27, 49, 1),
+(226, 27, 52, 1),
+(227, 27, 57, 1),
+(228, 27, 61, 1),
+(229, 27, 21, 1),
+(230, 28, 30, 1),
+(231, 28, 36, 1),
+(232, 28, 40, 1),
+(233, 28, 43, 1),
+(234, 28, 50, 1),
+(235, 28, 54, 1),
+(236, 28, 58, 1),
+(237, 28, 61, 1),
+(238, 28, 21, 1),
+(239, 28, 23, 1),
+(240, 28, 25, 1),
+(241, 29, 30, 1),
+(242, 29, 36, 1),
+(243, 29, 40, 1),
+(244, 29, 43, 1),
+(245, 29, 50, 1),
+(246, 29, 54, 1),
+(247, 29, 58, 1),
+(248, 29, 61, 1),
+(249, 29, 21, 1),
+(250, 29, 23, 1),
+(251, 29, 25, 1);
 
 -- --------------------------------------------------------
 
@@ -297,6 +350,66 @@ INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
 (9, 'Operating System', NULL),
 (10, 'Case Fans', NULL),
 (11, 'Monitor', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `community_comments`
+--
+
+CREATE TABLE `community_comments` (
+  `comment_id` int(11) NOT NULL,
+  `post_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `content` text NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `community_likes`
+--
+
+CREATE TABLE `community_likes` (
+  `like_id` int(11) NOT NULL,
+  `post_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- 转存表中的数据 `community_likes`
+--
+
+INSERT INTO `community_likes` (`like_id`, `post_id`, `customer_id`, `created_at`) VALUES
+(2, 2, 5, '2026-05-02 22:31:33'),
+(3, 1, 5, '2026-05-02 22:32:28');
+
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `community_posts`
+--
+
+CREATE TABLE `community_posts` (
+  `post_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `pc_build_id` int(11) DEFAULT NULL COMMENT '如果是分享配置，则关联装机单',
+  `title` varchar(255) NOT NULL,
+  `content` text NOT NULL,
+  `post_type` enum('Showcase','Discussion','Question') DEFAULT 'Discussion',
+  `views` int(11) DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- 转存表中的数据 `community_posts`
+--
+
+INSERT INTO `community_posts` (`post_id`, `customer_id`, `pc_build_id`, `title`, `content`, `post_type`, `views`, `created_at`) VALUES
+(1, 5, NULL, 'test', 'hello', 'Discussion', 0, '2026-05-01 22:36:47'),
+(2, 5, 28, 'god', '。。。', 'Showcase', 0, '2026-05-02 22:31:12');
 
 -- --------------------------------------------------------
 
@@ -349,7 +462,7 @@ INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `
 (1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99972177.99, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
 (2, 'Sheng Gan', NULL, NULL, 'ganshengwing11226@gmail.com', '$2y$10$vW1.TGCWwWQMw8qP57pjjuoePphWACuonBYU6YnK6u/Kkvhd7bJ4a', NULL, NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
 (3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
-(4, 'MrSuhaimi', 'XUAN', 'YEOH', 'queit0126@gmail.com', '$2y$10$dcM63RgR54xx1.0OPE2YJuUYgBiE.QpTjh59y9mcxDIWbCC8mgbPy', NULL, NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 5, 1, 0, 0, '2026-04-30 20:09:29');
+(5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 0.00, 0, NULL, 'Active', NULL, NULL, 7, 5, 10, 0, '2026-05-01 13:59:14');
 
 -- --------------------------------------------------------
 
@@ -379,7 +492,9 @@ CREATE TABLE `customer_addresses` (
 
 INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `recipient_name`, `phone_number`, `address_line1`, `address_line2`, `city`, `state`, `postcode`, `country`, `full_address`, `is_default`, `created_at`) VALUES
 (1, 1, '', '', '', NULL, '', '', '', 'Malaysia', 'No 123, Jalan Multimedia, 63100 Cyberjaya, Selangor', 0, '2026-04-09 13:23:19'),
-(2, 1, '', '', '', NULL, '', '', '', 'Malaysia', 'Sheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', 1, '2026-04-09 17:17:21');
+(2, 1, '', '', '', NULL, '', '', '', 'Malaysia', 'Sheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', 1, '2026-04-09 17:17:21'),
+(4, 5, 'YEOH XUAN MING', '0122222620', '68,JALAN UTAMA28 TAMAN MUTIARA RINI', '', 'Johor Bahru', 'Johor', '81300', 'Malaysia', '68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', 0, '2026-05-01 21:35:32'),
+(5, 5, 'YYEYY', '0123456789', '58,Jalan Udara 22,Taman Universiti', '', 'perak', 'sembilan', '81365', 'Malaysia', '58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', 1, '2026-05-01 21:39:12');
 
 -- --------------------------------------------------------
 
@@ -413,7 +528,9 @@ INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `to
 (12, 'My Custom Order', 1, '2026-04-09 23:28:54', 950.00, 0, 0.00, 'Gan Sheng Wing | 012-3456789\nMMU Cyberjaya', '012-3456789', 'Completed'),
 (13, 'My Custom Order', 1, '2026-04-11 17:26:52', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
 (14, 'My Custom Order', 1, '2026-04-11 17:41:34', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
-(15, 'My Custom Order', 1, '2026-04-19 23:30:46', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending');
+(15, 'My Custom Order', 1, '2026-04-19 23:30:46', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(16, 'My Custom Order', 5, '2026-05-02 22:30:30', 74860.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending'),
+(17, 'My Custom Order', 5, '2026-05-02 22:31:55', 6427.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending');
 
 -- --------------------------------------------------------
 
@@ -427,6 +544,7 @@ CREATE TABLE `order_details` (
   `product_id` int(11) DEFAULT NULL,
   `pc_build` int(11) DEFAULT NULL,
   `package_id` int(11) DEFAULT NULL,
+  `affiliate_id` int(11) DEFAULT NULL,
   `quantity` int(11) NOT NULL,
   `unit_price` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -435,19 +553,26 @@ CREATE TABLE `order_details` (
 -- 转存表中的数据 `order_details`
 --
 
-INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_build`, `package_id`, `quantity`, `unit_price`) VALUES
-(1, 7, NULL, 9, NULL, 1, 4620.00),
-(2, 7, NULL, 10, NULL, 1, 7820.00),
-(3, 7, NULL, 11, NULL, 1, 4620.00),
-(4, 7, NULL, 13, NULL, 1, 4620.00),
-(5, 8, NULL, 15, NULL, 1, 10677.00),
-(6, 9, NULL, 16, NULL, 1, 6697.00),
-(7, 10, NULL, 17, NULL, 1, 6697.00),
-(8, 11, NULL, 18, NULL, 1, 6047.00),
-(9, 12, 1, NULL, NULL, 1, 950.00),
-(10, 13, NULL, 20, NULL, 1, 6697.00),
-(11, 14, NULL, 21, NULL, 1, 6697.00),
-(12, 15, NULL, 22, NULL, 1, 6697.00);
+INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_build`, `package_id`, `affiliate_id`, `quantity`, `unit_price`) VALUES
+(1, 7, NULL, 9, NULL, NULL, 1, 4620.00),
+(2, 7, NULL, 10, NULL, NULL, 1, 7820.00),
+(3, 7, NULL, 11, NULL, NULL, 1, 4620.00),
+(4, 7, NULL, 13, NULL, NULL, 1, 4620.00),
+(5, 8, NULL, 15, NULL, NULL, 1, 10677.00),
+(6, 9, NULL, 16, NULL, NULL, 1, 6697.00),
+(7, 10, NULL, 17, NULL, NULL, 1, 6697.00),
+(8, 11, NULL, 18, NULL, NULL, 1, 6047.00),
+(9, 12, 1, NULL, NULL, NULL, 1, 950.00),
+(10, 13, NULL, 20, NULL, NULL, 1, 6697.00),
+(11, 14, NULL, 21, NULL, NULL, 1, 6697.00),
+(12, 15, NULL, 22, NULL, NULL, 1, 6697.00),
+(13, 16, NULL, NULL, 16, NULL, 2, 14419.00),
+(14, 16, NULL, NULL, 14, NULL, 1, 14729.00),
+(15, 16, NULL, 26, NULL, NULL, 1, 11787.00),
+(16, 16, NULL, NULL, 3, NULL, 1, 2820.00),
+(17, 16, NULL, NULL, 15, NULL, 1, 10259.00),
+(18, 16, NULL, 29, NULL, NULL, 1, 6427.00),
+(19, 17, NULL, 28, NULL, NULL, 1, 6427.00);
 
 -- --------------------------------------------------------
 
@@ -475,10 +600,10 @@ CREATE TABLE `packages` (
 --
 
 INSERT INTO `packages` (`package_id`, `package_name`, `description`, `price`, `image_url`, `target_persona`, `stock_status`, `score_gamer`, `score_creator`, `score_student`, `score_enthusiast`, `created_at`) VALUES
-(1, 'Esports Predator V1', 'Intel i5-13400F + RTX 4060. The ultimate sweet spot for 1080p competitive gaming and esports titles like Valorant and CS2.', 3499.00, 'https://via.placeholder.com/300x200/ff007f/FFF?text=Esports+Predator', 'Gamer', 'Available', 9, 3, 1, 4, '2026-04-09 10:59:36'),
-(2, 'Studio Pro Workstation', 'AMD Ryzen 9 7950X + 64GB DDR5 + RTX 4080. Built for 3D rendering, video editing, and heavy creative workloads.', 9899.00, 'https://via.placeholder.com/300x200/0078D4/FFF?text=Studio+Pro', 'Creator', 'Available', 7, 10, 0, 5, '2026-04-09 10:59:36'),
-(3, 'Campus Starter Box', 'Intel Core i3-12100 + 16GB RAM + 512GB NVMe. Fast, reliable, and affordable. Perfect for assignments, web browsing, and media consumption.', 1599.00, 'https://via.placeholder.com/300x200/00e676/000?text=Campus+Starter', 'Student', 'Available', 1, 2, 10, 0, '2026-04-09 10:59:36'),
-(4, 'Neon Liquid Beast', 'Intel Core i9-14900K + RTX 4090 + Custom Hard-Tube Liquid Cooling. For those who demand absolute perfection and maximum RGB aesthetics.', 18500.00, 'https://via.placeholder.com/300x200/8a2be2/FFF?text=Neon+Liquid+Beast', 'Enthusiast', 'Available', 10, 8, 0, 10, '2026-04-09 10:59:36'),
+(1, 'Esports Predator V1', 'Intel i5-13400F + RTX 4060. The ultimate sweet spot for 1080p competitive gaming and esports titles like Valorant and CS2.', 0.00, 'https://via.placeholder.com/300x200/ff007f/FFF?text=Esports+Predator', 'Gamer', 'Available', 9, 3, 1, 4, '2026-04-09 10:59:36'),
+(2, 'Studio Pro Workstation', 'AMD Ryzen 9 7950X + 64GB DDR5 + RTX 4080. Built for 3D rendering, video editing, and heavy creative workloads.', 0.00, 'https://via.placeholder.com/300x200/0078D4/FFF?text=Studio+Pro', 'Creator', 'Available', 7, 10, 0, 5, '2026-04-09 10:59:36'),
+(3, 'Campus Starter Box', 'Intel Core i3-12100 + 16GB RAM + 512GB NVMe. Fast, reliable, and affordable. Perfect for assignments, web browsing, and media consumption.', 0.00, 'https://via.placeholder.com/300x200/00e676/000?text=Campus+Starter', 'Student', 'Available', 1, 2, 10, 0, '2026-04-09 10:59:36'),
+(4, 'Neon Liquid Beast', 'Intel Core i9-14900K + RTX 4090 + Custom Hard-Tube Liquid Cooling. For those who demand absolute perfection and maximum RGB aesthetics.', 0.00, 'https://via.placeholder.com/300x200/8a2be2/FFF?text=Neon+Liquid+Beast', 'Enthusiast', 'Available', 10, 8, 0, 10, '2026-04-09 10:59:36'),
 (7, 'AMD Sweet Spot 1440p', 'Ryzen 7800X3D + RX 7800 XT. The absolute most cost-effective 1440p high-refresh-rate gaming machine available today.', 0.00, 'https://via.placeholder.com/300x200/ef4444/FFF?text=AMD+Sweet+Spot', 'Gamer', 'Available', 10, 4, 1, 5, '2026-04-30 11:22:59'),
 (8, 'The 4K Juggernaut', 'Intel i7-14700K + RTX 4080 SUPER. Zero compromises. Built inside the gorgeous Lian Li O11 Dynamic.', 0.00, 'https://via.placeholder.com/300x200/00e676/000?text=4K+Juggernaut', 'Enthusiast', 'Available', 9, 8, 1, 10, '2026-04-30 11:22:59'),
 (9, 'Video Editor Pro Mac-Killer', 'Intel i7-14700K + 64GB DDR5 + RTX 4060 Ti + 2TB Gen4 SSD. Optimized entirely for Adobe Premiere and After Effects.', 0.00, 'https://via.placeholder.com/300x200/a855f7/FFF?text=Editor+Pro', 'Creator', 'Available', 5, 10, 2, 6, '2026-04-30 11:22:59'),
@@ -656,7 +781,9 @@ INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `payment_sta
 (5, 11, 'Online Banking (FPX)', 'Paid', '2026-04-09 23:11:35'),
 (6, 13, 'Online Banking (FPX)', 'Paid', '2026-04-11 17:26:52'),
 (7, 14, 'Visa ending in 4444', 'Paid', '2026-04-11 17:41:34'),
-(8, 15, 'FPX - Maybank2U', 'Paid', '2026-04-19 23:30:46');
+(8, 15, 'FPX - Maybank2U', 'Paid', '2026-04-19 23:30:46'),
+(9, 16, 'FPX - RHB Now', 'Paid', '2026-05-02 22:30:30'),
+(10, 17, 'FPX - Maybank2U', 'Paid', '2026-05-02 22:31:55');
 
 -- --------------------------------------------------------
 
@@ -820,7 +947,12 @@ INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_pric
 (20, 1, 'd', 6697.00, '2026-04-11 16:59:53'),
 (21, 1, '4tgrrg', 6697.00, '2026-04-11 17:27:51'),
 (22, 1, 'i', 6697.00, '2026-04-12 22:40:26'),
-(23, 4, 'shengwing', 10259.00, '2026-04-30 20:03:54');
+(24, 5, 'shengwing', 14229.00, '2026-05-01 14:59:50'),
+(25, 5, 'c', 15107.00, '2026-05-01 15:24:25'),
+(26, 5, 'io', 11787.00, '2026-05-01 16:18:23'),
+(27, 5, 'kkkk', 10259.00, '2026-05-01 22:00:25'),
+(28, 5, 'kkkk', 6427.00, '2026-05-02 22:28:17'),
+(29, 5, 'ttt', 6427.00, '2026-05-02 22:28:32');
 
 -- --------------------------------------------------------
 
@@ -859,6 +991,7 @@ CREATE TABLE `shopping_cart` (
   `product_id` int(11) DEFAULT NULL,
   `pc_build` int(11) DEFAULT NULL,
   `package_id` int(11) DEFAULT NULL,
+  `affiliate_id` int(11) DEFAULT NULL,
   `quantity` int(11) NOT NULL DEFAULT 1,
   `added_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -867,12 +1000,12 @@ CREATE TABLE `shopping_cart` (
 -- 转存表中的数据 `shopping_cart`
 --
 
-INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `package_id`, `quantity`, `added_at`) VALUES
-(9, 3, NULL, 14, NULL, 1, '2026-04-06 09:17:24'),
-(19, 1, 4, NULL, NULL, 1, '2026-04-29 23:38:35'),
-(20, 1, NULL, NULL, 4, 2, '2026-04-30 00:06:55'),
-(21, 4, 48, NULL, NULL, 1, '2026-04-30 20:12:23'),
-(22, 4, 36, NULL, NULL, 1, '2026-04-30 20:12:35');
+INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `package_id`, `affiliate_id`, `quantity`, `added_at`) VALUES
+(9, 3, NULL, 14, NULL, NULL, 1, '2026-04-06 09:17:24'),
+(19, 1, 4, NULL, NULL, NULL, 1, '2026-04-29 23:38:35'),
+(20, 1, NULL, NULL, 4, NULL, 2, '2026-04-30 00:06:55'),
+(33, 5, NULL, NULL, 16, NULL, 1, '2026-05-04 12:47:06'),
+(34, 5, NULL, NULL, 15, NULL, 1, '2026-05-04 12:47:13');
 
 -- --------------------------------------------------------
 
@@ -933,6 +1066,30 @@ ALTER TABLE `build_items`
 --
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`category_id`);
+
+--
+-- 表的索引 `community_comments`
+--
+ALTER TABLE `community_comments`
+  ADD PRIMARY KEY (`comment_id`),
+  ADD KEY `post_id` (`post_id`),
+  ADD KEY `customer_id` (`customer_id`);
+
+--
+-- 表的索引 `community_likes`
+--
+ALTER TABLE `community_likes`
+  ADD PRIMARY KEY (`like_id`),
+  ADD UNIQUE KEY `unique_like` (`post_id`,`customer_id`),
+  ADD KEY `customer_id` (`customer_id`);
+
+--
+-- 表的索引 `community_posts`
+--
+ALTER TABLE `community_posts`
+  ADD PRIMARY KEY (`post_id`),
+  ADD KEY `customer_id` (`customer_id`),
+  ADD KEY `pc_build_id` (`pc_build_id`);
 
 --
 -- 表的索引 `consultations`
@@ -1065,13 +1222,31 @@ ALTER TABLE `bank`
 -- 使用表AUTO_INCREMENT `build_items`
 --
 ALTER TABLE `build_items`
-  MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=190;
+  MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=252;
 
 --
 -- 使用表AUTO_INCREMENT `categories`
 --
 ALTER TABLE `categories`
   MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- 使用表AUTO_INCREMENT `community_comments`
+--
+ALTER TABLE `community_comments`
+  MODIFY `comment_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- 使用表AUTO_INCREMENT `community_likes`
+--
+ALTER TABLE `community_likes`
+  MODIFY `like_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- 使用表AUTO_INCREMENT `community_posts`
+--
+ALTER TABLE `community_posts`
+  MODIFY `post_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- 使用表AUTO_INCREMENT `consultations`
@@ -1083,25 +1258,25 @@ ALTER TABLE `consultations`
 -- 使用表AUTO_INCREMENT `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- 使用表AUTO_INCREMENT `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
-  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- 使用表AUTO_INCREMENT `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- 使用表AUTO_INCREMENT `order_details`
 --
 ALTER TABLE `order_details`
-  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- 使用表AUTO_INCREMENT `packages`
@@ -1119,7 +1294,7 @@ ALTER TABLE `package_items`
 -- 使用表AUTO_INCREMENT `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- 使用表AUTO_INCREMENT `products`
@@ -1143,7 +1318,7 @@ ALTER TABLE `reviews`
 -- 使用表AUTO_INCREMENT `saved_builds`
 --
 ALTER TABLE `saved_builds`
-  MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- 使用表AUTO_INCREMENT `saved_cards`
@@ -1155,7 +1330,7 @@ ALTER TABLE `saved_cards`
 -- 使用表AUTO_INCREMENT `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
-  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- 使用表AUTO_INCREMENT `wallet_transactions`
@@ -1173,6 +1348,27 @@ ALTER TABLE `wallet_transactions`
 ALTER TABLE `build_items`
   ADD CONSTRAINT `build_items_ibfk_1` FOREIGN KEY (`pc_build`) REFERENCES `saved_builds` (`pc_build`) ON DELETE CASCADE,
   ADD CONSTRAINT `build_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `community_comments`
+--
+ALTER TABLE `community_comments`
+  ADD CONSTRAINT `community_comments_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `community_comments_ibfk_2` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `community_likes`
+--
+ALTER TABLE `community_likes`
+  ADD CONSTRAINT `community_likes_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `community_likes_ibfk_2` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `community_posts`
+--
+ALTER TABLE `community_posts`
+  ADD CONSTRAINT `community_posts_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `community_posts_ibfk_2` FOREIGN KEY (`pc_build_id`) REFERENCES `saved_builds` (`pc_build`) ON DELETE SET NULL;
 
 --
 -- 限制表 `consultations`
