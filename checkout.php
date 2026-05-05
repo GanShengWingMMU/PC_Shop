@@ -12,7 +12,7 @@ $customer_id = $_SESSION['customer_id'];
 $error_message = "";
 
 // 取得顧客目前的錢包餘額與金幣
-$user_query = "SELECT wallet_balance, reward_coins FROM customers WHERE customer_id = ?";
+$user_query = "SELECT wallet_balance, reward_coins, membership_tier FROM customers WHERE customer_id = ?";
 $stmt_user = $conn->prepare($user_query);
 $stmt_user->bind_param("i", $customer_id);
 $stmt_user->execute();
@@ -21,7 +21,7 @@ $stmt_user->close();
 
 $current_balance = $user_data['wallet_balance'];
 $current_coins = $user_data['reward_coins'];
-
+$current_tier = $user_data['membership_tier'];
 $saved_addresses = [];
 $address_query = "SELECT * FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
 $stmt_addr = $conn->prepare($address_query);
@@ -117,17 +117,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    $use_coins = isset($_POST['use_coins']) ? true : false;
+   $use_coins = isset($_POST['use_coins']) ? true : false;
     $coins_used = 0;
-    $discount_amount = 0;
+    $coin_discount = 0;
+    $vip_discount = 0;
+
+
+if ($current_tier === 'VIP') {
+        $vip_discount = $total_amount * 0.05;
+    }
+
 
     if ($use_coins && $current_coins > 0) {
         $coins_used = $current_coins;
-        $discount_amount = floor($current_coins / 10); 
+        $coin_discount = floor($current_coins / 10); 
     }
 
+
+    $discount_amount = $vip_discount + $coin_discount;
+    
     $final_amount = $total_amount - $discount_amount;
+    if ($final_amount < 0) $final_amount = 0;
     if ($final_amount < 0) $final_amount = 0; 
+
+ // ==========================================
+    // 🏦 金流驗證與扣款邏輯 (全能銀行系統)
+    // ==========================================
+    $bank_account_id_to_deduct = null; // 用來記錄要扣款的銀行帳戶 ID
 
     if ($final_payment_method === 'Credit Card') {
         $selected_card = $_POST['selected_card'] ?? '';
@@ -137,7 +153,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $card_number = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
             $card_cvc = trim($_POST['dummy_card_cvc']);
 
-            $bank_query = "SELECT * FROM dummy_bank WHERE card_number = ? AND cvc = ?";
+            // 🌟 改變：查詢我們真實的 bank 表格，而不是 dummy_bank
+            $bank_query = "SELECT * FROM bank WHERE card_number = ? AND cvc = ?";
             $bank_stmt = $conn->prepare($bank_query);
             $bank_stmt->bind_param("ss", $card_number, $card_cvc);
             $bank_stmt->execute();
@@ -145,22 +162,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($bank_result->num_rows > 0) {
                 $bank_data = $bank_result->fetch_assoc();
-                
-                if ($bank_data['balance'] < $final_amount) {
-                    $_SESSION['error_msg'] = "Bank Declined: Insufficient funds in your bank account.";
-                    header("Location: checkout.php");
-                    exit();
-                }
-
-                $new_balance = $bank_data['balance'] - $final_amount;
-                $deduct_stmt = $conn->prepare("UPDATE dummy_bank SET balance = ? WHERE id = ?");
-                $deduct_stmt->bind_param("di", $new_balance, $bank_data['id']);
-                $deduct_stmt->execute();
-                $deduct_stmt->close();
+                $bank_account_id_to_deduct = $bank_data['id']; // 記錄要扣款的帳戶 ID
 
                 $last_four = substr($card_number, -4);
                 $final_payment_method = "Visa ending in " . $last_four; 
-                
             } else {
                 $_SESSION['error_msg'] = "Bank Declined: Invalid Card Number or CVC. Please try again.";
                 header("Location: checkout.php");
@@ -170,7 +175,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         } else {
             $card_id = intval($selected_card);
-            $saved_query = "SELECT card_brand, last_four_digits FROM saved_cards WHERE card_id = ? AND customer_id = ?";
+            // 查詢這張儲存的卡片對應到哪一個 bank_id
+            $saved_query = "SELECT card_brand, last_four_digits, bank_id FROM saved_cards WHERE card_id = ? AND customer_id = ?";
             $saved_stmt = $conn->prepare($saved_query);
             $saved_stmt->bind_param("ii", $card_id, $customer_id);
             $saved_stmt->execute();
@@ -178,6 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($saved_row = $saved_result->fetch_assoc()) {
                 $final_payment_method = $saved_row['card_brand'] . " ending in " . $saved_row['last_four_digits'];
+                $bank_account_id_to_deduct = $saved_row['bank_id']; // 記錄要扣款的帳戶 ID
             }
             $saved_stmt->close();
         }
@@ -190,7 +197,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: checkout.php");
             exit();
         }
-        $final_payment_method = "FPX - " . $selected_bank;
+        
+        // 🌟 改變：模擬 FPX 登入驗證
+        // 實務上這裡會是彈出視窗讓顧客輸入帳密，目前我們先寫死一組測試帳號來示範扣款邏輯
+        $fpx_user = 'ganshengwing'; // 測試帳號
+        $fpx_pass = '123456';       // 測試密碼
+
+        $fpx_query = "SELECT id, balance FROM bank WHERE fpx_username = ? AND fpx_password = ?";
+        $fpx_stmt = $conn->prepare($fpx_query);
+        $fpx_stmt->bind_param("ss", $fpx_user, $fpx_pass);
+        $fpx_stmt->execute();
+        $fpx_result = $fpx_stmt->get_result();
+
+        if ($fpx_result->num_rows > 0) {
+             $fpx_data = $fpx_result->fetch_assoc();
+             $bank_account_id_to_deduct = $fpx_data['id']; // 記錄要扣款的帳戶 ID
+             $final_payment_method = "FPX - " . $selected_bank;
+        } else {
+             $_SESSION['error_msg'] = "FPX Login Failed: Invalid username or password.";
+             header("Location: checkout.php");
+             exit();
+        }
+        $fpx_stmt->close();
+    }
+
+    // ==========================================
+    // 🏦 執行銀行扣款 (統一處理)
+    // ==========================================
+    if ($bank_account_id_to_deduct !== null) {
+        // 先檢查餘額夠不夠
+        $bal_check_stmt = $conn->prepare("SELECT balance FROM bank WHERE id = ?");
+        $bal_check_stmt->bind_param("i", $bank_account_id_to_deduct);
+        $bal_check_stmt->execute();
+        $bank_balance = $bal_check_stmt->get_result()->fetch_assoc()['balance'];
+        $bal_check_stmt->close();
+
+        if ($bank_balance < $final_amount) {
+            $_SESSION['error_msg'] = "Bank Declined: Insufficient funds in your bank account.";
+            header("Location: checkout.php");
+            exit();
+        }
+
+        // 餘額足夠，執行扣款
+        $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ?");
+        $deduct_stmt->bind_param("di", $final_amount, $bank_account_id_to_deduct);
+        $deduct_stmt->execute();
+        $deduct_stmt->close();
     }
 
     if ($final_payment_method === 'E-Wallet' && $current_balance < $final_amount) {
@@ -594,6 +646,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="specs">Subtotal</span>
                 <span class="specs" id="subtotal-display" data-subtotal="<?php echo $total_amount; ?>">RM <?php echo number_format($total_amount, 2); ?></span>
             </div>
+
+<!-- 🌟 VIP 折扣顯示列 -->
+            <?php if ($current_tier === 'VIP'): ?>
+            <div class="summary-item" style="color: #ffd700;">
+                <span><i class="fa-solid fa-crown"></i> ELITE 5% Discount</span>
+                <span>- RM <?php echo number_format($total_amount * 0.05, 2); ?></span>
+            </div>
+            <?php endif; ?>
             
             <div class="summary-item" id="discount-row" style="display: none; color: #ffd700;">
                 <span>Coins Discount</span>

@@ -121,62 +121,84 @@ $stmt->close();
         }
         
         .product-card {
-            background: var(--bg-surface);
+            background: rgba(255, 255, 255, 0.02);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 12px;
             padding: 20px;
-            text-align: center;
+            text-align: left; 
             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
         }
         .product-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 243, 255, 0.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
             border-color: rgba(0, 243, 255, 0.3);
         }
-        .product-img {
+        
+        /* 圖片專屬容器 */
+        .product-img-box {
             width: 100%;
             height: 180px;
-            object-fit: contain;
             margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .product-img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
             transition: transform 0.3s;
         }
         .product-card:hover .product-img {
             transform: scale(1.05); 
         }
+
+        .product-cat-tag {
+            color: var(--accent-blue);
+            font-size: 0.7rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
         .product-title {
             color: var(--text-main);
-            font-size: 1rem;
+            font-size: 1.1rem;
             margin-bottom: 10px;
             line-height: 1.4;
+            font-weight: bold;
             flex-grow: 1; 
         }
+        
         .product-price {
-            color: var(--accent-blue);
-            font-size: 1.25rem;
+            color: #00ff66; 
+            font-size: 1.4rem;
             font-weight: bold;
             margin-bottom: 15px;
+            letter-spacing: 0.5px;
         }
         
         .btn-add-cart {
             width: 100%;
             padding: 10px;
-            background: transparent;
-            color: var(--accent-blue);
-            border: 1px solid var(--accent-blue);
+            background: var(--accent-blue);
+            color: #000;
+            border: none;
             border-radius: 6px;
             font-weight: bold;
             cursor: pointer;
             transition: 0.3s;
         }
         .btn-add-cart:hover {
-            background: var(--accent-blue);
-            color: #000;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
         }
-
-        /* --- 高级双向价格过滤器样式 --- */
         .price-filter-widget {
             background: transparent;
             padding: 10px 0;
@@ -352,12 +374,18 @@ $stmt->close();
                     <p style="color: var(--text-muted);">We are restocking soon. Please check another category.</p>
                 </div>
             <?php else: ?>
-                <div class="product-grid">
+<div class="product-grid">
                     <?php foreach ($products as $p): ?>
                         <div class="product-card">
                             
-                            <a href="product_detail.php?id=<?php echo $p['product_id']; ?>" style="text-decoration: none;">
-                                <img src="<?php echo htmlspecialchars($p['image_url'] ? $p['image_url'] : 'image/placeholder.png'); ?>" alt="Product" class="product-img">
+                            <a href="product_detail.php?id=<?php echo $p['product_id']; ?>" style="text-decoration: none; display: flex; flex-direction: column; flex-grow: 1;">
+                                
+                                <div class="product-img-box">
+                                    <img src="<?php echo htmlspecialchars($p['image_url'] ? $p['image_url'] : 'image/placeholder.png'); ?>" alt="Product" class="product-img">
+                                </div>
+                                
+                                <div class="product-cat-tag">COMPONENT HARDWARE</div>
+                                
                                 <h4 class="product-title"><?php echo htmlspecialchars($p['product_name']); ?></h4>
                             </a>
                             
@@ -368,7 +396,7 @@ $stmt->close();
                                     <input type="hidden" name="product_id" value="<?php echo $p['product_id']; ?>">
                                     <input type="hidden" name="quantity" value="1">
                                     <button type="submit" class="btn-add-cart">
-                                        <i class="fa-solid fa-cart-plus"></i> Add to Cart
+                                        Buy Now
                                     </button>
                                 </form>
                             </div>
@@ -391,21 +419,16 @@ document.addEventListener("DOMContentLoaded", function() {
     const priceInputs = document.querySelectorAll(".price-input-group input");
     const trackFill = document.querySelector(".slider-track-fill");
     
-    // 设定最大价格限制，与 HTML 中 max="10000" 对应
     const maxRange = 10000; 
-    // 设定两个滑块之间允许的最小差值
     const priceGap = 100;
 
-    // 更新绿色高亮条的宽度和位置
     function updateTrackFill(minVal, maxVal) {
         trackFill.style.left = (minVal / maxRange) * 100 + "%";
         trackFill.style.right = 100 - (maxVal / maxRange) * 100 + "%";
     }
 
-    // 初始化执行
     updateTrackFill(parseInt(rangeInputs[0].value), parseInt(rangeInputs[1].value));
 
-    // 1. 监听滑块拖动 -> 更新输入框
     rangeInputs.forEach(input => {
         input.addEventListener("input", e => {
             let minVal = parseInt(rangeInputs[0].value);
@@ -425,7 +448,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    // 2. 监听输入框修改 -> 更新滑块
     priceInputs.forEach(input => {
         input.addEventListener("input", e => {
             if(priceInputs[0].value === "" || priceInputs[1].value === "") return;
@@ -443,7 +465,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
         
-        // 失去焦点时校正极限值
         input.addEventListener("blur", e => {
             let minPrice = parseInt(priceInputs[0].value) || 0;
             let maxPrice = parseInt(priceInputs[1].value) || maxRange;
