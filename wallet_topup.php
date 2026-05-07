@@ -2,7 +2,6 @@
 session_start();
 require_once 'config.php';
 
-// 1. 檢查登入狀態
 if (!isset($_SESSION['customer_id'])) {
     header("Location: login.php");
     exit();
@@ -12,13 +11,9 @@ $customer_id = $_SESSION['customer_id'];
 $success_msg = "";
 $error_msg = "";
 
-// ==========================================
-// 2. 處理儲值請求 (POST Request)
-// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $amount = 0;
 
-    // 🌟 核心修改：判斷顧客是填寫「自定義金額」還是點擊「預設選項」
     if (!empty($_POST['custom_amount']) && is_numeric($_POST['custom_amount'])) {
         $amount = (float) $_POST['custom_amount'];
     } elseif (!empty($_POST['topup_option']) && is_numeric($_POST['topup_option'])) {
@@ -73,6 +68,17 @@ $stmt->close();
 
 $current_balance = $user_data['wallet_balance'];
 $current_coins = $user_data['reward_coins'];
+
+$saved_cards = [];
+$query_cards = "SELECT * FROM saved_cards WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
+$stmt_cards = $conn->prepare($query_cards);
+$stmt_cards->bind_param("i", $customer_id);
+$stmt_cards->execute();
+$res_cards = $stmt_cards->get_result();
+while ($card = $res_cards->fetch_assoc()) {
+    $saved_cards[] = $card;
+}
+$stmt_cards->close();
 ?>
 
 <!DOCTYPE html>
@@ -135,12 +141,67 @@ $current_coins = $user_data['reward_coins'];
                     <p id="custom_reward_preview" style="color: #ffd700; margin-top: 8px; font-size: 0.9rem; display: none;"></p>
                 </div>
 
-                <div class="form-group input-group">
-                    <label class="form-label" for="bank">Payment Method</label>
-                    <select id="bank" class="form-control" style="background-color: var(--bg-darker); color: var(--text-main);">
-                        <option>FPX Online Banking (Mock)</option>
-                        <option>Credit/Debit Card (Mock)</option>
+ <div class="form-group" style="margin-bottom: 20px; text-align: left;">
+                    <label style="color: #00f2fe; font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; display: block;"><i class="fa-solid fa-money-check-dollar"></i> Payment Method</label>
+                    <select id="payment_method" name="payment_method" class="form-control" required onchange="togglePaymentSections()" style="background-color: #000; color: #fff; border: 1px solid rgba(0, 243, 255, 0.4); font-size: 1.05rem; padding: 12px; border-radius: 8px; width: 100%;">
+                        <option value="">-- Select Payment Method --</option>
+                        <option value="Credit Card">💳 Credit / Debit Card</option>
+                        <option value="Online Banking (FPX)">🏦 Online Banking (FPX)</option>
                     </select>
+                </div>
+
+                <div id="credit_card_section" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 243, 255, 0.2); padding: 20px; border-radius: 8px; margin-bottom: 25px; text-align: left;">
+                    <h4 style="color: #00f2fe; margin-top: 0; margin-bottom: 15px; font-size: 1rem;"><i class="fa-regular fa-credit-card"></i> Select or Enter Card Details</h4>
+                    
+                    <?php if(!empty($saved_cards)): ?>
+                        <?php foreach ($saved_cards as $index => $card): ?>
+                            <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 10px; color: #ccc; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                                <input type="radio" name="selected_card" value="<?php echo htmlspecialchars($card['card_id']); ?>" style="margin-right: 15px;" onchange="toggleNewCardForm()" <?php echo $card['is_default'] ? 'checked' : ''; ?>>
+                                <div style="flex: 1;">
+                                    <strong style="color: #fff;"><?php echo htmlspecialchars($card['card_brand']); ?> ending in <?php echo htmlspecialchars($card['last_four_digits']); ?></strong>
+                                    <?php echo $card['is_default'] ? '<span style="margin-left: 8px; background: #00f2fe; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">Default</span>' : ''; ?>
+                                </div>
+                            </label>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+
+                    <label style="display: flex; align-items: center; cursor: pointer; color: #fff; padding: 12px; background: rgba(0, 243, 255, 0.05); border-radius: 6px; border: 1px dashed rgba(0, 243, 255, 0.5);">
+                        <input type="radio" name="selected_card" value="new" style="margin-right: 15px;" onchange="toggleNewCardForm()">
+                        <strong>➕ Pay with a New Card</strong>
+                    </label>
+
+                    <div id="new_card_form" style="display: none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <input type="text" name="dummy_card_name" placeholder="Name on Card (e.g., Ali Bin Abu)" class="form-control" style="width: 100%;">
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <input type="text" name="dummy_card_number" placeholder="Card Number (16 digits)" class="form-control" style="flex: 2;">
+                            <input type="text" name="dummy_card_cvc" placeholder="CVC" class="form-control" style="flex: 1;" maxlength="3">
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="fpx_section" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 243, 255, 0.2); padding: 20px; border-radius: 8px; margin-bottom: 25px; text-align: left;">
+                    <h4 style="color: #00f2fe; margin-top: 0; margin-bottom: 15px; font-size: 1rem;"><i class="fa-solid fa-building-columns"></i> Select Your Bank</h4>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                            <input type="radio" name="selected_bank" value="Maybank2U" style="margin-right: 10px;">
+                            <img src="image/maybank.png" style="height: 30px; object-fit: contain;">
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                            <input type="radio" name="selected_bank" value="CIMB Clicks" style="margin-right: 10px;">
+                            <img src="image/cimb.png" style="height: 30px; object-fit: contain;">
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                            <input type="radio" name="selected_bank" value="Public Bank" style="margin-right: 10px;">
+                            <img src="image/public.png" style="height: 30px; object-fit: contain;">
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                            <input type="radio" name="selected_bank" value="RHB Now" style="margin-right: 10px;">
+                            <img src="image/rhb.png" style="height: 30px; object-fit: contain;">
+                        </label>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-submit-login" style="width: 100%; margin-top: 10px;">
@@ -192,6 +253,39 @@ $current_coins = $user_data['reward_coins'];
                 }
             });
         });
+
+        // 🌟 升級 3：切換付款方式的邏輯
+        function togglePaymentSections() {
+            var method = document.getElementById('payment_method').value;
+            var ccSection = document.getElementById('credit_card_section');
+            var fpxSection = document.getElementById('fpx_section');
+            var newCardForm = document.getElementById('new_card_form');
+            
+            // 隱藏所有區塊
+            ccSection.style.display = 'none';
+            fpxSection.style.display = 'none';
+            newCardForm.style.display = 'none';
+
+            // 根據選擇打開對應區塊
+            if (method === 'Credit Card') {
+                ccSection.style.display = 'block';
+                toggleNewCardForm(); 
+            } else if (method === 'Online Banking (FPX)') {
+                fpxSection.style.display = 'block';
+            }
+        }
+
+        function toggleNewCardForm() {
+            var radios = document.getElementsByName('selected_card');
+            var newCardForm = document.getElementById('new_card_form');
+            for (var i = 0; i < radios.length; i++) {
+                if (radios[i].checked && radios[i].value === 'new') {
+                    newCardForm.style.display = 'block';
+                    return;
+                }
+            }
+            newCardForm.style.display = 'none';
+        }
     </script>
 </body>
 </html>

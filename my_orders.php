@@ -63,15 +63,16 @@ $result_orders = $stmt->get_result();
 while ($row = $result_orders->fetch_assoc()) {
     $order_id = $row['order_id'];
     
-    $query_details = "
-        SELECT od.*, p.product_name, sb.build_name 
+$query_details = "
+        SELECT od.*, p.product_name, sb.build_name,
+               (SELECT COUNT(*) FROM reviews r WHERE r.product_id = od.product_id AND r.customer_id = ?) AS is_reviewed
         FROM order_details od
         LEFT JOIN products p ON od.product_id = p.product_id
         LEFT JOIN saved_builds sb ON od.pc_build = sb.pc_build
         WHERE od.order_id = ?
     ";
     $stmt_details = $conn->prepare($query_details);
-    $stmt_details->bind_param("i", $order_id);
+    $stmt_details->bind_param("ii", $customer_id, $order_id); 
     $stmt_details->execute();
     $result_details = $stmt_details->get_result();
     
@@ -207,17 +208,30 @@ switch($current_filter) {
                                     </h4>
                                     <span class="specs">Qty: <?php echo $item['quantity']; ?></span>
                                 </div>
-                                <div style="flex: 1; text-align: right; color: var(--text-main); font-weight: bold;">
+<div style="flex: 1; text-align: right; color: var(--text-main); font-weight: bold;">
                                     RM <?php echo number_format($item['unit_price'], 2); ?>
-                                    
-                                    <?php if (!empty($item['product_id']) && $order['order_status'] == 'Completed'): ?>
-                                        <br>
-                                        <a href="leave_review.php?product_id=<?php echo $item['product_id']; ?>" style="display: inline-block; margin-top: 8px; color: #ffd700; font-size: 0.8rem; text-decoration: none; border: 1px solid #ffd700; padding: 4px 10px; border-radius: 4px; background: rgba(255, 215, 0, 0.05); transition: 0.3s;">
-                                            <i class="fa-regular fa-star"></i> Rate
+                                </div>
+                            </div>
+                            
+                            <?php if (!empty($item['product_id']) && $order['order_status'] == 'Completed'): ?>
+                                <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.05); gap: 10px;">
+                                    <?php if ($item['is_reviewed'] > 0): ?>
+                                        <span style="color: #4CAF50; font-size: 0.85rem; margin-right: 10px;"><i class="fa-solid fa-check-circle"></i> Reviewed</span>
+                                        <a href="product_detail.php?id=<?php echo $item['product_id']; ?>" style="border: 1px solid #ffd700; color: #ffd700; padding: 6px 18px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; transition: 0.3s;" onmouseover="this.style.background='rgba(255,215,0,0.1)'" onmouseout="this.style.background='transparent'">
+                                            Buy Again
+                                        </a>
+                                    <?php else: ?>
+                                        <button onclick="alert('Return/Refund request submitted. Our team will contact you shortly.')" style="border: 1px solid #555; color: #ccc; background: transparent; padding: 6px 15px; border-radius: 4px; font-size: 0.85rem; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                                            Return / Refund
+                                        </button>
+                                        <a href="leave_review.php?product_id=<?php echo $item['product_id']; ?>" style="background: #eb5e28; color: #fff; padding: 6px 20px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: bold; transition: 0.3s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                                            Rate
                                         </a>
                                     <?php endif; ?>
                                 </div>
-                            </div>
+                            <?php endif; ?>
+
+                            
                         <?php endforeach; ?>
                     </div>
 

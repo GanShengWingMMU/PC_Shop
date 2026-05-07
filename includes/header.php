@@ -89,6 +89,20 @@ if (isset($_SESSION['customer_id'])) {
     }
     $header_stmt->close();
 }
+
+// 🌟 修正：從資料庫即時計算購物車內商品總數
+$cart_item_count = 0;
+if (isset($_SESSION['customer_id'])) {
+    $count_stmt = $conn->prepare("SELECT SUM(quantity) AS total_items FROM shopping_cart WHERE customer_id = ?");
+    $count_stmt->bind_param("i", $_SESSION['customer_id']);
+    $count_stmt->execute();
+    $count_res = $count_stmt->get_result();
+    if ($count_row = $count_res->fetch_assoc()) {
+        $cart_item_count = $count_row['total_items'] ?? 0; // 如果沒有商品就顯示 0
+    }
+    $count_stmt->close();
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -174,13 +188,17 @@ if (isset($_SESSION['customer_id'])) {
             <i class="fas fa-user-astronaut"></i> Hi, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?> <i class="fa-solid fa-chevron-down" style="font-size: 0.8rem; margin-left: 5px;"></i>
             </a>
             
-            <div class="dropdown-content">
+<div class="dropdown-content">
                 <a href="profile.php"><i class="fa-regular fa-id-badge"></i> My Dashboard</a>
                 <a href="my_orders.php"><i class="fa-solid fa-box-open"></i> My Orders</a>
                 <a href="wallet_topup.php"><i class="fa-solid fa-wallet"></i> Digital Wallet</a>
+                
+                <a href="vouchers.php"><i class="fa-solid fa-ticket" style="color: #ffd700;"></i> My Vouchers</a>
+                
                 <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 5px 0;"></div>
                 <a href="logout.php" style="color: #ff4d4d;"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
+
         </div>
         <?php else: ?>
             <a href="login.php" style="text-decoration: none; margin-right: 15px;"><i class="fas fa-sign-in-alt"></i> Login</a>
@@ -188,9 +206,9 @@ if (isset($_SESSION['customer_id'])) {
         <?php endif; ?>
 
         <!-- 🌟 3. 🛒 購物車按鈕 -->
-        <a href="cart.php" class="btn btn-primary" style="padding: 8px 16px;">
-            <i class="fas fa-shopping-cart"></i> Cart (0)
-        </a>
+<a href="cart.php" style="background: #00f2fe; color: #000; padding: 8px 20px; border-radius: 30px; font-weight: 900; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); transition: 0.3s;" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 25px rgba(0, 242, 254, 0.7)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 15px rgba(0, 242, 254, 0.4)';">
+    <i class="fa-solid fa-cart-shopping"></i> Cart (<?php echo $cart_item_count; ?>)
+</a>
     </div>
 </nav>
 

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 05, 2026 at 06:07 PM
+-- Generation Time: May 07, 2026 at 05:46 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -410,7 +410,7 @@ CREATE TABLE `customers` (
 --
 
 INSERT INTO `customers` (`customer_id`, `username`, `email`, `password`, `phone_number`, `wallet_balance`, `reward_coins`, `membership_tier`, `vip_expiry_date`, `auto_renew`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`) VALUES
-(1, 'Sheng Wing Gan', 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, 99971490.29, 500, 'VIP', '2028-03-25 17:40:32', 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
+(1, 'Sheng Wing Gan', 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, 99934740.29, 530, 'VIP', '2028-03-25 17:40:32', 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
 (2, 'Sheng Gan', 'ganshengwing11226@gmail.com', '$2y$10$vW1.TGCWwWQMw8qP57pjjuoePphWACuonBYU6YnK6u/Kkvhd7bJ4a', NULL, 0.00, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0),
 (3, 'Sheng Gan', 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, 0.00, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0);
 
@@ -499,7 +499,8 @@ INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `to
 (12, 'My Custom Order', 1, '2026-04-09 23:28:54', 950.00, 0, 0.00, 'Gan Sheng Wing | 012-3456789\nMMU Cyberjaya', '012-3456789', 'Completed'),
 (13, 'My Custom Order', 1, '2026-04-11 17:26:52', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
 (14, 'My Custom Order', 1, '2026-04-11 17:41:34', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
-(15, 'My Custom Order', 1, '2026-04-19 23:30:46', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending');
+(15, 'My Custom Order', 1, '2026-04-19 23:30:46', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(20, 'My Custom Order', 1, '2026-05-07 13:19:02', 37050.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending');
 
 -- --------------------------------------------------------
 
@@ -534,7 +535,10 @@ INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_bu
 (9, 12, 1, NULL, NULL, NULL, 1, 950.00),
 (10, 13, NULL, 20, NULL, NULL, 1, 6697.00),
 (11, 14, NULL, 21, NULL, NULL, 1, 6697.00),
-(12, 15, NULL, 22, NULL, NULL, 1, 6697.00);
+(12, 15, NULL, 22, NULL, NULL, 1, 6697.00),
+(13, 20, 4, NULL, NULL, NULL, 1, 1450.00),
+(14, 20, NULL, NULL, 4, NULL, 2, 17250.00),
+(15, 20, 3, NULL, NULL, NULL, 1, 1100.00);
 
 -- --------------------------------------------------------
 
@@ -644,7 +648,8 @@ INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `reference_n
 (5, 11, 'Online Banking (FPX)', NULL, 'Paid', '2026-04-09 23:11:35'),
 (6, 13, 'Online Banking (FPX)', NULL, 'Paid', '2026-04-11 17:26:52'),
 (7, 14, 'Visa ending in 4444', NULL, 'Paid', '2026-04-11 17:41:34'),
-(8, 15, 'FPX - Maybank2U', NULL, 'Paid', '2026-04-19 23:30:46');
+(8, 15, 'FPX - Maybank2U', NULL, 'Paid', '2026-04-19 23:30:46'),
+(9, 20, 'E-Wallet', NULL, 'Paid', '2026-05-07 13:19:02');
 
 -- --------------------------------------------------------
 
@@ -709,6 +714,36 @@ CREATE TABLE `product_specifications` (
   `spec_name` varchar(100) NOT NULL,
   `spec_value` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `promo_codes`
+--
+
+CREATE TABLE `promo_codes` (
+  `promo_id` int(11) NOT NULL,
+  `code_name` varchar(50) NOT NULL COMMENT 'Promo code string (e.g., VIPCOMP15)',
+  `discount_percentage` int(11) NOT NULL COMMENT 'Discount amount in percentage (e.g., 15)',
+  `target_category` enum('All','Components','Packages') NOT NULL DEFAULT 'All' COMMENT 'Defines which items the discount applies to',
+  `is_vip_only` tinyint(1) DEFAULT 1 COMMENT '1 for VIP exclusive, 0 for public access',
+  `status` enum('Active','Inactive') DEFAULT 'Active' COMMENT 'Current status of the promo code',
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `promo_codes`
+--
+
+INSERT INTO `promo_codes` (`promo_id`, `code_name`, `discount_percentage`, `target_category`, `is_vip_only`, `status`, `created_at`) VALUES
+(1, 'VIPCOMP15', 15, 'Components', 1, 'Active', '2026-05-07 12:15:57'),
+(2, 'VIPPC20', 20, 'Packages', 1, 'Active', '2026-05-07 12:15:57'),
+(3, 'WELCOME10', 10, 'All', 0, 'Active', '2026-05-07 12:15:57'),
+(4, 'SUMMER26', 10, 'All', 0, 'Active', '2026-05-07 13:37:15'),
+(5, 'ELITEGAMER', 25, 'Packages', 1, 'Active', '2026-05-07 13:37:15'),
+(6, 'UPGRADE5', 5, 'Components', 0, 'Active', '2026-05-07 13:37:15'),
+(7, 'VIPPARTS12', 12, 'Components', 1, 'Active', '2026-05-07 13:37:15'),
+(8, 'EXPIRED50', 50, 'All', 0, 'Inactive', '2026-05-07 13:37:15');
 
 -- --------------------------------------------------------
 
@@ -823,9 +858,7 @@ CREATE TABLE `shopping_cart` (
 
 INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `package_id`, `affiliate_id`, `quantity`, `added_at`) VALUES
 (9, 3, NULL, 14, NULL, NULL, 1, '2026-04-06 09:17:24'),
-(19, 1, 4, NULL, NULL, NULL, 1, '2026-04-29 23:38:35'),
-(20, 1, NULL, NULL, 4, NULL, 2, '2026-04-30 00:06:55'),
-(21, 1, 3, NULL, NULL, NULL, 1, '2026-05-05 21:16:02');
+(23, 2, 3, NULL, NULL, NULL, 1, '2026-05-07 18:02:57');
 
 -- --------------------------------------------------------
 
@@ -876,7 +909,9 @@ INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amo
 (27, 1, 'Payment', -29.90, 0, '2026-05-05 23:40:40'),
 (28, 1, 'Payment', -29.90, 0, '2026-05-05 23:40:40'),
 (29, 1, 'Payment', -29.90, 0, '2026-05-05 23:40:40'),
-(30, 1, 'Payment', -29.90, 0, '2026-05-05 23:40:41');
+(30, 1, 'Payment', -29.90, 0, '2026-05-05 23:40:41'),
+(31, 1, 'Top-up', 300.00, 30, '2026-05-07 13:18:32'),
+(32, 1, 'Payment', -37050.00, 0, '2026-05-07 13:19:02');
 
 --
 -- Indexes for dumped tables
@@ -991,6 +1026,13 @@ ALTER TABLE `product_specifications`
   ADD KEY `idx_spec_search` (`spec_name`,`spec_value`);
 
 --
+-- Indexes for table `promo_codes`
+--
+ALTER TABLE `promo_codes`
+  ADD PRIMARY KEY (`promo_id`),
+  ADD UNIQUE KEY `code_name` (`code_name`);
+
+--
 -- Indexes for table `reviews`
 --
 ALTER TABLE `reviews`
@@ -1086,13 +1128,13 @@ ALTER TABLE `fpx_accounts`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `order_details`
 --
 ALTER TABLE `order_details`
-  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `packages`
@@ -1104,7 +1146,7 @@ ALTER TABLE `packages`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -1117,6 +1159,12 @@ ALTER TABLE `products`
 --
 ALTER TABLE `product_specifications`
   MODIFY `spec_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `promo_codes`
+--
+ALTER TABLE `promo_codes`
+  MODIFY `promo_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `reviews`
@@ -1146,7 +1194,7 @@ ALTER TABLE `shopping_cart`
 -- AUTO_INCREMENT for table `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- Constraints for dumped tables

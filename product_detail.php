@@ -51,6 +51,32 @@ if ($stmt_algo = $conn->prepare($algo_query)) {
     }
     $stmt_algo->close();
 }
+
+$reviews = [];
+$total_rating = 0;
+$avg_rating = 0;
+
+$review_query = "
+    SELECT r.*, c.username 
+    FROM reviews r 
+    JOIN customers c ON r.customer_id = c.customer_id 
+    WHERE r.product_id = ? 
+    ORDER BY r.review_id DESC
+";
+if ($stmt_rev = $conn->prepare($review_query)) {
+    $stmt_rev->bind_param("i", $product_id);
+    $stmt_rev->execute();
+    $res_rev = $stmt_rev->get_result();
+    while ($rev = $res_rev->fetch_assoc()) {
+        $reviews[] = $rev;
+        $total_rating += $rev['rating'];
+    }
+    $stmt_rev->close();
+}
+
+if (count($reviews) > 0) {
+    $avg_rating = round($total_rating / count($reviews), 1);
+}
 ?>
 
 <!DOCTYPE html>
@@ -442,6 +468,57 @@ if ($stmt_algo = $conn->prepare($algo_query)) {
     </div>
     <?php endif; ?>
 
+    <div class="reviews-section" style="background: var(--panel-bg); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 40px; margin-bottom: 60px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+        <h3 style="font-size: 1.8rem; color: var(--text-main); margin-bottom: 25px;"><i class="fa-solid fa-star" style="color: #ffd700;"></i> Product Ratings</h3>
+        
+        <?php if (empty($reviews)): ?>
+            <p style="color: var(--text-muted); text-align: center; padding: 30px 0; font-size: 1.1rem;">
+                <i class="fa-regular fa-comment-dots" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                No reviews yet. Be the first to review this product!
+            </p>
+        <?php else: ?>
+            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px; background: rgba(0,0,0,0.2); padding: 25px; border-radius: 8px; border: 1px solid rgba(255,215,0,0.2);">
+                <div style="color: #ffd700; font-size: 3.5rem; font-weight: bold; line-height: 1; text-shadow: 0 0 10px rgba(255,215,0,0.3);">
+                    <?php echo number_format($avg_rating, 1); ?> <span style="font-size: 1.2rem; color: #888; font-weight: normal;">out of 5</span>
+                </div>
+                <div>
+                    <?php 
+                    for($i=1; $i<=5; $i++) {
+                        echo $i <= round($avg_rating) ? '<i class="fa-solid fa-star" style="color: #ffd700; font-size: 1.5rem; margin-right: 3px;"></i>' : '<i class="fa-regular fa-star" style="color: #ffd700; font-size: 1.5rem; margin-right: 3px;"></i>';
+                    }
+                    ?>
+                    <div style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;"><?php echo count($reviews); ?> Ratings</div>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0;">
+                <?php foreach ($reviews as $rev): ?>
+                    <div style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 20px 0;">
+                        <div style="display: flex; gap: 15px; align-items: flex-start;">
+                            <div style="width: 40px; height: 40px; background: rgba(0, 243, 255, 0.1); color: var(--accent-blue); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 1.2rem;">
+                                <?php echo strtoupper(substr($rev['username'] ?? 'U', 0, 1)); ?>
+                            </div>
+                            
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <strong style="color: var(--text-main); font-size: 0.95rem;"><?php echo htmlspecialchars($rev['username'] ?? 'Anonymous User'); ?></strong>
+                                </div>
+                                <div style="margin-bottom: 8px;">
+                                    <?php 
+                                    for($i=1; $i<=5; $i++) {
+                                        echo $i <= $rev['rating'] ? '<i class="fa-solid fa-star" style="color: #ffd700; font-size: 0.8rem;"></i>' : '<i class="fa-regular fa-star" style="color: #ffd700; font-size: 0.8rem;"></i>';
+                                    }
+                                    ?>
+                                </div>
+                                <p style="color: #ccc; line-height: 1.6; margin: 0; font-size: 0.95rem;"><?php echo nl2br(htmlspecialchars($rev['comment'])); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+    
 </main>
 
 <?php include 'includes/footer.php'; ?>

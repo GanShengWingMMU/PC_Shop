@@ -117,28 +117,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-   $use_coins = isset($_POST['use_coins']) ? true : false;
+$use_coins = isset($_POST['use_coins']) ? true : false;
     $coins_used = 0;
     $coin_discount = 0;
-    $vip_discount = 0;
+    $promo_discount = 0; // 🌟 變成 Promo 折扣
+    $applied_promo_code = trim($_POST['applied_promo_code'] ?? ''); // 抓取輸入的代碼
 
+    // ==========================================
+    // 🛒 分類折扣引擎 (Smart Discount Engine)
+    // ==========================================
+    if (!empty($applied_promo_code)) {
+        $subtotal_components = 0; 
+        $subtotal_packages = 0;
+        
+        // 1. 將購物車商品分類算總價
+        foreach ($cart_items as $item) {
+            $price = 0;
+            if ($item['product_id']) $price = $item['product_price'];
+            elseif ($item['pc_build']) $price = $item['build_price'];
+            elseif ($item['package_id']) $price = $item['package_price'];
+            
+            $item_price = $price * $item['quantity'];
+            
+            if (!empty($item['product_id']) && empty($item['pc_build']) && empty($item['package_id'])) {
+                $subtotal_components += $item_price; // 單獨零件
+            } else {
+                $subtotal_packages += $item_price;   // 套裝機或自組機
+            }
+        }
 
-if ($current_tier === 'VIP') {
-        $vip_discount = $total_amount * 0.05;
+        // 2. 驗證代碼
+        $promo_stmt = $conn->prepare("SELECT * FROM promo_codes WHERE code_name = ? AND status = 'Active'");
+        $promo_stmt->bind_param("s", $applied_promo_code);
+        $promo_stmt->execute();
+        $promo_res = $promo_stmt->get_result();
+        
+        if ($promo_row = $promo_res->fetch_assoc()) {
+            if ($promo_row['is_vip_only'] == 1 && $current_tier !== 'VIP') {
+                $_SESSION['error_msg'] = "The promo code '{$applied_promo_code}' is exclusive to ELITE members only.";
+                header("Location: checkout.php");
+                exit();
+            } else {
+                $target = $promo_row['target_category'];
+                $pct = $promo_row['discount_percentage'] / 100;
+                
+                if ($target === 'Components') {
+                    $promo_discount = $subtotal_components * $pct;
+                } elseif ($target === 'Packages') {
+                    $promo_discount = $subtotal_packages * $pct;
+                } else { // 'All'
+                    $promo_discount = ($subtotal_components + $subtotal_packages) * $pct;
+                }
+
+                if ($promo_discount <= 0) {
+                    $_SESSION['error_msg'] = "Promo code '{$applied_promo_code}' is valid, but there are no eligible items in your cart to discount.";
+                    header("Location: checkout.php");
+                    exit();
+                }
+            }
+        } else {
+            $_SESSION['error_msg'] = "Invalid or expired promo code: '{$applied_promo_code}'.";
+            header("Location: checkout.php");
+            exit();
+        }
+        $promo_stmt->close();
     }
 
-
+    // 3. 計算 Coins 與最終總金額
     if ($use_coins && $current_coins > 0) {
         $coins_used = $current_coins;
         $coin_discount = floor($current_coins / 10); 
     }
 
-
-    $discount_amount = $vip_discount + $coin_discount;
-    
+    $discount_amount = $promo_discount + $coin_discount; // 加總所有折扣
     $final_amount = $total_amount - $discount_amount;
     if ($final_amount < 0) $final_amount = 0;
-    if ($final_amount < 0) $final_amount = 0; 
 
  // ==========================================
     // 🏦 金流驗證與扣款邏輯 (全能銀行系統)
@@ -494,18 +547,35 @@ if ($current_tier === 'VIP') {
                 </div>
                 <?php endif; ?>
 
-                <div class="form-group input-group">
-                    <label class="form-label" style="display: flex; justify-content: space-between;">
-                        <span>Payment Method</span>
+<div class="form-group input-group" style="margin-bottom: 20px;">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fa-solid fa-money-check-dollar"></i> Payment Method</span>
                     </label>
                     
-                    <select id="payment_method" name="payment_method" class="form-control" required onchange="togglePaymentSections()" style="background-color: var(--bg-surface); color: var(--text-main);">
+                    <select id="payment_method" name="payment_method" class="form-control" required onchange="togglePaymentSections()" style="background-color: #000; color: #fff; border: 1px solid rgba(0, 243, 255, 0.4); font-size: 1.05rem; padding: 12px; border-radius: 8px;">
                         <option value="">-- Select Payment Method --</option>
-                        <option value="E-Wallet">GridCitY E-Wallet (Bal: RM <?php echo number_format($current_balance, 2); ?>)</option>
+                        <option value="E-Wallet">💳 GridCitY Digital E-Wallet</option>
                         <option value="Credit Card">💳 Credit / Debit Card</option>
                         <option value="Online Banking (FPX)">🏦 Online Banking (FPX)</option>
                         <option value="Cash on Delivery">🚚 Cash on Delivery (COD)</option>
                     </select>
+                </div>
+
+                <div id="ewallet_section" style="display: none; background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); border: 1px solid #00f2fe; padding: 25px; border-radius: 12px; margin-bottom: 25px; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0, 242, 254, 0.15);">
+                    <i class="fa-solid fa-wallet" style="position: absolute; right: -20px; bottom: -20px; font-size: 8rem; color: rgba(0, 243, 255, 0.05); transform: rotate(-15deg);"></i>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1;">
+                        <div>
+                            <p style="color: #00f2fe; font-size: 0.9rem; margin: 0 0 5px 0; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Available Balance</p>
+                            <h2 style="color: #fff; font-size: 2.2rem; margin: 0; text-shadow: 0 0 10px rgba(0,242,254,0.3);">RM <?php echo number_format($current_balance, 2); ?></h2>
+                        </div>
+                        <div style="text-align: right;">
+                            <a href="wallet_topup.php" style="background: #00f2fe; color: #000; padding: 12px 25px; border-radius: 30px; text-decoration: none; font-weight: 900; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); transition: 0.3s; display: inline-block;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <i class="fa-solid fa-bolt"></i> Top Up Now
+                            </a>
+                            <p style="color: #aaa; font-size: 0.75rem; margin-top: 8px; margin-bottom: 0;">Instant reload via FPX</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="credit_card_section" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 243, 255, 0.2); padding: 20px; border-radius: 8px; margin-bottom: 25px;">
@@ -574,14 +644,16 @@ if ($current_tier === 'VIP') {
                 </div>
 
                 <script>
-                    function togglePaymentSections() {
+function togglePaymentSections() {
                         var method = document.getElementById('payment_method').value;
                         var ccSection = document.getElementById('credit_card_section');
                         var fpxSection = document.getElementById('fpx_section');
+                        var ewalletSection = document.getElementById('ewallet_section'); 
                         var newCardForm = document.getElementById('new_card_form');
                         
                         ccSection.style.display = 'none';
                         fpxSection.style.display = 'none';
+                        ewalletSection.style.display = 'none';
                         newCardForm.style.display = 'none';
 
                         if (method === 'Credit Card') {
@@ -589,6 +661,8 @@ if ($current_tier === 'VIP') {
                             toggleNewCardForm(); 
                         } else if (method === 'Online Banking (FPX)') {
                             fpxSection.style.display = 'block';
+                        } else if (method === 'E-Wallet') {
+                            ewalletSection.style.display = 'block'; 
                         }
                     }
 
@@ -604,6 +678,26 @@ if ($current_tier === 'VIP') {
                         newCardForm.style.display = 'none';
                     }
                 </script>
+<div style="background: rgba(255,255,255,0.05); padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 1px solid <?php echo ($current_tier === 'VIP') ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.1)'; ?>;">
+    <label style="display: block; color: <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#fff'; ?>; font-size: 0.9rem; font-weight: bold; margin-bottom: 12px; text-transform: uppercase;">
+        <i class="fa-solid fa-ticket"></i> Promo Code
+    </label>
+    
+    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+        <input type="text" name="applied_promo_code" id="promo_code_input" placeholder="Enter Code here" 
+               style="flex: 1; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; font-family: monospace;">
+        <button type="button" onclick="openVoucherModal()" 
+                style="background: #222; color: #ffd700; border: 1px solid #ffd700; padding: 0 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; white-space: nowrap;">
+            Select Voucher
+        </button>
+    </div>
+
+    <?php if ($current_tier !== 'VIP'): ?>
+        <p style="font-size: 0.8rem; color: #888; margin: 0;">ELITE members get up to 20% OFF. <a href="membership.php" style="color: #ffd700; text-decoration: none;">Join Now</a></p>
+    <?php else: ?>
+        <p style="font-size: 0.8rem; color: #ffd700; margin: 0;"><i class="fa-solid fa-crown"></i> ELITE Member Exclusive: High-value vouchers available!</p>
+    <?php endif; ?>
+</div>
 
                 <button type="submit" class="btn btn-primary btn-submit-login" style="width: 100%; margin-top: 10px;">
                     <i class="fa-solid fa-check-double"></i> Confirm & Place Order
@@ -647,13 +741,7 @@ if ($current_tier === 'VIP') {
                 <span class="specs" id="subtotal-display" data-subtotal="<?php echo $total_amount; ?>">RM <?php echo number_format($total_amount, 2); ?></span>
             </div>
 
-<!-- 🌟 VIP 折扣顯示列 -->
-            <?php if ($current_tier === 'VIP'): ?>
-            <div class="summary-item" style="color: #ffd700;">
-                <span><i class="fa-solid fa-crown"></i> ELITE 5% Discount</span>
-                <span>- RM <?php echo number_format($total_amount * 0.05, 2); ?></span>
-            </div>
-            <?php endif; ?>
+
             
             <div class="summary-item" id="discount-row" style="display: none; color: #ffd700;">
                 <span>Coins Discount</span>
@@ -668,6 +756,68 @@ if ($current_tier === 'VIP') {
 
     </div>
 </main>
+
+<div id="voucherModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px);">
+    <div style="background: #1a1a1a; margin: 10% auto; padding: 0; width: 90%; max-width: 500px; border-radius: 16px; border: 1px solid #333; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+        
+        <div style="padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; background: #222;">
+            <h3 style="margin: 0; color: #fff;"><i class="fa-solid fa-ticket" style="color: #ffd700;"></i> Select Voucher</h3>
+            <span onclick="closeVoucherModal()" style="color: #888; cursor: pointer; font-size: 1.5rem;">&times;</span>
+        </div>
+
+        <div style="padding: 20px; max-height: 400px; overflow-y: auto;">
+            
+            <?php
+            // 抓取適合該使用者的優惠券
+            // 邏輯：所有人都能看 is_vip_only=0，VIP 還能看 is_vip_only=1
+            $sql_vouchers = "SELECT * FROM promo_codes WHERE status = 'Active' AND (is_vip_only = 0";
+            if ($current_tier === 'VIP') {
+                $sql_vouchers .= " OR is_vip_only = 1";
+            }
+            $sql_vouchers .= ") ORDER BY discount_percentage DESC";
+            
+            $res_vouchers = $conn->query($sql_vouchers);
+
+            if ($res_vouchers->num_rows > 0):
+                while ($v = $res_vouchers->fetch_assoc()):
+                    $is_vip_code = ($v['is_vip_only'] == 1);
+            ?>
+  <div onclick="selectVoucher('<?php echo $v['code_name']; ?>')" 
+                     style="display: flex; background: #222; border: 1px solid <?php echo $is_vip_code ? '#ffd700' : '#00f2fe'; ?>; border-radius: 10px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;"
+                     onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 5px 15px <?php echo $is_vip_code ? "rgba(255,215,0,0.2)" : "rgba(0,242,254,0.2)"; ?>';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+                    
+                    <div style="background: <?php echo $is_vip_code ? 'linear-gradient(135deg, #ffd700, #f39c12)' : 'linear-gradient(135deg, #00f2fe, #4facfe)'; ?>; color: #000; width: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; border-right: 2px dashed #222;">
+                        <span style="font-weight: 900; font-size: 1.2rem;"><?php echo $v['discount_percentage']; ?>%</span>
+                        <span style="font-size: 0.6rem; text-transform: uppercase; font-weight: bold;">OFF</span>
+                    </div>
+
+                    <div style="padding: 15px; flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <strong style="color: #fff; font-size: 1rem;"><?php echo $v['code_name']; ?></strong>
+                            <?php if($is_vip_code): ?>
+                                <span style="background: #000; color: #ffd700; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffd700;">ELITE ONLY</span>
+                            <?php else: ?>
+                                <span style="background: rgba(0,242,254,0.1); color: #00f2fe; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(0,242,254,0.3);">PUBLIC</span>
+                            <?php endif; ?>
+                        </div>
+                        <p style="color: #888; font-size: 0.8rem; margin: 5px 0 0 0;">Apply to: <?php echo $v['target_category']; ?></p>
+                    </div>
+
+                    <div style="padding: 15px; display: flex; align-items: center; color: <?php echo $is_vip_code ? '#ffd700' : '#00f2fe'; ?>; font-size: 1.2rem;">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </div>
+            <?php 
+                endwhile;
+            else:
+                echo '<p style="text-align: center; color: #666;">No vouchers available right now.</p>';
+            endif;
+            ?>
+
+
+        </div>
+    </div>
+</div>
 
 <?php include 'includes/footer.php'; ?>
 
@@ -696,6 +846,35 @@ if ($current_tier === 'VIP') {
             });
         }
     });
+
+    // 🌟 打開彈窗
+function openVoucherModal() {
+    document.getElementById('voucherModal').style.display = 'block';
+    document.body.style.overflow = 'hidden'; // 防止背景滾動
+}
+
+// 🌟 關閉彈窗
+function closeVoucherModal() {
+    document.getElementById('voucherModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// 🌟 選擇優惠券並填入輸入框
+function selectVoucher(code) {
+    document.getElementById('promo_code_input').value = code;
+    closeVoucherModal();
+    // (可選) 自動提交或觸發計算邏輯
+}
+
+// 點擊彈窗外部區域也可關閉
+window.onclick = function(event) {
+    var modal = document.getElementById('voucherModal');
+    if (event.target == modal) {
+        closeVoucherModal();
+    }
+}
 </script>
+
+
 </body>
 </html>

@@ -375,34 +375,45 @@ $stmt->close();
                 </div>
             <?php else: ?>
 <div class="product-grid">
-                    <?php foreach ($products as $p): ?>
-                        <div class="product-card">
+                    <?php foreach ($products as $item): ?> <div class="product-card" style="background: #111; border: 1px solid #333; border-radius: 12px; overflow: hidden; padding: 15px; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.3);" onmouseover="this.style.borderColor='#00f2fe'; this.style.transform='translateY(-5px)';" onmouseout="this.style.borderColor='#333'; this.style.transform='translateY(0)';">
+                        
+                        <a href="product_detail.php?id=<?php echo $item['product_id']; ?>" style="text-decoration: none; display: block;">
                             
-                            <a href="product_detail.php?id=<?php echo $p['product_id']; ?>" style="text-decoration: none; display: flex; flex-direction: column; flex-grow: 1;">
-                                
-                                <div class="product-img-box">
-                                    <img src="<?php echo htmlspecialchars($p['image_url'] ? $p['image_url'] : 'image/placeholder.png'); ?>" alt="Product" class="product-img">
-                                </div>
-                                
-                                <div class="product-cat-tag">COMPONENT HARDWARE</div>
-                                
-                                <h4 class="product-title"><?php echo htmlspecialchars($p['product_name']); ?></h4>
+                            <div style="position: relative; padding-bottom: 100%; background: #0a0a0a; border-radius: 8px; overflow: hidden; margin-bottom: 15px;">
+                                <img src="<?php echo $item['image_url']; ?>" alt="<?php echo htmlspecialchars($item['product_name']); ?>" 
+                                     onerror="this.src='image/placeholder.jpg';" 
+                                     style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; transition: 0.4s;"
+                                     onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                            </div>
+                            
+                            <h3 style="color: #fff; font-size: 1.1rem; margin: 0 0 10px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; height: 2.8rem;">
+                                <?php echo htmlspecialchars($item['product_name']); ?>
+                            </h3>
+                            <div style="color: #00f2fe; font-size: 1.3rem; font-weight: 900; margin-bottom: 15px;">
+                                RM <?php echo number_format($item['price'], 2); ?>
+                            </div>
+                        </a>
+
+                        <div style="display: flex; gap: 10px;">
+                            
+                            <a href="product_detail.php?id=<?php echo $item['product_id']; ?>" style="flex: 1; text-align: center; padding: 10px; border: 1px solid rgba(0, 242, 254, 0.5); color: #00f2fe; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='rgba(0, 242, 254, 0.1)'; this.style.borderColor='#00f2fe';" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(0, 242, 254, 0.5)';">
+                                <i class="fa-solid fa-circle-info"></i> Details
                             </a>
                             
-                            <div>
-                                <div class="product-price">RM <?php echo number_format($p['price'], 2); ?></div>
+                            <form method="POST" action="add_to_cart.php" style="flex: 1; margin: 0;">
+                                <input type="hidden" name="product_id" value="<?php echo $item['product_id']; ?>">
+                                <input type="hidden" name="action" value="add">
+                                <input type="hidden" name="quantity" value="1"> 
                                 
-                                <form action="add_to_cart.php" method="POST">
-                                    <input type="hidden" name="product_id" value="<?php echo $p['product_id']; ?>">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="btn-add-cart">
-                                        Buy Now
-                                    </button>
-                                </form>
-                            </div>
-
+                                <button type="submit" style="width: 100%; padding: 10px; background: #00f2fe; color: #000; border: none; border-radius: 6px; font-weight: 900; cursor: pointer; font-size: 0.9rem; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 20px rgba(0, 242, 254, 0.6)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 10px rgba(0, 242, 254, 0.2)';">
+                                    <i class="fa-solid fa-cart-plus"></i> Cart
+                                </button>
+                            </form>
+                            
                         </div>
+                    </div>
                     <?php endforeach; ?>
+                </div>
                 </div>
             <?php endif; ?>
         </main>
