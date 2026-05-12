@@ -76,7 +76,6 @@ while ($row = $cart_result->fetch_assoc()) {
     } elseif ($row['pc_build']) {
         $price = $row['build_price'];
     } elseif ($row['package_id']) {
-        // 🚨 这里是核心升级！套餐价格不再读取数据库的固定值，而是实时计算总和！
         $pkg_id = $row['package_id'];
         $dynamic_pkg_price = 0;
         
@@ -91,10 +90,8 @@ while ($row = $cart_result->fetch_assoc()) {
         }
         $pkg_stmt->close();
         
-        $price = $dynamic_pkg_price; // 赋给计算变量
+        $price = $dynamic_pkg_price; 
         
-        // 关键点：我们需要把计算出来的价格，反向塞回 $cart_items 数组里
-        // 这样后面写入 order_details 的时候（大概在 193 行），拿到的才是真正的实时总价，而不是 0
         $cart_items[count($cart_items) - 1]['package_price'] = $dynamic_pkg_price; 
         
     } else {
@@ -105,6 +102,8 @@ while ($row = $cart_result->fetch_assoc()) {
 }
 $stmt->close();
 
+$promo_discount = 0;
+$applied_promo_code = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
@@ -117,11 +116,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-$use_coins = isset($_POST['use_coins']) ? true : false;
+    $use_coins = isset($_POST['use_coins']) ? true : false;
     $coins_used = 0;
     $coin_discount = 0;
-    $promo_discount = 0; // 🌟 變成 Promo 折扣
-    $applied_promo_code = trim($_POST['applied_promo_code'] ?? ''); // 抓取輸入的代碼
+    $promo_discount = 0; 
+    $applied_promo_code = trim($_POST['applied_promo_code'] ?? ''); 
 
     // ==========================================
     // 🛒 分類折扣引擎 (Smart Discount Engine)
@@ -130,7 +129,6 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
         $subtotal_components = 0; 
         $subtotal_packages = 0;
         
-        // 1. 將購物車商品分類算總價
         foreach ($cart_items as $item) {
             $price = 0;
             if ($item['product_id']) $price = $item['product_price'];
@@ -140,13 +138,12 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
             $item_price = $price * $item['quantity'];
             
             if (!empty($item['product_id']) && empty($item['pc_build']) && empty($item['package_id'])) {
-                $subtotal_components += $item_price; // 單獨零件
+                $subtotal_components += $item_price; 
             } else {
-                $subtotal_packages += $item_price;   // 套裝機或自組機
+                $subtotal_packages += $item_price;   
             }
         }
 
-        // 2. 驗證代碼
         $promo_stmt = $conn->prepare("SELECT * FROM promo_codes WHERE code_name = ? AND status = 'Active'");
         $promo_stmt->bind_param("s", $applied_promo_code);
         $promo_stmt->execute();
@@ -165,7 +162,7 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
                     $promo_discount = $subtotal_components * $pct;
                 } elseif ($target === 'Packages') {
                     $promo_discount = $subtotal_packages * $pct;
-                } else { // 'All'
+                } else { 
                     $promo_discount = ($subtotal_components + $subtotal_packages) * $pct;
                 }
 
@@ -183,20 +180,19 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
         $promo_stmt->close();
     }
 
-    // 3. 計算 Coins 與最終總金額
     if ($use_coins && $current_coins > 0) {
         $coins_used = $current_coins;
         $coin_discount = floor($current_coins / 10); 
     }
 
-    $discount_amount = $promo_discount + $coin_discount; // 加總所有折扣
+    $discount_amount = $promo_discount + $coin_discount; 
     $final_amount = $total_amount - $discount_amount;
     if ($final_amount < 0) $final_amount = 0;
 
- // ==========================================
+    // ==========================================
     // 🏦 金流驗證與扣款邏輯 (全能銀行系統)
     // ==========================================
-    $bank_account_id_to_deduct = null; // 用來記錄要扣款的銀行帳戶 ID
+    $bank_account_id_to_deduct = null; 
 
     if ($final_payment_method === 'Credit Card') {
         $selected_card = $_POST['selected_card'] ?? '';
@@ -206,7 +202,6 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
             $card_number = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
             $card_cvc = trim($_POST['dummy_card_cvc']);
 
-            // 🌟 改變：查詢我們真實的 bank 表格，而不是 dummy_bank
             $bank_query = "SELECT * FROM bank WHERE card_number = ? AND cvc = ?";
             $bank_stmt = $conn->prepare($bank_query);
             $bank_stmt->bind_param("ss", $card_number, $card_cvc);
@@ -215,7 +210,7 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
 
             if ($bank_result->num_rows > 0) {
                 $bank_data = $bank_result->fetch_assoc();
-                $bank_account_id_to_deduct = $bank_data['id']; // 記錄要扣款的帳戶 ID
+                $bank_account_id_to_deduct = $bank_data['id']; 
 
                 $last_four = substr($card_number, -4);
                 $final_payment_method = "Visa ending in " . $last_four; 
@@ -228,7 +223,6 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
 
         } else {
             $card_id = intval($selected_card);
-            // 查詢這張儲存的卡片對應到哪一個 bank_id
             $saved_query = "SELECT card_brand, last_four_digits, bank_id FROM saved_cards WHERE card_id = ? AND customer_id = ?";
             $saved_stmt = $conn->prepare($saved_query);
             $saved_stmt->bind_param("ii", $card_id, $customer_id);
@@ -237,7 +231,7 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
             
             if ($saved_row = $saved_result->fetch_assoc()) {
                 $final_payment_method = $saved_row['card_brand'] . " ending in " . $saved_row['last_four_digits'];
-                $bank_account_id_to_deduct = $saved_row['bank_id']; // 記錄要扣款的帳戶 ID
+                $bank_account_id_to_deduct = $saved_row['bank_id']; 
             }
             $saved_stmt->close();
         }
@@ -251,10 +245,8 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
             exit();
         }
         
-        // 🌟 改變：模擬 FPX 登入驗證
-        // 實務上這裡會是彈出視窗讓顧客輸入帳密，目前我們先寫死一組測試帳號來示範扣款邏輯
-        $fpx_user = 'ganshengwing'; // 測試帳號
-        $fpx_pass = '123456';       // 測試密碼
+        $fpx_user = 'ganshengwing'; 
+        $fpx_pass = '123456';       
 
         $fpx_query = "SELECT id, balance FROM bank WHERE fpx_username = ? AND fpx_password = ?";
         $fpx_stmt = $conn->prepare($fpx_query);
@@ -264,7 +256,7 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
 
         if ($fpx_result->num_rows > 0) {
              $fpx_data = $fpx_result->fetch_assoc();
-             $bank_account_id_to_deduct = $fpx_data['id']; // 記錄要扣款的帳戶 ID
+             $bank_account_id_to_deduct = $fpx_data['id']; 
              $final_payment_method = "FPX - " . $selected_bank;
         } else {
              $_SESSION['error_msg'] = "FPX Login Failed: Invalid username or password.";
@@ -274,11 +266,7 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
         $fpx_stmt->close();
     }
 
-    // ==========================================
-    // 🏦 執行銀行扣款 (統一處理)
-    // ==========================================
     if ($bank_account_id_to_deduct !== null) {
-        // 先檢查餘額夠不夠
         $bal_check_stmt = $conn->prepare("SELECT balance FROM bank WHERE id = ?");
         $bal_check_stmt->bind_param("i", $bank_account_id_to_deduct);
         $bal_check_stmt->execute();
@@ -291,7 +279,6 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
             exit();
         }
 
-        // 餘額足夠，執行扣款
         $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ?");
         $deduct_stmt->bind_param("di", $final_amount, $bank_account_id_to_deduct);
         $deduct_stmt->execute();
@@ -314,22 +301,18 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
         $order_id = $stmt_order->insert_id;
         $stmt_order->close();
 
-        // 🌟 核心升級：寫入 order_details 支援 package_id
-        $insert_detail = "INSERT INTO order_details (order_id, product_id, pc_build, package_id, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?)";
-        $stmt_detail = $conn->prepare($insert_detail);
-       // 🌟 核心升級：寫入 order_details 支援 package_id AND affiliate_id (帶貨賞金系統)
+        // 🌟 核心升級：寫入 order_details 支援 package_id AND affiliate_id
         $insert_detail = "INSERT INTO order_details (order_id, product_id, pc_build, package_id, affiliate_id, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt_detail = $conn->prepare($insert_detail);
         
-        // 準備發放帶貨賞金的 SQL (每帶貨一套，原作者獲得 500 金幣)
         $reward_stmt = $conn->prepare("UPDATE customers SET reward_coins = reward_coins + ? WHERE customer_id = ?");
         $bounty_per_build = 500; 
 
+        // 🌟 A+级防呆修复：幽灵库存拦截与真实库存扣除
         foreach ($cart_items as $item) {
             $pid = $item['product_id'] ? $item['product_id'] : NULL;
             $build_id = $item['pc_build'] ? $item['pc_build'] : NULL;
             $pkg_id = $item['package_id'] ? $item['package_id'] : NULL;
-            // 抓取這個商品的帶貨人是誰
             $aff_id = $item['affiliate_id'] ? $item['affiliate_id'] : NULL; 
             $qty = $item['quantity'];
             
@@ -338,13 +321,28 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
             elseif ($pkg_id) $unit_price = $item['package_price'];
             else $unit_price = 0;
 
-            // 1. 寫入訂單明細，把 affiliate_id 存進去作為歷史記錄
+            // 库存拦截
+            if ($pid) {
+                $stock_stmt = $conn->prepare("SELECT stock_quantity, product_name FROM products WHERE product_id = ? FOR UPDATE");
+                $stock_stmt->bind_param("i", $pid);
+                $stock_stmt->execute();
+                $stock_check = $stock_stmt->get_result()->fetch_assoc();
+                $stock_stmt->close();
+
+                if ($stock_check['stock_quantity'] < $qty) {
+                    throw new Exception("Inventory Error: '" . $stock_check['product_name'] . "' only has " . $stock_check['stock_quantity'] . " left. Order aborted to prevent phantom stock.");
+                }
+
+                $deduct_stock = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE product_id = ?");
+                $deduct_stock->bind_param("ii", $qty, $pid);
+                $deduct_stock->execute();
+                $deduct_stock->close();
+            }
+
             $stmt_detail->bind_param("iiiiiii", $order_id, $pid, $build_id, $pkg_id, $aff_id, $qty, $unit_price);
             $stmt_detail->execute();
 
-            // 🌟 2. 如果這筆訂單有帶貨人，立刻觸發分傭機制！
             if ($aff_id) {
-                // 如果買了 2 套一樣的，獎金就翻倍
                 $total_bounty = $bounty_per_build * $qty; 
                 $reward_stmt->bind_param("ii", $total_bounty, $aff_id);
                 $reward_stmt->execute();
@@ -393,7 +391,7 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
 
     } catch (Exception $e) {
         $conn->rollback();
-        $error_message = "Checkout failed. Error: " . $e->getMessage();
+        $error_message = "Checkout failed. " . $e->getMessage();
     }
 }
 ?>
@@ -423,7 +421,7 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
             unset($_SESSION['error_msg']);
         }
         if (!empty($error_message)) {
-            echo "<div class='text-danger' style='margin-bottom: 20px;'><i class='fa-solid fa-circle-exclamation'></i> $error_message</div>";
+            echo "<div class='text-danger' style='margin-bottom: 20px; border-left: 4px solid #ff4d4d; padding-left: 10px;'><i class='fa-solid fa-circle-exclamation'></i> $error_message</div>";
         }
         ?>
 
@@ -456,8 +454,8 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
                             <?php foreach ($saved_addresses as $addr): ?>
                                 
                                 <?php 
-                                    $recipient = !empty($addr['recipient_name']) ? $addr['recipient_name'] : 'Sheng Wing Gan';
-                                    $phone = !empty($addr['phone_number']) ? $addr['phone_number'] : '0162058560';
+                                    $recipient = !empty($addr['recipient_name']) ? $addr['recipient_name'] : 'Customer';
+                                    $phone = !empty($addr['phone_number']) ? $addr['phone_number'] : '000-0000000';
                                     
                                     if (!empty($addr['address_line1'])) {
                                         $full_text = $recipient . " | " . $phone . "\n" . $addr['address_line1'] . ", " . $addr['postcode'] . " " . $addr['city'] . ", " . $addr['state'];
@@ -547,7 +545,7 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
                 </div>
                 <?php endif; ?>
 
-<div class="form-group input-group" style="margin-bottom: 20px;">
+                <div class="form-group input-group" style="margin-bottom: 20px;">
                     <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
                         <span><i class="fa-solid fa-money-check-dollar"></i> Payment Method</span>
                     </label>
@@ -644,7 +642,7 @@ $use_coins = isset($_POST['use_coins']) ? true : false;
                 </div>
 
                 <script>
-function togglePaymentSections() {
+                    function togglePaymentSections() {
                         var method = document.getElementById('payment_method').value;
                         var ccSection = document.getElementById('credit_card_section');
                         var fpxSection = document.getElementById('fpx_section');
@@ -678,26 +676,43 @@ function togglePaymentSections() {
                         newCardForm.style.display = 'none';
                     }
                 </script>
-<div style="background: rgba(255,255,255,0.05); padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 1px solid <?php echo ($current_tier === 'VIP') ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.1)'; ?>;">
-    <label style="display: block; color: <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#fff'; ?>; font-size: 0.9rem; font-weight: bold; margin-bottom: 12px; text-transform: uppercase;">
-        <i class="fa-solid fa-ticket"></i> Promo Code
-    </label>
-    
-    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-        <input type="text" name="applied_promo_code" id="promo_code_input" placeholder="Enter Code here" 
-               style="flex: 1; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; font-family: monospace;">
-        <button type="button" onclick="openVoucherModal()" 
-                style="background: #222; color: #ffd700; border: 1px solid #ffd700; padding: 0 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; white-space: nowrap;">
-            Select Voucher
-        </button>
-    </div>
 
-    <?php if ($current_tier !== 'VIP'): ?>
-        <p style="font-size: 0.8rem; color: #888; margin: 0;">ELITE members get up to 20% OFF. <a href="membership.php" style="color: #ffd700; text-decoration: none;">Join Now</a></p>
-    <?php else: ?>
-        <p style="font-size: 0.8rem; color: #ffd700; margin: 0;"><i class="fa-solid fa-crown"></i> ELITE Member Exclusive: High-value vouchers available!</p>
-    <?php endif; ?>
-</div>
+                <div style="background: rgba(255,255,255,0.05); padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 1px solid <?php echo ($current_tier === 'VIP') ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.1)'; ?>;">
+                    <label style="display: block; color: <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#fff'; ?>; font-size: 0.9rem; font-weight: bold; margin-bottom: 12px; text-transform: uppercase;">
+                        <i class="fa-solid fa-ticket"></i> Promo Code
+                    </label>
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                        <input type="text" name="applied_promo_code" id="promo_code_input" placeholder="Enter Code here" 
+                               style="flex: 1; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; font-family: monospace;">
+                        <button type="button" onclick="openVoucherModal()" 
+                                style="background: #222; color: #ffd700; border: 1px solid #ffd700; padding: 0 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; white-space: nowrap;">
+                            Select Voucher
+                        </button>
+                    </div>
+
+                    <?php if ($current_tier !== 'VIP'): ?>
+                        <p style="font-size: 0.8rem; color: #888; margin: 0;">ELITE members get up to 20% OFF. <a href="membership.php" style="color: #ffd700; text-decoration: none;">Join Now</a></p>
+                    <?php else: ?>
+                        <p style="font-size: 0.8rem; color: #ffd700; margin: 0;"><i class="fa-solid fa-crown"></i> ELITE Member Exclusive: High-value vouchers available!</p>
+                    <?php endif; ?>
+                </div>
+
+                <div style="background: rgba(0, 242, 254, 0.05); border: 1px dashed #00f2fe; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="color: #00f2fe; margin-top: 0; font-size: 1.1rem;"><i class="fas fa-truck-fast"></i> Delivery Expectation</h4>
+                    <ul style="list-style: none; padding: 0; margin: 0; color: #cbd5e1; font-size: 0.9rem;">
+                        <li style="margin-bottom: 10px;">
+                            <i class="fas fa-check-circle" style="color: #00e676;"></i> <strong>Inventory Check:</strong> Parts locked and secured upon confirmation.
+                        </li>
+                        <li style="margin-bottom: 10px;">
+                            <i class="fas fa-tools" style="color: #ffd700;"></i> <strong>Assembly & Stress Test:</strong> 48 Hours (Professional Cable Management Included).
+                        </li>
+                        <li>
+                            <i class="fas fa-box" style="color: #a855f7;"></i> <strong>Estimated Arrival:</strong> 
+                            <?php echo date('D, M j', strtotime('+5 days')) . " - " . date('D, M j', strtotime('+7 days')); ?>
+                        </li>
+                    </ul>
+                </div>
 
                 <button type="submit" class="btn btn-primary btn-submit-login" style="width: 100%; margin-top: 10px;">
                     <i class="fa-solid fa-check-double"></i> Confirm & Place Order
@@ -741,16 +756,21 @@ function togglePaymentSections() {
                 <span class="specs" id="subtotal-display" data-subtotal="<?php echo $total_amount; ?>">RM <?php echo number_format($total_amount, 2); ?></span>
             </div>
 
-
+            <?php if (isset($promo_discount) && $promo_discount > 0): ?>
+                <div class="summary-item" style="color: #00f2fe; margin-top: 10px;">
+                    <span>Promo Discount (<?php echo htmlspecialchars($applied_promo_code); ?>)</span>
+                    <span>- RM <?php echo number_format($promo_discount, 2); ?></span>
+                </div>
+            <?php endif; ?>
             
-            <div class="summary-item" id="discount-row" style="display: none; color: #ffd700;">
+            <div class="summary-item" id="discount-row" style="display: none; color: #ffd700; margin-top: 10px;">
                 <span>Coins Discount</span>
                 <span id="discount-display" data-discount="<?php echo floor($current_coins/10); ?>">- RM <?php echo number_format(floor($current_coins/10), 2); ?></span>
             </div>
 
-            <div class="summary-item total-row">
-                <span>Total</span>
-                <span id="final-total-display">RM <?php echo number_format($total_amount, 2); ?></span>
+            <div class="summary-item total-row" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2);">
+                <span style="font-size: 1.2rem;">Total</span>
+                <span id="final-total-display" style="font-size: 1.5rem; color: #00f2fe;">RM <?php echo number_format($final_amount ?? $total_amount, 2); ?></span>
             </div>
         </div>
 
@@ -768,8 +788,6 @@ function togglePaymentSections() {
         <div style="padding: 20px; max-height: 400px; overflow-y: auto;">
             
             <?php
-            // 抓取適合該使用者的優惠券
-            // 邏輯：所有人都能看 is_vip_only=0，VIP 還能看 is_vip_only=1
             $sql_vouchers = "SELECT * FROM promo_codes WHERE status = 'Active' AND (is_vip_only = 0";
             if ($current_tier === 'VIP') {
                 $sql_vouchers .= " OR is_vip_only = 1";
@@ -782,7 +800,7 @@ function togglePaymentSections() {
                 while ($v = $res_vouchers->fetch_assoc()):
                     $is_vip_code = ($v['is_vip_only'] == 1);
             ?>
-  <div onclick="selectVoucher('<?php echo $v['code_name']; ?>')" 
+                <div onclick="selectVoucher('<?php echo $v['code_name']; ?>')" 
                      style="display: flex; background: #222; border: 1px solid <?php echo $is_vip_code ? '#ffd700' : '#00f2fe'; ?>; border-radius: 10px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;"
                      onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 5px 15px <?php echo $is_vip_code ? "rgba(255,215,0,0.2)" : "rgba(0,242,254,0.2)"; ?>';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
                     
@@ -813,8 +831,6 @@ function togglePaymentSections() {
                 echo '<p style="text-align: center; color: #666;">No vouchers available right now.</p>';
             endif;
             ?>
-
-
         </div>
     </div>
 </div>
@@ -828,45 +844,42 @@ function togglePaymentSections() {
         const finalTotalDisplay = document.getElementById('final-total-display');
         
         if (useCoinsCheckbox) {
+            // 注意：这里读取的 subtotal 应该扣掉 promo_discount，才能跟 PHP 后端的最终金额吻合
             const subtotal = parseFloat(document.getElementById('subtotal-display').getAttribute('data-subtotal'));
+            const currentPromoDiscount = <?php echo isset($promo_discount) ? $promo_discount : 0; ?>;
             const discount = parseFloat(document.getElementById('discount-display').getAttribute('data-discount'));
 
             useCoinsCheckbox.addEventListener('change', function() {
-                let finalAmount = subtotal;
+                let finalAmount = subtotal - currentPromoDiscount;
                 
                 if (this.checked) {
                     discountRow.style.display = 'flex';
-                    finalAmount = subtotal - discount;
-                    if (finalAmount < 0) finalAmount = 0;
+                    finalAmount = finalAmount - discount;
                 } else {
                     discountRow.style.display = 'none';
                 }
                 
+                if (finalAmount < 0) finalAmount = 0;
                 finalTotalDisplay.innerHTML = 'RM ' + finalAmount.toFixed(2);
             });
         }
     });
 
-    // 🌟 打開彈窗
 function openVoucherModal() {
     document.getElementById('voucherModal').style.display = 'block';
-    document.body.style.overflow = 'hidden'; // 防止背景滾動
+    document.body.style.overflow = 'hidden'; 
 }
 
-// 🌟 關閉彈窗
 function closeVoucherModal() {
     document.getElementById('voucherModal').style.display = 'none';
     document.body.style.overflow = 'auto';
 }
 
-// 🌟 選擇優惠券並填入輸入框
 function selectVoucher(code) {
     document.getElementById('promo_code_input').value = code;
     closeVoucherModal();
-    // (可選) 自動提交或觸發計算邏輯
 }
 
-// 點擊彈窗外部區域也可關閉
 window.onclick = function(event) {
     var modal = document.getElementById('voucherModal');
     if (event.target == modal) {
@@ -874,7 +887,6 @@ window.onclick = function(event) {
     }
 }
 </script>
-
 
 </body>
 </html>

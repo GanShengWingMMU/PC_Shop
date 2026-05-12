@@ -247,36 +247,59 @@ $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = 
                 </div>
             </div>
 
-            <!-- 🌟 手风琴 2: My Vouchers (新增领券中心) -->
             <div class="accordion-item <?php echo $open_acc == 'vouchers' ? 'active' : ''; ?>" id="acc-vouchers">
                 <div class="accordion-header" onclick="toggleAccordion('acc-vouchers')">
-                    <span><i class="fas fa-ticket-alt" style="margin-right: 10px;"></i> My Vouchers</span>
+                    <span><i class="fas fa-crown" style="margin-right: 10px; color: #ffd700;"></i> ELITE Status & Vouchers</span>
                     <i class="fas fa-chevron-down chevron"></i>
                 </div>
+                
                 <div class="accordion-content">
-                    <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px;">Claim vouchers and copy the code to apply during checkout.</p>
                     
-                    <div style="display: grid; gap: 15px; margin-bottom: 20px;">
-                        <!-- Voucher 1 -->
-                        <div class="voucher-card">
-                            <div>
-                                <h4 style="margin: 0; color: #00f2fe; font-size: 1.2rem;">RM 50 OFF</h4>
-                                <p style="margin: 5px 0 0; font-size: 0.8rem; color: #cbd5e1;">Applicable for Custom Rigs & Pre-built Packages</p>
-                                <div style="margin-top: 8px; font-size: 0.7rem; color: #64748b;">Min Spend: RM 3000</div>
+                    <?php if ($user['membership_tier'] === 'VIP'): ?>
+                        <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(10,10,15,0.9) 100%); border: 1px solid rgba(255,215,0,0.4); padding: 30px; border-radius: 16px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                            <i class="fa-solid fa-crown" style="position: absolute; right: -20px; bottom: -30px; font-size: 10rem; color: rgba(255,215,0,0.05); transform: rotate(-15deg); pointer-events: none;"></i>
+                            
+                            <div style="position: relative; z-index: 2;">
+                                <h4 style="color: #ffd700; margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 900; display: flex; align-items: center; gap: 10px;">
+                                    <i class="fa-solid fa-circle-check"></i> ELITE Member
+                                </h4>
+                                <p style="font-size: 0.95rem; color: #e2e8f0; margin: 0 0 8px 0; line-height: 1.6;">
+                                    Your premium status is active. You have access to exclusive high-value vouchers.
+                                </p>
+                                <p style="font-size: 0.85rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace; margin: 0 0 25px 0;">
+                                    Valid until: <span style="color: #fff; font-weight: bold;"><?php echo date('d M Y', strtotime($user['vip_expiry_date'])); ?></span>
+                                </p>
+                                
+                                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                    <a href="vouchers.php" class="tech-btn" style="background: #ffd700; color: #000; border: none; padding: 12px 24px; font-size: 0.9rem; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(255,215,0,0.3);">
+                                        <i class="fa-solid fa-ticket"></i> Open Voucher Wallet
+                                    </a>
+                                    <a href="membership.php" class="tech-btn" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,215,0,0.5); color: #ffd700; padding: 12px 24px; font-size: 0.9rem; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: 0.3s;">
+                                        Manage Subscription
+                                    </a>
+                                </div>
                             </div>
-                            <button class="tech-btn copy-btn" data-code="GRID50" style="padding: 8px 15px; font-size: 0.75rem; width: 110px;">GRID50</button>
                         </div>
-                        
-                        <!-- Voucher 2 -->
-                        <div class="voucher-card">
-                            <div>
-                                <h4 style="margin: 0; color: #ffd700; font-size: 1.2rem;">FREE SHIPPING</h4>
-                                <p style="margin: 5px 0 0; font-size: 0.8rem; color: #cbd5e1;">West Malaysia Only. Automatically applied at checkout.</p>
-                                <div style="margin-top: 8px; font-size: 0.7rem; color: #64748b;">No minimum spend</div>
+
+                    <?php else: ?>
+                        <div style="background: rgba(15, 23, 42, 0.6); border: 1px dashed rgba(0, 242, 254, 0.5); padding: 30px; border-radius: 16px; position: relative;">
+                            <h4 style="color: #fff; margin: 0 0 12px 0; font-size: 1.3rem; font-weight: 800;">Standard Member</h4>
+                            <p style="font-size: 0.95rem; color: #94a3b8; margin: 0 0 25px 0; line-height: 1.6;">
+                                You currently have access to <span style="color:#00f2fe; font-weight:bold;">Public Vouchers</span>. <br>
+                                Upgrade to <strong style="color:#ffd700; letter-spacing: 1px;">ELITE</strong> to unlock up to 25% OFF exclusive codes, instant 500 Reward Coins, and priority shipping!
+                            </p>
+                            
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                <a href="membership.php" class="tech-btn" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; border: none; padding: 12px 24px; font-size: 0.9rem; font-weight: 900; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,242,254,0.4);">
+                                    <i class="fa-solid fa-bolt"></i> Upgrade to ELITE
+                                </a>
+                                <a href="vouchers.php" class="tech-btn" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #cbd5e1; padding: 12px 24px; font-size: 0.9rem; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: 0.3s;">
+                                    View Public Vouchers
+                                </a>
                             </div>
-                            <button class="tech-btn" style="padding: 8px 15px; font-size: 0.75rem; width: 110px; border-color: #ffd700; color: #ffd700;">Applied</button>
                         </div>
-                    </div>
+                    <?php endif; ?>
+                    
                 </div>
             </div>
 

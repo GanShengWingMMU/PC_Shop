@@ -17,6 +17,9 @@ $discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=" . $di
 
 if (!isset($_SESSION['login_attempts'])) { $_SESSION['login_attempts'] = 0; }
 
+// 🌟 核心修复 1：抓取用户是从哪个页面来的
+$redirect_url = isset($_GET['redirect']) ? filter_var($_GET['redirect'], FILTER_SANITIZE_URL) : 'index.php';
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_SESSION['lockout_time']) && time() < $_SESSION['lockout_time']) {
         $remaining = $_SESSION['lockout_time'] - time();
@@ -42,7 +45,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         unset($_SESSION['login_attempts'], $_SESSION['lockout_time']);
                         $_SESSION['customer_id'] = $user['customer_id'];
                         $_SESSION['username'] = $user['username'];
-                        header("Location: index.php"); exit();
+                        
+                        // 🌟 核心修复 2：智能重定向 (从哪里来，回哪里去)
+                        // 防御机制：如果 URL 包含 http (企图跳出站外)，则强制返回 index.php
+                        if (strpos($redirect_url, 'http') === 0) {
+                            header("Location: index.php");
+                        } else {
+                            header("Location: " . $redirect_url);
+                        }
+                        exit();
                     } else {
                         $_SESSION['login_attempts']++;
                         if ($_SESSION['login_attempts'] >= 3) {
@@ -144,7 +155,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         <?php endif; ?>
 
-        <form action="login.php" method="POST">
+        <form action="login.php?redirect=<?php echo urlencode($redirect_url); ?>" method="POST">
             <div class="tech-input-group">
                 <label class="tech-label">Email or Username</label>
                 <input type="text" name="login_id" class="tech-input" required placeholder="Enter your email" value="<?php echo isset($_POST['login_id']) ? htmlspecialchars($_POST['login_id']) : ''; ?>">

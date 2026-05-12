@@ -40,7 +40,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $mail->Host       = 'smtp.gmail.com'; 
                 $mail->SMTPAuth   = true;
                 $mail->Username   = 'ganshengwing1126@gmail.com'; 
-                $mail->Password   = 'vyay fzmg glan quun'; 
+                // 🌟 核心修复：禁止密码硬编码！调用 config.php 中的变量
+                $mail->Password   = $smtp_password; 
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port       = 587;
 

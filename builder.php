@@ -4,6 +4,12 @@ session_start();
 require_once 'config.php';
 include 'includes/header.php'; 
 
+// 🚨 强制清理旧版本格式的脏 Session (数组套数组格式)
+if (!empty($_SESSION['pc_build']) && is_array(reset($_SESSION['pc_build']))) {
+    $_SESSION['pc_build'] = []; 
+}
+if (!isset($_SESSION['pc_build'])) { $_SESSION['pc_build'] = []; }
+
 // ==========================================
 // 1. 递归级联失效算法 (Cascade Invalidation)
 // ==========================================
@@ -11,15 +17,15 @@ $dependency_map = [
     1 => [2, 8],    // CPU -> Motherboard, Cooler
     2 => [3, 4],    // Motherboard -> RAM, GPU
     4 => [6],       // GPU -> PSU
-    7 => [10]       // 修复：PC Case (7) 没了，Case Fans (10) 才应该跟着掉！
+    7 => [10]       // PC Case -> Case Fans
 ];
 
-function cascade_remove($cat_id, &$cart, $map) {
+function cascade_remove($cat_id, &$session_cart, $map) {
     if (isset($map[$cat_id])) {
         foreach ($map[$cat_id] as $child_id) {
-            if (isset($cart[$child_id])) {
-                unset($cart[$child_id]); 
-                cascade_remove($child_id, $cart, $map); 
+            if (isset($session_cart[$child_id])) {
+                unset($session_cart[$child_id]); 
+                cascade_remove($child_id, $session_cart, $map); 
             }
         }
     }
@@ -43,70 +49,113 @@ if (isset($_GET['action'])) {
     }
 }
 
-if (!isset($_SESSION['pc_build'])) { $_SESSION['pc_build'] = []; }
-$cart = $_SESSION['pc_build'];
-
-$total_price = 0; $total_wattage = 0;
-foreach ($cart as $p) { $total_price += $p['price']; $total_wattage += $p['wattage']; }
-
 // ==========================================
-// 3. 动态属性嗅探 (Transitive Property Sniffer)
+// 🚀 3. 黑匣子恢复引擎 (只恢复 ID，不存死数据)
 // ==========================================
-$socket_param = "";
-if (isset($cart[1])) {
-    $cpu_name = strtoupper($cart[1]['name']);
-    if (preg_match('/(I3|I5|I7|I9|LGA1700)/', $cpu_name)) $socket_param = "LGA1700";
-    elseif (preg_match('/(RYZEN|AM5|AM4)/', $cpu_name)) $socket_param = "AM5";
-}
-
-$ram_type_param = "";
-if (isset($cart[2])) {
-    $mb_name = strtoupper($cart[2]['name']);
-    if (strpos($mb_name, 'DDR5') !== false) $ram_type_param = "DDR5";
-    elseif (strpos($mb_name, 'DDR4') !== false) $ram_type_param = "DDR4";
-}
-
-$rec_psu = ceil(($total_wattage + 100) / 50) * 50;
-
-// ==========================================
-// 🚀 新增：3.5 实时库存雷达 (Inventory Radar)
-// 一次性查出每个分类下还有多少个【有库存】的商品
-// ==========================================
-$stock_check_sql = "SELECT category_id, COUNT(product_id) as available_count FROM products WHERE stock_quantity > 0 GROUP BY category_id";
-$stock_res = mysqli_query($conn, $stock_check_sql);
-$inventory_radar = [];
-if ($stock_res) {
-    while ($row = mysqli_fetch_assoc($stock_res)) {
-        $inventory_radar[$row['category_id']] = $row['available_count'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])) {
+    $backup_ids = json_decode($_POST['restore_backup_ids'], true);
+    if (is_array($backup_ids) && !empty($backup_ids)) {
+        $_SESSION['pc_build'] = []; 
+        $id_list = implode(',', array_map('intval', $backup_ids));
+        
+        // 只验证库存并提取对应 Category，绝不在此刻固化价格
+        $res = $conn->query("SELECT product_id, category_id FROM products WHERE product_id IN ($id_list) AND stock_quantity > 0");
+        while ($row = $res->fetch_assoc()) {
+            $_SESSION['pc_build'][$row['category_id']] = (int)$row['product_id'];
+        }
+        $_SESSION['success_msg'] = "Session recovered! Valid blueprint has been restored.";
+        header("Location: builder.php");
+        exit();
     }
 }
 
 // ==========================================
-// 4. 木桶效应与 AI 评级 (Tier & Bottleneck AI)
+// 💎 4. 核心数据水合引擎 (Hydration Engine) - 后端真理原则
+// ==========================================
+$cart = []; // 前端渲染专用的已验证数据集
+$total_price = 0; 
+$total_wattage = 0; 
+$psu_wattage = 0; 
+$socket_param = "";
+$ram_type_param = "";
+$stock_issue_detected = false;
+
+// 动态构建当前可用配件的清单
+if (!empty($_SESSION['pc_build'])) {
+    $session_ids = implode(',', array_map('intval', $_SESSION['pc_build']));
+    
+    // 一次性查出所有被选配件的最新状态，包括新增的规格字段
+    $sql = "SELECT product_id, category_id, product_name, price, tdp_wattage, stock_quantity, socket_type, ram_type, performance_tier FROM products WHERE product_id IN ($session_ids)";
+    $res = $conn->query($sql);
+    
+    while ($row = $res->fetch_assoc()) {
+        $cid = $row['category_id'];
+        
+        // ⚔️ 实时库存防呆 (Kill Switch)：如果中途售罄或下架，立刻从 Session 中剔除并触发级联失效
+        if ($row['stock_quantity'] <= 0) {
+            cascade_remove($cid, $_SESSION['pc_build'], $dependency_map);
+            unset($_SESSION['pc_build'][$cid]);
+            $stock_issue_detected = true;
+            continue; 
+        }
+
+        // 组装前端需要的安全数据 (这里的数据永远是最新的)
+        $cart[$cid] = [
+            'product_id' => $row['product_id'],
+            'name'       => $row['product_name'],
+            'price'      => (float)$row['price'],
+            'wattage'    => (int)$row['tdp_wattage'],
+            'tier'       => (int)$row['performance_tier']
+        ];
+
+        // 计算财务与物理指标
+        $total_price += $row['price']; 
+        if ($cid == 6) {
+            $psu_wattage = $row['tdp_wattage']; 
+        } else {
+            $total_wattage += $row['tdp_wattage']; 
+        }
+
+        // 🛡️ 属性嗅探：直接读取数据库精准字段，拒绝正则盲猜
+        if ($cid == 1 && !empty($row['socket_type'])) $socket_param = $row['socket_type'];
+        if ($cid == 2 && !empty($row['ram_type'])) $ram_type_param = $row['ram_type'];
+    }
+}
+
+// 若有商品因库存不足被踢出，提醒用户
+if ($stock_issue_detected) {
+    $_SESSION['error_msg'] = "Some items in your build went out of stock and were automatically removed to ensure valid checkout.";
+}
+
+if ($total_wattage > 0) $total_wattage += 50; // 基础冗余
+$rec_psu = ceil(($total_wattage + 100) / 50) * 50;
+
+// ==========================================
+// 🚀 5. 商业化 AI 瓶颈预警 (基于 Tier 评级而非价格)
 // ==========================================
 $system_tier = "AWAITING CORE PARTS";
 $tier_color = "#555"; 
 $bottleneck_warning = "";
+$bottleneck_color = "";
 
-if (isset($cart[1]) && isset($cart[2]) && isset($cart[4]) && isset($cart[6])) {
-    if ($total_price >= 8000) {
-        $system_tier = "GOD TIER (Enthusiast)";
-        $tier_color = "#ff007f"; 
-    } elseif ($total_price >= 4000) {
-        $system_tier = "HIGH-END (Pro Gaming)";
-        $tier_color = "#00e676"; 
-    } else {
-        $system_tier = "MAINSTREAM (Entry)";
-        $tier_color = "#00f2fe"; 
-    }
+// 系统总评级
+if (isset($cart[1], $cart[2], $cart[4], $cart[6])) {
+    if ($total_price >= 8000) { $system_tier = "GOD TIER (Enthusiast)"; $tier_color = "#ff007f"; } 
+    elseif ($total_price >= 4000) { $system_tier = "HIGH-END (Pro Gaming)"; $tier_color = "#00e676"; } 
+    else { $system_tier = "MAINSTREAM (Entry)"; $tier_color = "#00f2fe"; }
+}
 
-    $cpu_price = $cart[1]['price'];
-    $gpu_price = $cart[4]['price'];
+// 基于性能 Tier 的硬核瓶颈计算
+if (isset($cart[1]) && isset($cart[4])) {
+    $cpu_tier = $cart[1]['tier'];
+    $gpu_tier = $cart[4]['tier'];
 
-    if ($gpu_price > ($cpu_price * 3.5)) {
-        $bottleneck_warning = "⚠️ CPU Bottleneck: Your GPU might be held back by the Processor.";
-    } elseif ($cpu_price > ($gpu_price * 2.5)) {
-        $bottleneck_warning = "⚠️ GPU Bottleneck: Your CPU outpaces your Graphics Card.";
+    if (($gpu_tier - $cpu_tier) >= 3) {
+        $bottleneck_color = "#ff4d4d"; 
+        $bottleneck_warning = "<strong><i class='fas fa-exclamation-triangle'></i> Severe CPU Bottleneck:</strong><br> Your High-End GPU is severely throttled by a weaker CPU.<br><a href='select_part.php?category_id=1&socket=$socket_param' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE CPU</a>";
+    } elseif (($cpu_tier - $gpu_tier) >= 3) {
+        $bottleneck_color = "#f97316"; 
+        $bottleneck_warning = "<strong><i class='fas fa-info-circle'></i> Unbalanced Build:</strong><br> Powerful CPU paired with an entry-level GPU. Great for rendering, poor for gaming.<br><a href='select_part.php?category_id=4' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE GPU</a>";
     }
 }
 
@@ -140,7 +189,6 @@ foreach($workflow as $s) foreach($s as $item) $flat_slots[] = $item;
 $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots)) * 100) : 0;
 ?>
 
-<!-- 🌟 植入 Login 的核心字体 -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/builder.css">
 
@@ -167,19 +215,16 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     
     .btn-action { padding: 8px 20px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; text-decoration: none; transition: 0.3s; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; box-sizing: border-box; }
     
-    /* 🌟 修复隐形 BUG：加入 !important 强行覆盖全局样式 */
     .btn-select { background: transparent !important; color: #00f2fe !important; border: 1px solid #00f2fe !important; font-family: 'Inter', sans-serif; }
     .btn-select:hover { background: #00f2fe !important; color: #000 !important; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4) !important; }
     
     .btn-change { background: rgba(255,255,255,0.03) !important; color: #cbd5e1 !important; border: 1px solid rgba(255,255,255,0.08) !important; font-family: 'Inter', sans-serif; }
     .btn-change:hover { background: rgba(255,255,255,0.08) !important; color: #fff !important; border-color: rgba(255,255,255,0.3) !important; }
     
-    /* 无库存按钮专用样式 */
     .btn-out-of-stock { background: rgba(239, 68, 68, 0.05); color: #ef4444; border: 1px dashed #ef4444; cursor: not-allowed; user-select: none; }
     
     .lock-badge { background: #ff4d4d; color: #fff; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; font-weight: 800; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;}
 
-    /* AI Predictor Styles */
     .perf-hub { width: 100%; margin: 40px 0 0; background: rgba(10,10,10,0.8); border: 1px solid rgba(0,242,254,0.2); border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .hub-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; }
     .hub-title { font-size: 1.1rem; color: #fff; font-weight: 900; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
@@ -220,7 +265,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                             <i class="fas fa-trash-alt"></i> WIPE LOADOUT
                         </a>
                     <?php endif; ?>
-                    <!-- 🌟 极客字体用于百分比 -->
                     <span style="color: var(--accent); font-size: 1.4rem; font-family: 'JetBrains Mono', monospace; text-shadow: 0 0 10px rgba(0,242,254,0.5);"><?php echo $progress; ?>%</span>
                 </div>
             </div>
@@ -256,7 +300,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                                 <span style="color: #ff4d4d; font-size: 0.8rem; margin-left: 8px;"><?php echo $slot['lock_msg']; ?></span>
                             <?php elseif ($is_filled): ?>
                                 <div style="color: var(--accent); font-weight: 700; font-size: 1rem;"><?php echo htmlspecialchars($cart[$cid]['name']); ?></div>
-                                <!-- 🌟 金额应用极客字体 -->
                                 <div style="color: #00e676; font-size: 0.85rem; font-weight: 600; margin-top: 3px; font-family: 'JetBrains Mono', monospace;">RM <?php echo number_format($cart[$cid]['price'], 2); ?></div>
                             <?php elseif (!$has_stock): ?>
                                 <div style="color: #ef4444; font-size: 0.85rem; font-weight: bold;"><i class="fas fa-times-circle"></i> Currently depleted from database.</div>
@@ -382,27 +425,45 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         </h3>
         
         <div style="display: flex; flex-direction: column; gap: 20px;">
+            
             <div>
                 <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">System Tier</div>
                 <div style="font-size: 1.2rem; font-weight: 900; color: <?php echo $tier_color; ?>; text-shadow: 0 0 15px <?php echo $tier_color; ?>88;">
                     <?php echo $system_tier; ?>
                 </div>
+                
                 <?php if($bottleneck_warning): ?>
-                    <div style="color: #ffc107; font-size: 0.75rem; font-weight: bold; margin-top: 8px; line-height: 1.4; background: rgba(255,193,7,0.1); padding: 8px 10px; border-radius: 6px; border-left: 3px solid #ffc107;">
+                    <div style="color: <?php echo $bottleneck_color; ?>; font-size: 0.8rem; font-weight: normal; margin-top: 10px; line-height: 1.5; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; border-left: 4px solid <?php echo $bottleneck_color; ?>;">
                         <?php echo $bottleneck_warning; ?>
                     </div>
                 <?php endif; ?>
             </div>
 
             <div>
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Estimated Load</div>
-                <!-- 🌟 数值应用极客字体 -->
-                <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; color: #facc15; font-weight: 900;"><i class="fas fa-bolt" style="text-shadow: 0 0 10px rgba(251,191,36,0.4);"></i> <?php echo $total_wattage; ?> W</div>
+                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Power / Upgrade Headroom</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; color: #facc15; font-weight: 900; margin-bottom: 5px;"><i class="fas fa-bolt" style="text-shadow: 0 0 10px rgba(251,191,36,0.4);"></i> Load: <?php echo $total_wattage; ?> W</div>
+                
+                <?php if (isset($cart[6])): ?>
+                    <?php if ($psu_wattage < $total_wattage): ?>
+                        <div style="color: #ff4d4d; font-size: 0.8rem; line-height: 1.4; background: rgba(255,77,77,0.1); padding: 10px; border-radius: 6px; border: 1px dashed #ff4d4d;">
+                            <i class="fas fa-radiation"></i> <strong>CRITICAL:</strong> Your PSU (<?php echo $psu_wattage; ?>W) cannot support this system. PC will shut down under load!
+                        </div>
+                    <?php elseif ($psu_wattage < ($total_wattage * 1.3)): ?>
+                        <div style="color: #f97316; font-size: 0.8rem; line-height: 1.4; background: rgba(249,115,22,0.1); padding: 10px; border-radius: 6px; border: 1px solid #f97316;">
+                            <i class="fas fa-battery-half"></i> <strong>LOW HEADROOM:</strong> Only <?php echo round((($psu_wattage - $total_wattage) / $psu_wattage) * 100); ?>% upgrade margin. Consider a larger PSU for future-proofing.
+                        </div>
+                    <?php else: ?>
+                        <div style="color: #00e676; font-size: 0.8rem; line-height: 1.4; background: rgba(0,230,118,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(0,230,118,0.3);">
+                            <i class="fas fa-battery-full"></i> <strong>SAFE:</strong> <?php echo round((($psu_wattage - $total_wattage) / $psu_wattage) * 100); ?>% capacity remaining. Excellent upgrade headroom.
+                        </div>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div style="color: #64748b; font-size: 0.8rem;"><i class="fas fa-plug"></i> Select a Power Supply to calculate headroom.</div>
+                <?php endif; ?>
             </div>
             
             <div style="margin-top: 5px; padding-top: 20px; border-top: 1px dashed rgba(255,255,255,0.1);">
                 <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Raw Component Value</div>
-                <!-- 🌟 数值应用极客字体 -->
                 <div style="font-family: 'JetBrains Mono', monospace; font-size: 2.2rem; color: var(--accent); font-weight: 900; text-shadow: 0 0 20px rgba(0,242,254,0.3);">RM <?php echo number_format($total_price, 2); ?></div>
             </div>
 
@@ -426,3 +487,52 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 </div>
 
 <?php include 'includes/footer.php'; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 抓取当前 PHP Session 的状态
+    const phpCartCount = <?php echo count($cart); ?>;
+    const currentCartIds = <?php echo json_encode(array_values(array_map(function($item) { return $item['product_id']; }, $cart))); ?>;
+
+    // 1. 如果 PHP 购物车有东西，持续在后台备份到用户浏览器的 LocalStorage
+    if (phpCartCount > 0) {
+        localStorage.setItem('gridcity_backup_build', JSON.stringify(currentCartIds));
+    }
+
+    // 2. 🚨 核心防呆：如果 PHP Session 已经过期清空，但本地浏览器存有备份！
+    if (phpCartCount === 0) {
+        const backup = localStorage.getItem('gridcity_backup_build');
+        if (backup) {
+            const backupIds = JSON.parse(backup);
+            if (backupIds && backupIds.length > 0) {
+                // 弹出极其贴心的恢复提示
+                if (confirm("⚠️ SYSTEM ALERT: We detected an unsaved build from your previous session! Do you want to restore your hard work?")) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = 'builder.php';
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'restore_backup_ids';
+                    input.value = JSON.stringify(backupIds);
+                    form.appendChild(input);
+                    document.body.appendChild(form);
+                    form.submit();
+                } else {
+                    localStorage.removeItem('gridcity_backup_build'); // 玩家选择放弃，清除废弃档案
+                }
+            }
+        }
+    }
+    
+    // 3. 当玩家主动点击 "WIPE LOADOUT" (清空重配) 时，顺便把备份也删了
+    const clearBtn = document.querySelector('a[href="builder.php?action=clear"]');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            localStorage.removeItem('gridcity_backup_build');
+        });
+    }
+});
+</script>
+
+</body>
+</html>
