@@ -4,7 +4,7 @@ session_start();
 require_once 'config.php';
 include 'includes/header.php'; 
 
-// 🚨 强制清理旧版本格式的脏 Session (数组套数组格式)
+// 🚨 强制清理旧版本格式的脏 Session
 if (!empty($_SESSION['pc_build']) && is_array(reset($_SESSION['pc_build']))) {
     $_SESSION['pc_build'] = []; 
 }
@@ -58,7 +58,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])
         $_SESSION['pc_build'] = []; 
         $id_list = implode(',', array_map('intval', $backup_ids));
         
-        // 只验证库存并提取对应 Category，绝不在此刻固化价格
         $res = $conn->query("SELECT product_id, category_id FROM products WHERE product_id IN ($id_list) AND stock_quantity > 0");
         while ($row = $res->fetch_assoc()) {
             $_SESSION['pc_build'][$row['category_id']] = (int)$row['product_id'];
@@ -72,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])
 // ==========================================
 // 💎 4. 核心数据水合引擎 (Hydration Engine) - 后端真理原则
 // ==========================================
-$cart = []; // 前端渲染专用的已验证数据集
+$cart = []; 
 $total_price = 0; 
 $total_wattage = 0; 
 $psu_wattage = 0; 
@@ -80,18 +79,14 @@ $socket_param = "";
 $ram_type_param = "";
 $stock_issue_detected = false;
 
-// 动态构建当前可用配件的清单
 if (!empty($_SESSION['pc_build'])) {
     $session_ids = implode(',', array_map('intval', $_SESSION['pc_build']));
-    
-    // 一次性查出所有被选配件的最新状态，包括新增的规格字段
     $sql = "SELECT product_id, category_id, product_name, price, tdp_wattage, stock_quantity, socket_type, ram_type, performance_tier FROM products WHERE product_id IN ($session_ids)";
     $res = $conn->query($sql);
     
     while ($row = $res->fetch_assoc()) {
         $cid = $row['category_id'];
         
-        // ⚔️ 实时库存防呆 (Kill Switch)：如果中途售罄或下架，立刻从 Session 中剔除并触发级联失效
         if ($row['stock_quantity'] <= 0) {
             cascade_remove($cid, $_SESSION['pc_build'], $dependency_map);
             unset($_SESSION['pc_build'][$cid]);
@@ -99,7 +94,6 @@ if (!empty($_SESSION['pc_build'])) {
             continue; 
         }
 
-        // 组装前端需要的安全数据 (这里的数据永远是最新的)
         $cart[$cid] = [
             'product_id' => $row['product_id'],
             'name'       => $row['product_name'],
@@ -108,7 +102,6 @@ if (!empty($_SESSION['pc_build'])) {
             'tier'       => (int)$row['performance_tier']
         ];
 
-        // 计算财务与物理指标
         $total_price += $row['price']; 
         if ($cid == 6) {
             $psu_wattage = $row['tdp_wattage']; 
@@ -116,46 +109,56 @@ if (!empty($_SESSION['pc_build'])) {
             $total_wattage += $row['tdp_wattage']; 
         }
 
-        // 🛡️ 属性嗅探：直接读取数据库精准字段，拒绝正则盲猜
+        // 🛡️ 属性嗅探：完全废弃正则，直接读取物理字段！
         if ($cid == 1 && !empty($row['socket_type'])) $socket_param = $row['socket_type'];
         if ($cid == 2 && !empty($row['ram_type'])) $ram_type_param = $row['ram_type'];
     }
 }
 
-// 若有商品因库存不足被踢出，提醒用户
 if ($stock_issue_detected) {
-    $_SESSION['error_msg'] = "Some items in your build went out of stock and were automatically removed to ensure valid checkout.";
+    $_SESSION['error_msg'] = "Some items went out of stock and were automatically removed.";
 }
 
-if ($total_wattage > 0) $total_wattage += 50; // 基础冗余
+if ($total_wattage > 0) $total_wattage += 50; 
 $rec_psu = ceil(($total_wattage + 100) / 50) * 50;
 
 // ==========================================
-// 🚀 5. 商业化 AI 瓶颈预警 (基于 Tier 评级而非价格)
+// 3.5 实时库存雷达 (精确拦截)
+// ==========================================
+$inventory_radar = [];
+$stock_check_sql = "SELECT category_id, COUNT(product_id) as available_count FROM products WHERE stock_quantity > 0 AND status = 'Available' GROUP BY category_id";
+$stock_res = mysqli_query($conn, $stock_check_sql);
+if ($stock_res) {
+    while ($row = mysqli_fetch_assoc($stock_res)) {
+        $inventory_radar[$row['category_id']] = $row['available_count'];
+    }
+}
+
+// ==========================================
+// 🚀 AI 瓶颈预警与商业 Upsell 引擎
 // ==========================================
 $system_tier = "AWAITING CORE PARTS";
 $tier_color = "#555"; 
 $bottleneck_warning = "";
 $bottleneck_color = "";
 
-// 系统总评级
 if (isset($cart[1], $cart[2], $cart[4], $cart[6])) {
     if ($total_price >= 8000) { $system_tier = "GOD TIER (Enthusiast)"; $tier_color = "#ff007f"; } 
     elseif ($total_price >= 4000) { $system_tier = "HIGH-END (Pro Gaming)"; $tier_color = "#00e676"; } 
     else { $system_tier = "MAINSTREAM (Entry)"; $tier_color = "#00f2fe"; }
 }
 
-// 基于性能 Tier 的硬核瓶颈计算
 if (isset($cart[1]) && isset($cart[4])) {
-    $cpu_tier = $cart[1]['tier'];
-    $gpu_tier = $cart[4]['tier'];
+    $cpu_tier = $cart[1]['tier'] ?? 1;
+    $gpu_tier = $cart[4]['tier'] ?? 1;
 
+    // 使用真实的 Tier 评级替代粗暴的价格相乘
     if (($gpu_tier - $cpu_tier) >= 3) {
         $bottleneck_color = "#ff4d4d"; 
-        $bottleneck_warning = "<strong><i class='fas fa-exclamation-triangle'></i> Severe CPU Bottleneck:</strong><br> Your High-End GPU is severely throttled by a weaker CPU.<br><a href='select_part.php?category_id=1&socket=$socket_param' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE CPU</a>";
+        $bottleneck_warning = "<strong><i class='fas fa-exclamation-triangle'></i> Severe CPU Bottleneck:</strong><br> Your GPU is heavily throttled by the processor.<br><a href='select_part.php?category_id=1&socket=$socket_param' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE CPU TO FIX</a>";
     } elseif (($cpu_tier - $gpu_tier) >= 3) {
         $bottleneck_color = "#f97316"; 
-        $bottleneck_warning = "<strong><i class='fas fa-info-circle'></i> Unbalanced Build:</strong><br> Powerful CPU paired with an entry-level GPU. Great for rendering, poor for gaming.<br><a href='select_part.php?category_id=4' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE GPU</a>";
+        $bottleneck_warning = "<strong><i class='fas fa-info-circle'></i> Unbalanced Build:</strong><br> High-end CPU with a weak Graphics Card. Great for rendering, poor for gaming.<br><a href='select_part.php?category_id=4' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE GPU TO FIX</a>";
     }
 }
 
@@ -194,8 +197,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 
 <style>
     :root { --accent: #00f2fe; --dark-card: rgba(255,255,255,0.03); }
-    
-    /* 🌟 全局对齐 Login 的排版体系 */
     body { background-color: #030305; color: #fff; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
     
     .builder-dashboard { max-width: 1400px; margin: 40px auto 80px; padding: 0 20px; display: grid; grid-template-columns: 1fr 360px; gap: 40px; align-items: start; }
@@ -214,15 +215,11 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     .slot-filled { border-color: var(--accent) !important; background: rgba(0,242,254,0.04); box-shadow: 0 4px 15px rgba(0,242,254,0.05); }
     
     .btn-action { padding: 8px 20px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; text-decoration: none; transition: 0.3s; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; box-sizing: border-box; }
-    
     .btn-select { background: transparent !important; color: #00f2fe !important; border: 1px solid #00f2fe !important; font-family: 'Inter', sans-serif; }
     .btn-select:hover { background: #00f2fe !important; color: #000 !important; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4) !important; }
-    
     .btn-change { background: rgba(255,255,255,0.03) !important; color: #cbd5e1 !important; border: 1px solid rgba(255,255,255,0.08) !important; font-family: 'Inter', sans-serif; }
     .btn-change:hover { background: rgba(255,255,255,0.08) !important; color: #fff !important; border-color: rgba(255,255,255,0.3) !important; }
-    
     .btn-out-of-stock { background: rgba(239, 68, 68, 0.05); color: #ef4444; border: 1px dashed #ef4444; cursor: not-allowed; user-select: none; }
-    
     .lock-badge { background: #ff4d4d; color: #fff; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; font-weight: 800; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;}
 
     .perf-hub { width: 100%; margin: 40px 0 0; background: rgba(10,10,10,0.8); border: 1px solid rgba(0,242,254,0.2); border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -239,7 +236,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 </style>
 
 <div class="builder-dashboard">
-
     <div class="builder-main-column">
         
         <?php if (isset($_SESSION['error_msg'])): ?>
@@ -343,25 +339,13 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 
             $score_obs_4k = round($cpu_index * 0.4 + $gpu_index * 0.6); 
             $score_vtube  = round($cpu_index * 0.7 + $gpu_index * 0.3); 
-
-            $adv_bottleneck = "";
-            $bot_color = "";
-            if ($gpu_p > ($cpu_p * 3.5)) {
-                $adv_bottleneck = "SEVERE CPU BOTTLENECK: Processor will throttle GPU performance.";
-                $bot_color = "#ef4444";
-            } elseif ($cpu_p > ($gpu_p * 2.5)) {
-                $adv_bottleneck = "GPU BOTTLENECK: Graphics card holding back the system.";
-                $bot_color = "#f97316";
-            } else {
-                $adv_bottleneck = "OPTIMAL PAIRING: Balanced components.";
-                $bot_color = "#00e676";
-            }
         ?>
         <div class="perf-hub">
             <div class="hub-header">
                 <div class="hub-title"><i class="fas fa-satellite-dish" style="color: var(--accent);"></i> MULTI-SCENARIO AI PREDICTOR</div>
-                <div class="bot-badge" style="border: 1px solid <?php echo $bot_color; ?>; color: <?php echo $bot_color; ?>;">
-                    <i class="fas <?php echo $bot_color == '#00e676' ? 'fa-check-circle' : 'fa-exclamation-triangle'; ?>"></i> <?php echo $adv_bottleneck; ?>
+                <div class="bot-badge" style="border: 1px solid <?php echo $bottleneck_color ?: '#00e676'; ?>; color: <?php echo $bottleneck_color ?: '#00e676'; ?>;">
+                    <i class="fas <?php echo empty($bottleneck_color) ? 'fa-check-circle' : 'fa-exclamation-triangle'; ?>"></i> 
+                    <?php echo empty($bottleneck_warning) ? 'OPTIMAL PAIRING: Balanced components.' : strip_tags($bottleneck_warning); ?>
                 </div>
             </div>
             
@@ -490,22 +474,18 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 抓取当前 PHP Session 的状态
     const phpCartCount = <?php echo count($cart); ?>;
     const currentCartIds = <?php echo json_encode(array_values(array_map(function($item) { return $item['product_id']; }, $cart))); ?>;
 
-    // 1. 如果 PHP 购物车有东西，持续在后台备份到用户浏览器的 LocalStorage
     if (phpCartCount > 0) {
         localStorage.setItem('gridcity_backup_build', JSON.stringify(currentCartIds));
     }
 
-    // 2. 🚨 核心防呆：如果 PHP Session 已经过期清空，但本地浏览器存有备份！
     if (phpCartCount === 0) {
         const backup = localStorage.getItem('gridcity_backup_build');
         if (backup) {
             const backupIds = JSON.parse(backup);
             if (backupIds && backupIds.length > 0) {
-                // 弹出极其贴心的恢复提示
                 if (confirm("⚠️ SYSTEM ALERT: We detected an unsaved build from your previous session! Do you want to restore your hard work?")) {
                     const form = document.createElement('form');
                     form.method = 'POST';
@@ -518,13 +498,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.body.appendChild(form);
                     form.submit();
                 } else {
-                    localStorage.removeItem('gridcity_backup_build'); // 玩家选择放弃，清除废弃档案
+                    localStorage.removeItem('gridcity_backup_build'); 
                 }
             }
         }
     }
     
-    // 3. 当玩家主动点击 "WIPE LOADOUT" (清空重配) 时，顺便把备份也删了
     const clearBtn = document.querySelector('a[href="builder.php?action=clear"]');
     if (clearBtn) {
         clearBtn.addEventListener('click', function() {
@@ -533,6 +512,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-
 </body>
 </html>

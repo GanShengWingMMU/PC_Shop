@@ -11,73 +11,67 @@ if ($category_id == 0) {
 }
 
 // ==========================================
-// 1. 处理表单提交：抓取真实数据存入 Session
+// 🚀 1. 严格模式 POST 处理 (配合 Builder 水合引擎)
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
     $product_id = intval($_POST['product_id']);
     
-    // 亲自去数据库查真实价格和功耗，绝对不信任前端数据！
-    $stmt = $conn->prepare("SELECT product_name, price, tdp_wattage FROM products WHERE product_id = ?");
-    $stmt->bind_param("i", $product_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    // 只存 ID，绝对不把价格固化在 Session 里
+    $stmt = $conn->prepare("SELECT product_id FROM products WHERE product_id = ? AND category_id = ? AND stock_quantity > 0 AND status = 'Available'");
+    $stmt->execute([$product_id, $category_id]);
     
-    if ($row = $result->fetch_assoc()) {
-        $_SESSION['pc_build'][$category_id] = [
-            'product_id' => $product_id,
-            'name'       => $row['product_name'], 
-            'price'      => $row['price'],
-            'wattage'    => $row['tdp_wattage'] ?? 0 
-        ];
+    if ($stmt->get_result()->num_rows > 0) {
+        $_SESSION['pc_build'][$category_id] = $product_id;
+    } else {
+        $_SESSION['error_msg'] = "Sorry, this item just went out of stock or is invalid.";
     }
-    $stmt->close();
     
     header("Location: builder.php");
     exit();
 }
 
 // ==========================================
-// 2. 接收来自 Builder 的“智能算法参数”
+// 2. 接收来自 Builder 的智能锁定参数
 // ==========================================
-$socket_filter = isset($_GET['socket']) ? $conn->real_escape_string($_GET['socket']) : '';
+$socket_filter = isset($_GET['socket']) ? trim($_GET['socket']) : '';
 $min_wattage = isset($_GET['min_w']) ? intval($_GET['min_w']) : 0;
-$ram_type_req = isset($_GET['ram_type']) ? $conn->real_escape_string($_GET['ram_type']) : ''; 
+$ram_type_req = isset($_GET['ram_type']) ? trim($_GET['ram_type']) : ''; 
 
 $cat_name = "Component";
 $stmt_cat = $conn->prepare("SELECT category_name FROM categories WHERE category_id = ?");
-$stmt_cat->bind_param("i", $category_id);
-$stmt_cat->execute();
-$res_cat = $stmt_cat->get_result();
-if ($row_cat = $res_cat->fetch_assoc()) {
+$stmt_cat->execute([$category_id]);
+if ($row_cat = $stmt_cat->get_result()->fetch_assoc()) {
     $cat_name = $row_cat['category_name']; 
 }
-$stmt_cat->close();
 
 // ==========================================
-// 3. 动态 SQL 构建器 (Dynamic SQL Builder)
+// 🛡️ 3. 动态预处理 SQL 构建器 (完全废除 LIKE 模糊匹配)
 // ==========================================
-$sql = "SELECT * FROM products WHERE category_id = $category_id AND status = 'Available'";
+$sql = "SELECT * FROM products WHERE category_id = ? AND stock_quantity > 0 AND status = 'Available'";
+$params = [$category_id]; 
 $filter_messages = []; 
 
-// 规则 A：插槽过滤 (CPU -> 主板)
 if (!empty($socket_filter)) {
-    $sql .= " AND (product_name LIKE '%$socket_filter%' OR description LIKE '%$socket_filter%')";
-    $filter_messages[] = "Socket locked to: <strong>$socket_filter</strong>";
+    $sql .= " AND socket_type = ?";
+    $params[] = $socket_filter;
+    $filter_messages[] = "Socket locked to: <strong>" . htmlspecialchars($socket_filter) . "</strong>";
 }
 
-// 规则 B：内存世代过滤 (主板 -> RAM)
 if (!empty($ram_type_req) && $category_id == 3) { 
-    $sql .= " AND (product_name LIKE '%$ram_type_req%' OR description LIKE '%$ram_type_req%')";
-    $filter_messages[] = "Memory standard locked to: <strong>$ram_type_req</strong>";
+    $sql .= " AND ram_type = ?";
+    $params[] = $ram_type_req;
+    $filter_messages[] = "Memory locked to: <strong>" . htmlspecialchars($ram_type_req) . "</strong>";
 }
 
-// 规则 C：功耗下限过滤 (总功耗 -> 电源)
 if ($min_wattage > 0 && $category_id == 6) { 
-    $sql .= " AND tdp_wattage >= $min_wattage";
-    $filter_messages[] = "Minimum Power Required: <strong>{$min_wattage}W</strong>";
+    $sql .= " AND tdp_wattage >= ?";
+    $params[] = $min_wattage;
+    $filter_messages[] = "Minimum Power: <strong>{$min_wattage}W</strong>";
 }
 
-$result = mysqli_query($conn, $sql);
+$stmt_products = $conn->prepare($sql);
+$stmt_products->execute($params);
+$result = $stmt_products->get_result();
 
 include 'includes/header.php';
 ?>
@@ -123,8 +117,8 @@ include 'includes/header.php';
     </div>
 
     <div class="product-grid">
-        <?php if (mysqli_num_rows($result) > 0): ?>
-            <?php while ($row = mysqli_fetch_assoc($result)): ?>
+        <?php if ($result->num_rows > 0): ?>
+            <?php while ($row = $result->fetch_assoc()): ?>
                 <div class="product-card">
                     <img src="<?php echo !empty($row['image_url']) ? htmlspecialchars($row['image_url']) : 'https://via.placeholder.com/280x180/111/333?text=PC+Part'; ?>" alt="Part" class="prod-img">
                     
@@ -139,6 +133,9 @@ include 'includes/header.php';
                     <div style="margin-bottom: 15px; display: flex; gap: 10px;">
                         <?php if(isset($row['tdp_wattage']) && $row['tdp_wattage'] > 0): ?>
                             <span style="font-size: 0.75rem; background: rgba(255,193,7,0.1); color: #ffc107; padding: 2px 6px; border-radius: 4px;"><i class="fas fa-bolt"></i> <?php echo $row['tdp_wattage']; ?>W</span>
+                        <?php endif; ?>
+                        <?php if(isset($row['performance_tier']) && $row['performance_tier'] > 0): ?>
+                            <span style="font-size: 0.75rem; background: rgba(255,0,127,0.1); color: #ff007f; padding: 2px 6px; border-radius: 4px;">TIER <?php echo $row['performance_tier']; ?></span>
                         <?php endif; ?>
                     </div>
 
