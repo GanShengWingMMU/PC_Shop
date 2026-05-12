@@ -11,7 +11,7 @@ $dependency_map = [
     1 => [2, 8],    // CPU -> Motherboard, Cooler
     2 => [3, 4],    // Motherboard -> RAM, GPU
     4 => [6],       // GPU -> PSU
-    7 => [10]       // 修复：PC Case (7) 没了，Case Fans (10) 才应该跟着掉！
+    7 => [10]       // PC Case (7) 没了，Case Fans (10) 才跟着掉
 ];
 
 function cascade_remove($cat_id, &$cart, $map) {
@@ -46,8 +46,23 @@ if (isset($_GET['action'])) {
 if (!isset($_SESSION['pc_build'])) { $_SESSION['pc_build'] = []; }
 $cart = $_SESSION['pc_build'];
 
-$total_price = 0; $total_wattage = 0;
-foreach ($cart as $p) { $total_price += $p['price']; $total_wattage += $p['wattage']; }
+// ==========================================
+// 🚀 核心修复 1: 物理学正确的负载与供电算法
+// ==========================================
+$total_price = 0; 
+$total_wattage = 0; 
+$psu_wattage = 0; // 单独记录电源的供电能力
+
+foreach ($cart as $cat_id => $p) { 
+    $total_price += $p['price']; 
+    if ($cat_id == 6) {
+        $psu_wattage = $p['wattage']; // 抓取电源的输出瓦数
+    } else {
+        $total_wattage += $p['wattage']; // 累加其他配件的耗电量
+    }
+}
+// 加入 50W 的基础冗余 (主板、风扇、RGB、硬盘等周边耗电)
+if ($total_wattage > 0) $total_wattage += 50; 
 
 // ==========================================
 // 3. 动态属性嗅探 (Transitive Property Sniffer)
@@ -66,11 +81,11 @@ if (isset($cart[2])) {
     elseif (strpos($mb_name, 'DDR4') !== false) $ram_type_param = "DDR4";
 }
 
+// 推荐电源容量：负载加 100W 冗余，再向上取整到 50 的倍数
 $rec_psu = ceil(($total_wattage + 100) / 50) * 50;
 
 // ==========================================
-// 🚀 新增：3.5 实时库存雷达 (Inventory Radar)
-// 一次性查出每个分类下还有多少个【有库存】的商品
+// 3.5 实时库存雷达 (Inventory Radar)
 // ==========================================
 $stock_check_sql = "SELECT category_id, COUNT(product_id) as available_count FROM products WHERE stock_quantity > 0 GROUP BY category_id";
 $stock_res = mysqli_query($conn, $stock_check_sql);
@@ -82,31 +97,31 @@ if ($stock_res) {
 }
 
 // ==========================================
-// 4. 木桶效应与 AI 评级 (Tier & Bottleneck AI)
+// 🚀 核心升级 2: AI 瓶颈预警与商业 Upsell 引擎
 // ==========================================
 $system_tier = "AWAITING CORE PARTS";
 $tier_color = "#555"; 
 $bottleneck_warning = "";
+$bottleneck_color = "";
 
+// 评级系统
 if (isset($cart[1]) && isset($cart[2]) && isset($cart[4]) && isset($cart[6])) {
-    if ($total_price >= 8000) {
-        $system_tier = "GOD TIER (Enthusiast)";
-        $tier_color = "#ff007f"; 
-    } elseif ($total_price >= 4000) {
-        $system_tier = "HIGH-END (Pro Gaming)";
-        $tier_color = "#00e676"; 
-    } else {
-        $system_tier = "MAINSTREAM (Entry)";
-        $tier_color = "#00f2fe"; 
-    }
+    if ($total_price >= 8000) { $system_tier = "GOD TIER (Enthusiast)"; $tier_color = "#ff007f"; } 
+    elseif ($total_price >= 4000) { $system_tier = "HIGH-END (Pro Gaming)"; $tier_color = "#00e676"; } 
+    else { $system_tier = "MAINSTREAM (Entry)"; $tier_color = "#00f2fe"; }
+}
 
+// 只要同时选了 CPU 和 GPU，立刻触发瓶颈侦测！
+if (isset($cart[1]) && isset($cart[4])) {
     $cpu_price = $cart[1]['price'];
     $gpu_price = $cart[4]['price'];
 
     if ($gpu_price > ($cpu_price * 3.5)) {
-        $bottleneck_warning = "⚠️ CPU Bottleneck: Your GPU might be held back by the Processor.";
+        $bottleneck_color = "#ff4d4d"; // 危险红
+        $bottleneck_warning = "<strong><i class='fas fa-exclamation-triangle'></i> Severe CPU Bottleneck:</strong><br> Your GPU is heavily throttled by the processor. This causes massive frame drops.<br><a href='select_part.php?category_id=1&socket=$socket_param' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE CPU TO FIX</a>";
     } elseif ($cpu_price > ($gpu_price * 2.5)) {
-        $bottleneck_warning = "⚠️ GPU Bottleneck: Your CPU outpaces your Graphics Card.";
+        $bottleneck_color = "#f97316"; // 警告橙
+        $bottleneck_warning = "<strong><i class='fas fa-info-circle'></i> Unbalanced Build:</strong><br> High-end CPU with a weak Graphics Card. Great for rendering, poor for gaming.<br><a href='select_part.php?category_id=4' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE GPU TO FIX</a>";
     }
 }
 
@@ -140,7 +155,6 @@ foreach($workflow as $s) foreach($s as $item) $flat_slots[] = $item;
 $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots)) * 100) : 0;
 ?>
 
-<!-- 🌟 植入 Login 的核心字体 -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/builder.css">
 
@@ -167,19 +181,16 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     
     .btn-action { padding: 8px 20px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; text-decoration: none; transition: 0.3s; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; box-sizing: border-box; }
     
-    /* 🌟 修复隐形 BUG：加入 !important 强行覆盖全局样式 */
     .btn-select { background: transparent !important; color: #00f2fe !important; border: 1px solid #00f2fe !important; font-family: 'Inter', sans-serif; }
     .btn-select:hover { background: #00f2fe !important; color: #000 !important; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4) !important; }
     
     .btn-change { background: rgba(255,255,255,0.03) !important; color: #cbd5e1 !important; border: 1px solid rgba(255,255,255,0.08) !important; font-family: 'Inter', sans-serif; }
     .btn-change:hover { background: rgba(255,255,255,0.08) !important; color: #fff !important; border-color: rgba(255,255,255,0.3) !important; }
     
-    /* 无库存按钮专用样式 */
     .btn-out-of-stock { background: rgba(239, 68, 68, 0.05); color: #ef4444; border: 1px dashed #ef4444; cursor: not-allowed; user-select: none; }
     
     .lock-badge { background: #ff4d4d; color: #fff; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; font-weight: 800; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;}
 
-    /* AI Predictor Styles */
     .perf-hub { width: 100%; margin: 40px 0 0; background: rgba(10,10,10,0.8); border: 1px solid rgba(0,242,254,0.2); border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .hub-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; }
     .hub-title { font-size: 1.1rem; color: #fff; font-weight: 900; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
@@ -220,7 +231,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                             <i class="fas fa-trash-alt"></i> WIPE LOADOUT
                         </a>
                     <?php endif; ?>
-                    <!-- 🌟 极客字体用于百分比 -->
                     <span style="color: var(--accent); font-size: 1.4rem; font-family: 'JetBrains Mono', monospace; text-shadow: 0 0 10px rgba(0,242,254,0.5);"><?php echo $progress; ?>%</span>
                 </div>
             </div>
@@ -256,7 +266,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                                 <span style="color: #ff4d4d; font-size: 0.8rem; margin-left: 8px;"><?php echo $slot['lock_msg']; ?></span>
                             <?php elseif ($is_filled): ?>
                                 <div style="color: var(--accent); font-weight: 700; font-size: 1rem;"><?php echo htmlspecialchars($cart[$cid]['name']); ?></div>
-                                <!-- 🌟 金额应用极客字体 -->
                                 <div style="color: #00e676; font-size: 0.85rem; font-weight: 600; margin-top: 3px; font-family: 'JetBrains Mono', monospace;">RM <?php echo number_format($cart[$cid]['price'], 2); ?></div>
                             <?php elseif (!$has_stock): ?>
                                 <div style="color: #ef4444; font-size: 0.85rem; font-weight: bold;"><i class="fas fa-times-circle"></i> Currently depleted from database.</div>
@@ -382,27 +391,45 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         </h3>
         
         <div style="display: flex; flex-direction: column; gap: 20px;">
+            
             <div>
                 <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">System Tier</div>
                 <div style="font-size: 1.2rem; font-weight: 900; color: <?php echo $tier_color; ?>; text-shadow: 0 0 15px <?php echo $tier_color; ?>88;">
                     <?php echo $system_tier; ?>
                 </div>
+                
                 <?php if($bottleneck_warning): ?>
-                    <div style="color: #ffc107; font-size: 0.75rem; font-weight: bold; margin-top: 8px; line-height: 1.4; background: rgba(255,193,7,0.1); padding: 8px 10px; border-radius: 6px; border-left: 3px solid #ffc107;">
+                    <div style="color: <?php echo $bottleneck_color; ?>; font-size: 0.8rem; font-weight: normal; margin-top: 10px; line-height: 1.5; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; border-left: 4px solid <?php echo $bottleneck_color; ?>;">
                         <?php echo $bottleneck_warning; ?>
                     </div>
                 <?php endif; ?>
             </div>
 
             <div>
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Estimated Load</div>
-                <!-- 🌟 数值应用极客字体 -->
-                <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; color: #facc15; font-weight: 900;"><i class="fas fa-bolt" style="text-shadow: 0 0 10px rgba(251,191,36,0.4);"></i> <?php echo $total_wattage; ?> W</div>
+                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Power / Upgrade Headroom</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; color: #facc15; font-weight: 900; margin-bottom: 5px;"><i class="fas fa-bolt" style="text-shadow: 0 0 10px rgba(251,191,36,0.4);"></i> Load: <?php echo $total_wattage; ?> W</div>
+                
+                <?php if (isset($cart[6])): ?>
+                    <?php if ($psu_wattage < $total_wattage): ?>
+                        <div style="color: #ff4d4d; font-size: 0.8rem; line-height: 1.4; background: rgba(255,77,77,0.1); padding: 10px; border-radius: 6px; border: 1px dashed #ff4d4d;">
+                            <i class="fas fa-radiation"></i> <strong>CRITICAL:</strong> Your PSU (<?php echo $psu_wattage; ?>W) cannot support this system. PC will shut down under load!
+                        </div>
+                    <?php elseif ($psu_wattage < ($total_wattage * 1.3)): ?>
+                        <div style="color: #f97316; font-size: 0.8rem; line-height: 1.4; background: rgba(249,115,22,0.1); padding: 10px; border-radius: 6px; border: 1px solid #f97316;">
+                            <i class="fas fa-battery-half"></i> <strong>LOW HEADROOM:</strong> Only <?php echo round((($psu_wattage - $total_wattage) / $psu_wattage) * 100); ?>% upgrade margin. Consider a larger PSU for future-proofing.
+                        </div>
+                    <?php else: ?>
+                        <div style="color: #00e676; font-size: 0.8rem; line-height: 1.4; background: rgba(0,230,118,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(0,230,118,0.3);">
+                            <i class="fas fa-battery-full"></i> <strong>SAFE:</strong> <?php echo round((($psu_wattage - $total_wattage) / $psu_wattage) * 100); ?>% capacity remaining. Excellent upgrade headroom.
+                        </div>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <div style="color: #64748b; font-size: 0.8rem;"><i class="fas fa-plug"></i> Select a Power Supply to calculate headroom.</div>
+                <?php endif; ?>
             </div>
             
             <div style="margin-top: 5px; padding-top: 20px; border-top: 1px dashed rgba(255,255,255,0.1);">
                 <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Raw Component Value</div>
-                <!-- 🌟 数值应用极客字体 -->
                 <div style="font-family: 'JetBrains Mono', monospace; font-size: 2.2rem; color: var(--accent); font-weight: 900; text-shadow: 0 0 20px rgba(0,242,254,0.3);">RM <?php echo number_format($total_price, 2); ?></div>
             </div>
 
