@@ -217,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="benefit-icon"><i class="fa-solid fa-ticket"></i></div>
             <div>
                 <h4 style="color: #fff; margin: 0 0 5px 0;">Monthly Vouchers</h4>
-                <p style="color: #888; font-size: 0.85rem; margin: 0;">Access up to 20% OFF codes refreshed every month.</p>
+                <p style="color: #888; font-size: 0.85rem; margin: 0;">Access up to 10% OFF codes refreshed every month.</p>
             </div>
         </div>
         <div class="benefit-card">
@@ -227,13 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p style="color: #888; font-size: 0.85rem; margin: 0;">Get 500 reward coins instantly upon subscription.</p>
             </div>
         </div>
-        <div class="benefit-card">
-            <div class="benefit-icon"><i class="fa-solid fa-truck-fast"></i></div>
-            <div>
-                <h4 style="color: #fff; margin: 0 0 5px 0;">Priority Shipping</h4>
-                <p style="color: #888; font-size: 0.85rem; margin: 0;">Jump the queue. Your orders are assembled first.</p>
-            </div>
-        </div>
+
         <div class="benefit-card">
             <div class="benefit-icon"><i class="fa-solid fa-headset"></i></div>
             <div>
@@ -245,47 +239,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <h2 class="section-title">What You'll Enjoy Monthly</h2>
     
-    <?php if ($current_tier === 'VIP'): ?>
-        <div class="voucher-grid">
-            <?php
-            // 從資料庫抓取 Active 的 VIP 優惠碼
-            $promo_stmt = $conn->prepare("SELECT code_name, discount_percentage, target_category FROM promo_codes WHERE is_vip_only = 1 AND status = 'Active'");
-            $promo_stmt->execute();
-            $promo_result = $promo_stmt->get_result();
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+    <?php
+    // 🌟 修正：改用 discount_value 和 discount_type 查詢
+    $promo_stmt = $conn->prepare("SELECT * FROM promo_codes WHERE is_vip_only = 1 AND status = 'Active' ORDER BY discount_value DESC");
+    $promo_stmt->execute();
+    $promo_res = $promo_stmt->get_result();
+
+    if ($promo_res->num_rows > 0):
+        while ($v = $promo_res->fetch_assoc()):
+    ?>
+        <div style="background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 12px; display: flex; overflow: hidden; transition: 0.3s;" onmouseover="this.style.boxShadow='0 5px 15px rgba(255,215,0,0.1)'" onmouseout="this.style.boxShadow='none'">
             
-            if ($promo_result->num_rows > 0) {
-                while ($promo = $promo_result->fetch_assoc()) {
-                    ?>
-                    <div class="voucher-ticket">
-                        <div class="voucher-left">
-                            <i class="fa-solid fa-crown" style="font-size: 1.5rem; margin-bottom: 5px; color: #fff;"></i>
-                            <span style="font-size: 1.2rem;">ELITE</span>
-                        </div>
-                        <div class="voucher-middle">
-                            <h3 style="color: #fff; margin: 0 0 5px 0; font-size: 1.3rem;"><?php echo $promo['discount_percentage']; ?>% OFF</h3>
-                            <p style="color: #00f2fe; font-weight: bold; margin: 0 0 5px 0; font-size: 0.85rem;">Applicable to: <?php echo $promo['target_category']; ?></p>
-                            <span style="color: #777; font-size: 0.8rem; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 4px; display: inline-block; width: fit-content;">Monthly Voucher</span>
-                        </div>
-                        <div class="voucher-right">
-                            <span style="font-family: monospace; color: #ccc; margin-bottom: 10px; font-size: 0.9rem;">Code: <strong style="color: #fff;"><?php echo $promo['code_name']; ?></strong></span>
-                            <button class="copy-btn" onclick="copyPromoCode('<?php echo $promo['code_name']; ?>', this)">Copy Code</button>
-                        </div>
-                    </div>
-                    <?php
-                }
-            } else {
-                echo '<p style="color: #aaa; width: 100%;">No active promo codes at the moment. Check back later!</p>';
-            }
-            $promo_stmt->close();
-            ?>
+            <div style="background: linear-gradient(135deg, #ffd700, #f39c12); color: #000; width: 90px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; border-right: 2px dashed rgba(0,0,0,0.2);">
+                <i class="fa-solid fa-crown" style="font-size: 1.5rem; margin-bottom: 5px;"></i>
+                <span style="font-weight: 900; font-size: 0.9rem;">ELITE</span>
+            </div>
+            
+            <div style="padding: 15px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                <h3 style="margin: 0 0 5px 0; color: #fff; font-size: 1.2rem;">
+                    <?php if($v['discount_type'] == 'Fixed'): ?>
+                        RM <?php echo floatval($v['discount_value']); ?> OFF
+                    <?php else: ?>
+                        <?php echo floatval($v['discount_value']); ?>% OFF
+                    <?php endif; ?>
+                </h3>
+                <p style="margin: 0; color: #00f2fe; font-size: 0.85rem;">Applicable to: <strong><?php echo $v['target_category']; ?></strong></p>
+                <p style="margin: 5px 0 0 0; color: #888; font-size: 0.75rem;">Monthly Voucher</p>
+            </div>
+            
+            <div style="padding: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-left: 1px dashed rgba(255, 215, 0, 0.2); min-width: 120px;">
+                <span style="font-size: 0.75rem; color: #aaa; margin-bottom: 5px;">Code: <strong style="color: #fff;"><?php echo $v['code_name']; ?></strong></span>
+                <button onclick="copyPromoCode('<?php echo $v['code_name']; ?>', this)" style="background: transparent; border: 1px solid #ffd700; color: #ffd700; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='#ffd700'; this.style.color='#000';" onmouseout="this.style.background='transparent'; this.style.color='#ffd700';">Copy Code</button>
+            </div>
+            
         </div>
-    <?php else: ?>
-        <div style="background: rgba(255,255,255,0.02); border: 1px dashed #444; padding: 40px; text-align: center; border-radius: 12px;">
-            <i class="fa-solid fa-lock" style="font-size: 3rem; color: #555; margin-bottom: 15px;"></i>
-            <h3 style="color: #ccc; margin-bottom: 10px;">Vouchers Locked</h3>
-            <p style="color: #777; max-width: 400px; margin: 0 auto;">Join ELITE today to unlock exclusive monthly discount codes for Packages and Components.</p>
-        </div>
-    <?php endif; ?>
+    <?php 
+        endwhile;
+    else:
+        echo "<p style='color: #888;'>No exclusive vouchers available at the moment.</p>";
+    endif; 
+    $promo_stmt->close();
+    ?>
+</div>
+
+<script>
+// 🌟 複製代碼的小功能
+function copyPromoCode(code, btn) {
+    navigator.clipboard.writeText(code).then(() => {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+        setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+    });
+}
+</script>
 
 </main>
 

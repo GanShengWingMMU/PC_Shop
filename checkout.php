@@ -23,6 +23,7 @@ $current_balance = $user_data['wallet_balance'];
 $current_coins = $user_data['reward_coins'];
 $current_tier = $user_data['membership_tier'];
 $saved_addresses = [];
+
 $address_query = "SELECT * FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
 $stmt_addr = $conn->prepare($address_query);
 $stmt_addr->bind_param("i", $customer_id);
@@ -44,7 +45,7 @@ while ($card = $res_cards->fetch_assoc()) {
 }
 $stmt_cards->close();
 
-// 🌟 核心升級：抓取購物車內容，新增抓取 affiliate_id 用於帶貨分傭！
+// 🌟 核心升級：抓取購物車內容，包含 affiliate_id 用於帶貨分傭
 $cart_query = "SELECT c.cart_id, c.quantity, c.affiliate_id, 
                       p.product_id, p.product_name, p.price AS product_price,
                       b.pc_build, b.build_name, b.total_price AS build_price,
@@ -61,6 +62,9 @@ $cart_result = $stmt->get_result();
 
 $cart_items = [];
 $total_amount = 0;
+// 🌟 為了前端即時計算，準備好分類總額
+$subtotal_components = 0; 
+$subtotal_packages = 0;
 
 if ($cart_result->num_rows === 0) {
     header("Location: components.php");
@@ -91,14 +95,20 @@ while ($row = $cart_result->fetch_assoc()) {
         $pkg_stmt->close();
         
         $price = $dynamic_pkg_price; 
-        
         $cart_items[count($cart_items) - 1]['package_price'] = $dynamic_pkg_price; 
-        
     } else {
         $price = 0;
     }
     
-    $total_amount += ($price * $row['quantity']);
+    // 🌟 將商品價格分類，以供優惠券判斷
+    $item_total = $price * $row['quantity'];
+    $total_amount += $item_total;
+    
+    if (!empty($row['product_id']) && empty($row['pc_build']) && empty($row['package_id'])) {
+        $subtotal_components += $item_total;
+    } else {
+        $subtotal_packages += $item_total;
+    }
 }
 $stmt->close();
 
@@ -156,20 +166,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit();
             } else {
                 $target = $promo_row['target_category'];
-                $pct = $promo_row['discount_percentage'] / 100;
                 
-                if ($target === 'Components') {
-                    $promo_discount = $subtotal_components * $pct;
-                } elseif ($target === 'Packages') {
-                    $promo_discount = $subtotal_packages * $pct;
-                } else { 
-                    $promo_discount = ($subtotal_components + $subtotal_packages) * $pct;
-                }
+                // 完美保留隊友的變數修復邏輯
+                $target_subtotal = 0;
+                if ($target === 'Components') $target_subtotal = $subtotal_components;
+                elseif ($target === 'Packages') $target_subtotal = $subtotal_packages;
+                else $target_subtotal = $subtotal_components + $subtotal_packages;
 
-                if ($promo_discount <= 0) {
-                    $_SESSION['error_msg'] = "Promo code '{$applied_promo_code}' is valid, but there are no eligible items in your cart to discount.";
+                if ($target_subtotal < $promo_row['min_spend']) {
+                    $_SESSION['error_msg'] = "Min. spend of RM " . number_format($promo_row['min_spend'], 2) . " on {$target} is required to use this code.";
                     header("Location: checkout.php");
                     exit();
+                }
+
+                if ($target_subtotal <= 0) {
+                    $_SESSION['error_msg'] = "No eligible {$target} items in your cart for this promo code.";
+                    header("Location: checkout.php");
+                    exit();
+                }
+
+                if ($promo_row['discount_type'] === 'Fixed') {
+                    $promo_discount = min($promo_row['discount_value'], $target_subtotal);
+                } else {
+                    $promo_discount = $target_subtotal * ($promo_row['discount_value'] / 100);
+                    
+                    if ($promo_row['max_cap'] > 0 && $promo_discount > $promo_row['max_cap']) {
+                        $promo_discount = $promo_row['max_cap'];
+                    }
                 }
             }
         } else {
@@ -180,9 +203,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $promo_stmt->close();
     }
 
+    // 🌟 先計算扣除優惠券後的剩餘金額 (防超額扣款)
+    $amount_after_promo = $total_amount - $promo_discount;
+    if ($amount_after_promo < 0) $amount_after_promo = 0;
+
     if ($use_coins && $current_coins > 0) {
-        $coins_used = $current_coins;
-        $coin_discount = floor($current_coins / 10); 
+        $max_coin_discount = floor($current_coins / 10); // 玩家最多可以扣多少錢
+
+        if ($max_coin_discount > $amount_after_promo) {
+            // 🚨 如果金幣折抵超過了結帳金額，只扣剛好可以抵銷的數量！
+            $coin_discount = $amount_after_promo;
+            $coins_used = $coin_discount * 10;
+        } else {
+            // 金幣不夠抵銷全部，就全扣
+            $coin_discount = $max_coin_discount;
+            $coins_used = $coin_discount * 10; 
+        }
     }
 
     $discount_amount = $promo_discount + $coin_discount; 
@@ -245,8 +281,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         
-        $fpx_user = 'ganshengwing'; 
-        $fpx_pass = '123456';       
+        // 🌟 保留隊友的升級：接收顧客輸入的真實 FPX 帳號密碼
+        $fpx_user = trim($_POST['fpx_username'] ?? ''); 
+        $fpx_pass = trim($_POST['fpx_password'] ?? '');
+
+        if (empty($fpx_user) || empty($fpx_pass)) {
+            $_SESSION['error_msg'] = "FPX Error: Please enter your internet banking username and password.";
+            header("Location: checkout.php");
+            exit();
+        }
 
         $fpx_query = "SELECT id, balance FROM bank WHERE fpx_username = ? AND fpx_password = ?";
         $fpx_stmt = $conn->prepare($fpx_query);
@@ -301,14 +344,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $order_id = $stmt_order->insert_id;
         $stmt_order->close();
 
-        // 🌟 核心升級：寫入 order_details 支援 package_id AND affiliate_id
+        // 🌟 核心防護：保留隊友防止優惠券重複使用的邏輯
+        if (isset($applied_promo_code) && !empty($applied_promo_code)) {
+            $get_promo = $conn->prepare("SELECT promo_id FROM promo_codes WHERE code_name = ?");
+            $get_promo->bind_param("s", $applied_promo_code);
+            $get_promo->execute();
+            $promo_data = $get_promo->get_result()->fetch_assoc();
+            
+            if ($promo_data) {
+                $p_id = $promo_data['promo_id'];
+                $log_used = $conn->prepare("INSERT INTO used_vouchers (customer_id, promo_id, order_id) VALUES (?, ?, ?)");
+                $log_used->bind_param("iii", $customer_id, $p_id, $order_id);
+                $log_used->execute();
+                $log_used->close();
+            }
+            $get_promo->close();
+        }
+
+        // 🌟 完美融合：保留你寫的 Affiliate ID 邏輯
         $insert_detail = "INSERT INTO order_details (order_id, product_id, pc_build, package_id, affiliate_id, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt_detail = $conn->prepare($insert_detail);
         
         $reward_stmt = $conn->prepare("UPDATE customers SET reward_coins = reward_coins + ? WHERE customer_id = ?");
         $bounty_per_build = 500; 
 
-        // 🌟 A+级防呆修复：幽灵库存拦截与真实库存扣除
         foreach ($cart_items as $item) {
             $pid = $item['product_id'] ? $item['product_id'] : NULL;
             $build_id = $item['pc_build'] ? $item['pc_build'] : NULL;
@@ -537,8 +596,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-group" style="background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                     <label style="display: flex; align-items: center; cursor: pointer; color: var(--text-main);">
                         <input type="checkbox" id="use_coins" name="use_coins" style="margin-right: 10px; width: 18px; height: 18px;">
-                        <span>
-                            Use <strong><?php echo $current_coins; ?> Coins</strong> to get 
+                        <span id="coins-label-text">
+                            Use up to <strong><?php echo $current_coins; ?> Coins</strong> for 
                             <strong style="color: #ffd700;">RM <?php echo number_format(floor($current_coins/10), 2); ?> OFF</strong>
                         </span>
                     </label>
@@ -615,29 +674,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="Maybank2U" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;">
+                            <input type="radio" name="selected_bank" value="Maybank2U" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;" onchange="toggleFPXForm()">
                             <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
                                 <img src="image/maybank.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
                             </div>
                         </label>
+
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="CIMB Clicks" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;">
+                            <input type="radio" name="selected_bank" value="CIMB Clicks" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;" onchange="toggleFPXForm()">
                             <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
                                 <img src="image/cimb.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
                             </div>
                         </label>
+
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="Public Bank" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;">
+                            <input type="radio" name="selected_bank" value="Public Bank" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;" onchange="toggleFPXForm()">
                             <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
                                 <img src="image/public.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
                             </div>
                         </label>
+
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="RHB Now" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;">
+                            <input type="radio" name="selected_bank" value="RHB Now" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;" onchange="toggleFPXForm()">
                             <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
                                 <img src="image/rhb.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
                             </div>
                         </label>
+                    </div>
+
+                    <div id="fpx_login_form" style="display: none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                        <p style="font-size: 0.85rem; color: #ffcc00; margin-top: 0; margin-bottom: 15px;">
+                            <i class="fa-solid fa-shield-halved"></i> <strong>Secure FPX Login:</strong> Please login to authorize the payment from your bank.
+                        </p>
+                        <div style="display: flex; gap: 15px;">
+                            <input type="text" name="fpx_username" placeholder="FPX Username" class="form-control" style="flex: 1;">
+                            <input type="password" name="fpx_password" placeholder="Password" class="form-control" style="flex: 1;">
+                        </div>
                     </div>
                 </div>
 
@@ -756,12 +828,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="specs" id="subtotal-display" data-subtotal="<?php echo $total_amount; ?>">RM <?php echo number_format($total_amount, 2); ?></span>
             </div>
 
-            <?php if (isset($promo_discount) && $promo_discount > 0): ?>
-                <div class="summary-item" style="color: #00f2fe; margin-top: 10px;">
-                    <span>Promo Discount (<?php echo htmlspecialchars($applied_promo_code); ?>)</span>
-                    <span>- RM <?php echo number_format($promo_discount, 2); ?></span>
-                </div>
-            <?php endif; ?>
+            <div class="summary-item" id="promo-row" style="display: none; color: #00f2fe; margin-top: 10px;">
+                <span>Voucher (<span id="promo-name-display"></span>)</span>
+                <span id="promo-amount-display">- RM 0.00</span>
+            </div>
             
             <div class="summary-item" id="discount-row" style="display: none; color: #ffd700; margin-top: 10px;">
                 <span>Coins Discount</span>
@@ -770,7 +840,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="summary-item total-row" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2);">
                 <span style="font-size: 1.2rem;">Total</span>
-                <span id="final-total-display" style="font-size: 1.5rem; color: #00f2fe;">RM <?php echo number_format($final_amount ?? $total_amount, 2); ?></span>
+                <span id="final-total-display" style="font-size: 1.5rem; color: #00f2fe;">RM <?php echo number_format($total_amount, 2); ?></span>
             </div>
         </div>
 
@@ -788,11 +858,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div style="padding: 20px; max-height: 400px; overflow-y: auto;">
             
             <?php
-            $sql_vouchers = "SELECT * FROM promo_codes WHERE status = 'Active' AND (is_vip_only = 0";
+            // 🌟 升級版：過濾掉該顧客已經用過的優惠券
+            $sql_vouchers = "SELECT p.* FROM promo_codes p 
+                             LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = $customer_id 
+                             WHERE p.status = 'Active' AND uv.promo_id IS NULL AND (p.is_vip_only = 0";
             if ($current_tier === 'VIP') {
-                $sql_vouchers .= " OR is_vip_only = 1";
+                $sql_vouchers .= " OR p.is_vip_only = 1";
             }
-            $sql_vouchers .= ") ORDER BY discount_percentage DESC";
+            $sql_vouchers .= ") ORDER BY p.is_vip_only DESC, p.discount_value DESC";
             
             $res_vouchers = $conn->query($sql_vouchers);
 
@@ -804,8 +877,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      style="display: flex; background: #222; border: 1px solid <?php echo $is_vip_code ? '#ffd700' : '#00f2fe'; ?>; border-radius: 10px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;"
                      onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 5px 15px <?php echo $is_vip_code ? "rgba(255,215,0,0.2)" : "rgba(0,242,254,0.2)"; ?>';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
                     
-                    <div style="background: <?php echo $is_vip_code ? 'linear-gradient(135deg, #ffd700, #f39c12)' : 'linear-gradient(135deg, #00f2fe, #4facfe)'; ?>; color: #000; width: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; border-right: 2px dashed #222;">
-                        <span style="font-weight: 900; font-size: 1.2rem;"><?php echo $v['discount_percentage']; ?>%</span>
+                    <div style="background: <?php echo $is_vip_code ? 'linear-gradient(135deg, #ffd700, #f39c12)' : 'linear-gradient(135deg, #00f2fe, #4facfe)'; ?>; color: #000; width: 90px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; border-right: 2px dashed #222;">
+                        <?php if($v['discount_type'] == 'Fixed'): ?>
+                            <span style="font-weight: 900; font-size: 1.1rem;">RM<?php echo floatval($v['discount_value']); ?></span>
+                        <?php else: ?>
+                            <span style="font-weight: 900; font-size: 1.2rem;"><?php echo floatval($v['discount_value']); ?>%</span>
+                        <?php endif; ?>
                         <span style="font-size: 0.6rem; text-transform: uppercase; font-weight: bold;">OFF</span>
                     </div>
 
@@ -818,7 +895,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <span style="background: rgba(0,242,254,0.1); color: #00f2fe; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(0,242,254,0.3);">PUBLIC</span>
                             <?php endif; ?>
                         </div>
-                        <p style="color: #888; font-size: 0.8rem; margin: 5px 0 0 0;">Apply to: <?php echo $v['target_category']; ?></p>
+                        <p style="color: #ccc; font-size: 0.8rem; margin: 5px 0 2px 0;">For <?php echo $v['target_category']; ?></p>
+                        
+                        <div style="color: #888; font-size: 0.75rem;">
+                            <?php 
+                                $terms = [];
+                                if ($v['min_spend'] > 0) $terms[] = "Min. Spend RM " . floatval($v['min_spend']);
+                                if ($v['max_cap'] > 0) $terms[] = "Capped at RM " . floatval($v['max_cap']);
+                                echo empty($terms) ? "No minimum spend" : implode(' | ', $terms);
+                            ?>
+                        </div>
                     </div>
 
                     <div style="padding: 15px; display: flex; align-items: center; color: <?php echo $is_vip_code ? '#ffd700' : '#00f2fe'; ?>; font-size: 1.2rem;">
@@ -838,54 +924,169 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php include 'includes/footer.php'; ?>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    // ==========================================
+    // 1. 資料初始化 (從 PHP 取得)
+    // ==========================================
+    const cartSubtotals = {
+        'Components': <?php echo (float)$subtotal_components; ?>,
+        'Packages': <?php echo (float)$subtotal_packages; ?>,
+        'All': <?php echo (float)$total_amount; ?>
+    };
+
+    const activeVouchers = {
+        <?php
+        $js_promo_stmt = $conn->query("SELECT * FROM promo_codes WHERE status = 'Active'");
+        while($p = $js_promo_stmt->fetch_assoc()) {
+            echo "'{$p['code_name']}': { type: '{$p['discount_type']}', val: {$p['discount_value']}, min: {$p['min_spend']}, max: {$p['max_cap']}, cat: '{$p['target_category']}', vip: {$p['is_vip_only']} },\n";
+        }
+        ?>
+    };
+
+    const currentTier = '<?php echo $current_tier; ?>';
+    const baseSubtotal = <?php echo (float)$total_amount; ?>;
+    const maxUserCoins = <?php echo (int)$current_coins; ?>;
+    
+    let currentPromoDiscount = 0;
+    let currentCoinsDiscount = 0;
+
+    // ==========================================
+    // 2. 支付方式切換與 UI 顯示控制 (FPX & Card)
+    // ==========================================
+    function togglePaymentSections() {
+        const method = document.getElementById('payment_method').value;
+        const sections = {
+            'Credit Card': document.getElementById('credit_card_section'),
+            'Online Banking (FPX)': document.getElementById('fpx_section'),
+            'E-Wallet': document.getElementById('ewallet_section')
+        };
+        const fpxForm = document.getElementById('fpx_login_form');
+
+        Object.values(sections).forEach(s => { if(s) s.style.display = 'none'; });
+        if(fpxForm) fpxForm.style.display = 'none';
+
+        if (sections[method]) {
+            sections[method].style.display = 'block';
+            if (method === 'Credit Card') toggleNewCardForm();
+            if (method === 'Online Banking (FPX)') toggleFPXForm();
+        }
+    }
+
+    function toggleNewCardForm() {
+        const radios = document.getElementsByName('selected_card');
+        const newCardForm = document.getElementById('new_card_form');
+        let isNew = false;
+        for (let r of radios) { if (r.checked && r.value === 'new') isNew = true; }
+        if(newCardForm) newCardForm.style.display = isNew ? 'block' : 'none';
+    }
+
+    function toggleFPXForm() {
+        const radios = document.getElementsByName('selected_bank');
+        const fpxForm = document.getElementById('fpx_login_form');
+        let isSelected = false;
+        for (let r of radios) { if (r.checked) isSelected = true; }
+        if(fpxForm) fpxForm.style.display = isSelected ? 'block' : 'none';
+    }
+
+    // ==========================================
+    // 3. 智慧計算核心大管家 (優惠券 & 金幣)
+    // ==========================================
+    function updateFinalTotal() {
+        const promoInput = document.getElementById('promo_code_input');
+        const code = promoInput ? promoInput.value.trim() : '';
+        const promoRow = document.getElementById('promo-row');
+        
+        currentPromoDiscount = 0;
+        if (code && activeVouchers[code]) {
+            const v = activeVouchers[code];
+            const targetSubtotal = cartSubtotals[v.cat] || cartSubtotals['All'];
+
+            const isVipValid = (v.vip === 0 || (v.vip === 1 && currentTier === 'VIP'));
+            const isSpendValid = (targetSubtotal >= v.min);
+
+            if (isVipValid && isSpendValid && targetSubtotal > 0) {
+                if (v.type === 'Fixed') {
+                    currentPromoDiscount = Math.min(v.val, targetSubtotal);
+                } else {
+                    currentPromoDiscount = targetSubtotal * (v.val / 100);
+                    if (v.max > 0 && currentPromoDiscount > v.max) currentPromoDiscount = v.max;
+                }
+                document.getElementById('promo-name-display').innerText = code;
+                document.getElementById('promo-amount-display').innerText = '- RM ' + currentPromoDiscount.toFixed(2);
+                promoRow.style.display = 'flex';
+            } else {
+                promoRow.style.display = 'none';
+            }
+        } else {
+            promoRow.style.display = 'none';
+        }
+
+        const amountAfterPromo = Math.max(0, baseSubtotal - currentPromoDiscount);
+
         const useCoinsCheckbox = document.getElementById('use_coins');
         const discountRow = document.getElementById('discount-row');
-        const finalTotalDisplay = document.getElementById('final-total-display');
+        const coinsLabelText = document.getElementById('coins-label-text');
         
+        currentCoinsDiscount = 0;
         if (useCoinsCheckbox) {
-            // 注意：这里读取的 subtotal 应该扣掉 promo_discount，才能跟 PHP 后端的最终金额吻合
-            const subtotal = parseFloat(document.getElementById('subtotal-display').getAttribute('data-subtotal'));
-            const currentPromoDiscount = <?php echo isset($promo_discount) ? $promo_discount : 0; ?>;
-            const discount = parseFloat(document.getElementById('discount-display').getAttribute('data-discount'));
-
-            useCoinsCheckbox.addEventListener('change', function() {
-                let finalAmount = subtotal - currentPromoDiscount;
-                
-                if (this.checked) {
-                    discountRow.style.display = 'flex';
-                    finalAmount = finalAmount - discount;
+            let maxPossibleCoinValue = Math.floor(maxUserCoins / 10);
+            
+            if (useCoinsCheckbox.checked) {
+                if (maxPossibleCoinValue > amountAfterPromo) {
+                    currentCoinsDiscount = amountAfterPromo;
                 } else {
-                    discountRow.style.display = 'none';
+                    currentCoinsDiscount = maxPossibleCoinValue;
                 }
-                
-                if (finalAmount < 0) finalAmount = 0;
-                finalTotalDisplay.innerHTML = 'RM ' + finalAmount.toFixed(2);
-            });
+                const coinsToDeduct = currentCoinsDiscount * 10;
+                document.getElementById('discount-display').innerText = '- RM ' + currentCoinsDiscount.toFixed(2);
+                coinsLabelText.innerHTML = `Use <strong>${coinsToDeduct} Coins</strong> to get <strong style="color: #ffd700;">RM ${currentCoinsDiscount.toFixed(2)} OFF</strong>`;
+                discountRow.style.display = 'flex';
+            } else {
+                coinsLabelText.innerHTML = `Use up to <strong>${maxUserCoins} Coins</strong> for <strong style="color: #ffd700;">RM ${maxPossibleCoinValue.toFixed(2)} OFF</strong>`;
+                discountRow.style.display = 'none';
+            }
         }
+
+        const finalAmount = Math.max(0, amountAfterPromo - currentCoinsDiscount);
+        document.getElementById('final-total-display').innerText = 'RM ' + finalAmount.toFixed(2);
+    }
+
+    // ==========================================
+    // 4. 彈窗與事件綁定
+    // ==========================================
+    function openVoucherModal() {
+        document.getElementById('voucherModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeVoucherModal() {
+        document.getElementById('voucherModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    function selectVoucher(code) {
+        document.getElementById('promo_code_input').value = code;
+        closeVoucherModal();
+        updateFinalTotal();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        togglePaymentSections();
+        updateFinalTotal();
+
+        const promoInput = document.getElementById('promo_code_input');
+        if(promoInput) promoInput.addEventListener('input', updateFinalTotal);
+
+        const coinsCheckbox = document.getElementById('use_coins');
+        if(coinsCheckbox) coinsCheckbox.addEventListener('change', updateFinalTotal);
+        
+        const paymentMethodSelect = document.getElementById('payment_method');
+        if(paymentMethodSelect) paymentMethodSelect.addEventListener('change', togglePaymentSections);
     });
 
-function openVoucherModal() {
-    document.getElementById('voucherModal').style.display = 'block';
-    document.body.style.overflow = 'hidden'; 
-}
-
-function closeVoucherModal() {
-    document.getElementById('voucherModal').style.display = 'none';
-    document.body.style.overflow = 'auto';
-}
-
-function selectVoucher(code) {
-    document.getElementById('promo_code_input').value = code;
-    closeVoucherModal();
-}
-
-window.onclick = function(event) {
-    var modal = document.getElementById('voucherModal');
-    if (event.target == modal) {
-        closeVoucherModal();
+    window.onclick = function(event) {
+        const modal = document.getElementById('voucherModal');
+        if (event.target == modal) closeVoucherModal();
     }
-}
 </script>
 
 </body>
