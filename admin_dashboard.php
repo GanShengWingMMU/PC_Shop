@@ -90,7 +90,7 @@ try {
             <span>GridCity PC</span>
         </h2>
         <ul>
-            <li><a href="admin_dashboard.php">Dashboard</a></li>
+            <li><a href="admin_dashboard.php" class="active">Dashboard</a></li>
             <li><a href="manage_products.php">Products</a></li> 
             
             <li><a href="manage_packages.php">Packages</a></li>
@@ -132,11 +132,71 @@ try {
             </div>
         </div>
 
-        <div class="charts-container">
-            <div class="chart-box">[ Sales Trend Graph Placeholder ]</div>
-            <div class="chart-box">[ Inventory By Category Graph Placeholder ]</div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        
+        <div class="charts-container" style="display: flex; gap: 20px; margin-top: 20px;">
+            <div class="chart-box" style="flex: 1; background: var(--bg-surface); padding: 20px; border-radius: 10px; border: 1px solid var(--border-color);">
+                <canvas id="salesChart"></canvas>
+            </div>
+            <div class="chart-box" style="flex: 1; background: var(--bg-surface); padding: 20px; border-radius: 10px; border: 1px solid var(--border-color);">
+                <canvas id="inventoryChart"></canvas>
+            </div>
         </div>
 
+        <script>
+        // 1. 绘制左侧：销售趋势折线图
+        const salesCtx = document.getElementById('salesChart').getContext('2d');
+        new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: <?php echo json_encode($dates_arr); ?>, // PHP传过来的日期
+                datasets: [{
+                    label: 'Daily Revenue (RM)',
+                    data: <?php echo json_encode($amounts_arr); ?>, // PHP传过来的金额
+                    borderColor: '#00f2fe',
+                    backgroundColor: 'rgba(0, 242, 254, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4 // 让线条变得平滑弯曲
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#a0aec0' } },
+                    title: { display: true, text: 'Last 7 Days Sales Trend', color: '#ffffff', font: { size: 16 } }
+                },
+                scales: {
+                    x: { ticks: { color: '#a0aec0' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#a0aec0' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+
+        // 2. 绘制右侧：分类库存甜甜圈图
+        const invCtx = document.getElementById('inventoryChart').getContext('2d');
+        new Chart(invCtx, {
+            type: 'doughnut',
+            data: {
+                labels: <?php echo json_encode($cat_names); ?>, // PHP传过来的分类名
+                datasets: [{
+                    label: 'Products in Stock',
+                    data: <?php echo json_encode($cat_counts); ?>, // PHP传过来的库存数
+                    backgroundColor: ['#8a2be2', '#00f2fe', '#00e676', '#f39c12', '#ff4d4d', '#9b59b6', '#34495e', '#e84393'],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#a0aec0', padding: 20 } },
+                    title: { display: true, text: 'Inventory By Category', color: '#ffffff', font: { size: 16 } }
+                }
+            }
+        });
+        </script>
         <div class="bottom-sections">
             <div class="table-section">
                 <h3>Recent orders</h3>
@@ -157,7 +217,7 @@ try {
 
                         if ($res_recent && mysqli_num_rows($res_recent) > 0) {
                             while($row = mysqli_fetch_assoc($res_recent)) {
-                                $status = isset($row['status']) ? $row['status'] : 'Completed';
+                                $status = isset($row['order_status']) ? $row['order_status'] : (isset($row['status']) ? $row['status'] : 'Completed');
                                 $status_badge = 'status-pending'; 
                                 if ($status == 'Completed' || $status == 'Shipped') $status_badge = 'status-completed';
 

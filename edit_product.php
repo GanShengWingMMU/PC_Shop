@@ -3,7 +3,8 @@ session_start();
 include 'db_connect.php'; 
 
 
-if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'superadmin')) {
+
+if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && strtolower($_SESSION['role']) !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
