@@ -2,7 +2,7 @@
 session_start();
 include 'db_connect.php'; 
 
-// ✅ 聪明的保安：允许 admin 和 superadmin 进入 (防止大写 SuperAdmin 报错)
+// 聪明的保安
 if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && strtolower($_SESSION['role']) !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
@@ -10,59 +10,77 @@ if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && s
 
 $error = "";
 
-// 1. 检查有没有传进来要修改的套餐 ID
+// 1. 检查传进来的 ID
 if (!isset($_GET['id'])) {
     header("Location: manage_packages.php");
     exit();
 }
 $package_id = intval($_GET['id']);
 
-// 2. 抓取这个套餐当前的旧数据
+// 2. 抓取旧数据
 $sql_fetch = "SELECT * FROM packages WHERE package_id = $package_id";
 $res_fetch = mysqli_query($conn, $sql_fetch);
 
 if (!$res_fetch || mysqli_num_rows($res_fetch) == 0) {
-    // 找不到这个套餐就弹回列表页
     header("Location: manage_packages.php");
     exit();
 }
 $package = mysqli_fetch_assoc($res_fetch);
 
-// 3. 处理表单更新提交
+// 3. 处理表单提交
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $package_name = mysqli_real_escape_string($conn, $_POST['package_name']);
     $description = mysqli_real_escape_string($conn, $_POST['description']);
     $price = floatval($_POST['price']);
-    $image_url = mysqli_real_escape_string($conn, $_POST['image_url']);
     $target_persona = mysqli_real_escape_string($conn, $_POST['target_persona']);
     $stock_status = mysqli_real_escape_string($conn, $_POST['stock_status']);
     
-    // 抓取评分数据
+    // 🌟 默认保留数据库里原本的图片路径
+    $image_url = $package['image_url'];
+    
+    // 🌟 处理电脑本地文件上传 (如果选了新图片，就覆盖)
+    if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] == UPLOAD_ERR_OK) {
+        $upload_dir = 'uploads/';
+        if (!is_dir($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
+        
+        $file_name = time() . '_' . preg_replace("/[^a-zA-Z0-9.]/", "", basename($_FILES['image_file']['name']));
+        $target_path = $upload_dir . $file_name;
+        
+        if (move_uploaded_file($_FILES['image_file']['tmp_name'], $target_path)) {
+            $image_url = $target_path; // 成功上传，替换成新图片的路径
+        } else {
+            $error = "Failed to move uploaded file.";
+        }
+    }
+
     $score_gamer = intval($_POST['score_gamer']);
     $score_creator = intval($_POST['score_creator']);
     $score_student = intval($_POST['score_student']);
     $score_enthusiast = intval($_POST['score_enthusiast']);
 
-    // 更新数据库 SQL
-    $update_sql = "UPDATE packages SET 
-                   package_name = '$package_name', 
-                   description = '$description', 
-                   price = $price, 
-                   image_url = '$image_url', 
-                   target_persona = '$target_persona', 
-                   stock_status = '$stock_status', 
-                   score_gamer = $score_gamer, 
-                   score_creator = $score_creator, 
-                   score_student = $score_student, 
-                   score_enthusiast = $score_enthusiast 
-                   WHERE package_id = $package_id";
-                   
-    if (mysqli_query($conn, $update_sql)) {
-        // 更新成功，带上 success=2 跳回套餐列表页
-        header("Location: manage_packages.php?success=2");
-        exit();
-    } else {
-        $error = "Update Failed: " . mysqli_error($conn);
+    if (empty($error)) {
+        // 更新数据库 SQL
+        $update_sql = "UPDATE packages SET 
+                       package_name = '$package_name', 
+                       description = '$description', 
+                       price = $price, 
+                       image_url = '$image_url', 
+                       target_persona = '$target_persona', 
+                       stock_status = '$stock_status', 
+                       score_gamer = $score_gamer, 
+                       score_creator = $score_creator, 
+                       score_student = $score_student, 
+                       score_enthusiast = $score_enthusiast 
+                       WHERE package_id = $package_id";
+                       
+        if (mysqli_query($conn, $update_sql)) {
+            header("Location: manage_packages.php?success=2");
+            exit();
+        } else {
+            $error = "Update Failed: " . mysqli_error($conn);
+        }
     }
 }
 ?>
@@ -82,7 +100,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         .form-card::before {
             content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: linear-gradient(to right, #00f2fe, #8a2be2); /* 科技渐变边条 */
+            background: linear-gradient(to right, #00f2fe, #8a2be2);
         }
         .form-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
@@ -129,7 +147,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
             ?>
 
-            <form action="" method="POST">
+            <form action="" method="POST" enctype="multipart/form-data">
                 <div class="form-grid">
                     
                     <div class="form-group full-width">
@@ -148,14 +166,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
 
                     <div class="form-group">
-                        <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Stock Status</label>
-                        <select name="stock_status" class="form-control">
-                            <option value="Available" <?php echo ($package['stock_status'] == 'Available') ? 'selected' : ''; ?>>Available</option>
-                            <option value="Out of Stock" <?php echo ($package['stock_status'] == 'Out of Stock') ? 'selected' : ''; ?>>Out of Stock</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
                         <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Target Persona</label>
                         <select name="target_persona" class="form-control">
                             <option value="Gamer" <?php echo ($package['target_persona'] == 'Gamer') ? 'selected' : ''; ?>>Gamer</option>
@@ -166,8 +176,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
 
                     <div class="form-group">
-                        <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Image URL</label>
-                        <input type="text" name="image_url" class="form-control" value="<?php echo htmlspecialchars($package['image_url']); ?>">
+                        <label style="color: var(--accent-purple); font-weight: bold; margin-bottom: 8px; display:block;"><i class="fas fa-upload"></i> Upload Image (From PC)</label>
+                        <input type="file" name="image_file" class="form-control" accept="image/*" style="padding: 6px;">
+                        <small style="color: var(--text-muted); display: block; margin-top: 5px;">Leave empty to keep current image.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Stock Status</label>
+                        <select name="stock_status" class="form-control">
+                            <option value="Available" <?php echo ($package['stock_status'] == 'Available') ? 'selected' : ''; ?>>Available</option>
+                            <option value="Out of Stock" <?php echo ($package['stock_status'] == 'Out of Stock') ? 'selected' : ''; ?>>Out of Stock</option>
+                        </select>
                     </div>
 
                     <div class="full-width" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);">
