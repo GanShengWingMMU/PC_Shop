@@ -50,7 +50,7 @@ if (isset($_GET['action'])) {
 }
 
 // ==========================================
-// 🚀 3. 黑匣子恢复引擎 (只恢复 ID，不存死数据)
+// 🚀 3. 黑匣子恢复引擎 (安全加固版：防篡改与兼容性嗅探)
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])) {
     $backup_ids = json_decode($_POST['restore_backup_ids'], true);
@@ -58,11 +58,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])
         $_SESSION['pc_build'] = []; 
         $id_list = implode(',', array_map('intval', $backup_ids));
         
-        $res = $conn->query("SELECT product_id, category_id FROM products WHERE product_id IN ($id_list) AND stock_quantity > 0");
+        // 抓取所有配件及其兼容性屬性
+        $res = $conn->query("SELECT product_id, category_id, socket_type, ram_type FROM products WHERE product_id IN ($id_list) AND stock_quantity > 0 ORDER BY category_id ASC");
+        
+        $temp_build = [];
+        $check_socket = "";
+        $check_ram = "";
+        $conflict_found = false;
+
         while ($row = $res->fetch_assoc()) {
-            $_SESSION['pc_build'][$row['category_id']] = (int)$row['product_id'];
+            $cid = $row['category_id'];
+            
+            // 兼容性防呆檢查核心
+            if ($cid == 1 && !empty($row['socket_type'])) {
+                $check_socket = $row['socket_type'];
+            }
+            if ($cid == 2) {
+                if (!empty($check_socket) && !empty($row['socket_type']) && $check_socket !== $row['socket_type']) {
+                    $conflict_found = true;
+                    continue; // 發現主板與CPU不兼容，直接丟棄主板
+                }
+                if (!empty($row['ram_type'])) $check_ram = $row['ram_type'];
+            }
+            if ($cid == 3) {
+                if (!empty($check_ram) && !empty($row['ram_type']) && $check_ram !== $row['ram_type']) {
+                    $conflict_found = true;
+                    continue; // 發現RAM與主板不兼容，直接丟棄RAM
+                }
+            }
+            $temp_build[$cid] = (int)$row['product_id'];
         }
-        $_SESSION['success_msg'] = "Session recovered! Valid blueprint has been restored.";
+        
+        $_SESSION['pc_build'] = $temp_build;
+
+        if ($conflict_found) {
+            $_SESSION['error_msg'] = "Session recovered partially. Some incompatible or modified parts were automatically removed for safety.";
+        } else {
+            $_SESSION['success_msg'] = "Session recovered! Valid blueprint has been restored.";
+        }
         header("Location: builder.php");
         exit();
     }
@@ -233,6 +266,92 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     .metric-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 4px; font-weight: 600; }
     .metric-bar-bg { width: 100%; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
     .metric-bar-fill { height: 100%; border-radius: 3px; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    /* ==============================================================
+       🌟 全息透视装机线框图 (Holographic Wireframe) V4.0 像素级防溢出版 🌟
+       ============================================================== */
+    .blueprint-wrapper {
+        position: relative; width: 100%; height: 320px;
+        background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 242, 254, 0.2);
+        border-radius: 12px; margin-bottom: 25px; display: flex;
+        align-items: center; justify-content: center; overflow: hidden;
+        box-shadow: inset 0 0 40px rgba(0,0,0,0.9);
+    }
+    .blueprint-wrapper::before {
+        content: ''; position: absolute; width: 100%; height: 100%;
+        background-image: linear-gradient(rgba(0, 242, 254, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.04) 1px, transparent 1px);
+        background-size: 20px 20px; z-index: 0; pointer-events: none;
+    }
+    
+    /* 🚨 画布严格锁定为 280px 宽，保证绝对适配任何情况下的 Sidebar，不会被 cut off */
+    .bp-canvas { position: relative; width: 280px; height: 280px; z-index: 1; }
+
+    /* 强制盒模型，边框不外溢 */
+    .bp-node, .bp-container { box-sizing: border-box; }
+
+    /* 基礎節點 (實際物理零件) */
+    .bp-node {
+        position: absolute; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.6);
+        display: flex; flex-direction: column; justify-content: center; align-items: center;
+        border-radius: 6px; transition: all 0.4s ease; backdrop-filter: blur(4px);
+    }
+    .bp-node i { font-size: 1rem; color: #555; transition: 0.4s ease; }
+    .bp-node span { font-size: 8px; font-weight: 800; margin-top: 4px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.4s ease; text-align: center; white-space: nowrap; }
+
+    /* 基礎節點 (容器 - 极度轻量化，变成纯虚线框) */
+    .bp-container {
+        position: absolute; border: 1px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.1);
+        border-radius: 8px; transition: all 0.4s ease;
+    }
+    .bp-container > .cont-label {
+        position: absolute; top: -7px; left: 10px; font-size: 9px; font-weight: 900; color: #777;
+        text-transform: uppercase; letter-spacing: 1px; transition: 0.4s ease;
+        background: #0b0c10; padding: 0 4px;
+    }
+
+    /* ⚡ 激活狀態 (絲滑點亮特效) */
+    .bp-node.active {
+        border-color: var(--bp-color); background: rgba(var(--bp-rgb), 0.15);
+        box-shadow: 0 0 12px rgba(var(--bp-rgb), 0.25), inset 0 0 6px rgba(var(--bp-rgb), 0.15);
+    }
+    .bp-node.active i { color: var(--bp-color); text-shadow: 0 0 10px var(--bp-color); transform: scale(1.1); }
+    .bp-node.active span { color: #fff; text-shadow: 0 0 5px var(--bp-color); }
+
+    .bp-container.active {
+        border-color: var(--bp-color); background: rgba(var(--bp-rgb), 0.03);
+        box-shadow: 0 0 20px rgba(var(--bp-rgb), 0.1) inset;
+    }
+    .bp-container.active > .cont-label { color: var(--bp-color); text-shadow: 0 0 8px var(--bp-color); }
+
+    /* 🧭 V4.0 像素级重算坐标 (宽 280px) */
+    /* 外部组件 */
+    .bp-monitor { left: 0px; top: 40px; width: 60px; height: 70px; --bp-color: #facc15; --bp-rgb: 250, 204, 21; }
+    .bp-os { left: 0px; top: 130px; width: 60px; height: 50px; --bp-color: #00e676; --bp-rgb: 0, 230, 118; border-radius: 8px; }
+
+    /* 机箱层 - 宽度 205px (刚好占据 75~280 的空间) */
+    .bp-case { left: 75px; top: 10px; width: 205px; height: 260px; --bp-color: #00f2fe; --bp-rgb: 0, 242, 254; }
+
+    /* 机箱内部定位 */
+    .bp-fans { right: 5px; top: 15px; width: 25px; height: 230px; --bp-color: #00f2fe; --bp-rgb: 0, 242, 254; gap: 15px; }
+    .bp-fans i { font-size: 0.9rem; animation: spin 4s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    
+    .bp-psu { left: 10px; bottom: 10px; width: 145px; height: 45px; --bp-color: #ff007f; --bp-rgb: 255, 0, 127; flex-direction: row; gap: 8px; }
+    
+    /* 主板层 - 宽度 145px */
+    .bp-mobo { left: 10px; top: 15px; width: 145px; height: 180px; --bp-color: #a855f7; --bp-rgb: 168, 85, 247; }
+
+    /* 主板内部定位 (散开排列，绝不重叠) */
+    .bp-cooler { left: 35px; top: 10px; width: 65px; height: 30px; --bp-color: #00e676; --bp-rgb: 0, 230, 118; flex-direction: row; gap: 5px; }
+    .bp-cooler i { font-size: 0.8rem; }
+    .bp-cpu { left: 40px; top: 50px; width: 55px; height: 50px; --bp-color: #ff007f; --bp-rgb: 255, 0, 127; }
+    .bp-cpu i { font-size: 1.4rem; }
+    .bp-ram { left: 105px; top: 15px; width: 30px; height: 85px; --bp-color: #facc15; --bp-rgb: 250, 204, 21; }
+    .bp-ssd { left: 5px; top: 50px; width: 25px; height: 50px; --bp-color: #00e676; --bp-rgb: 0, 230, 118; }
+    .bp-gpu { left: 5px; top: 120px; width: 130px; height: 45px; --bp-color: #f97316; --bp-rgb: 249, 115, 22; flex-direction: row; gap: 8px;}
+
+    /* 横向组件的图标与文字间距重置 */
+    .bp-psu span, .bp-gpu span, .bp-cooler span { margin-top: 0; }
 </style>
 
 <div class="builder-dashboard">
@@ -407,7 +526,54 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         <h3 style="margin: 0; color: #fff; font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 10px;">
             <i class="fas fa-receipt" style="color: var(--accent);"></i> SYSTEM SUMMARY
         </h3>
-        
+
+        <div class="blueprint-wrapper">
+            <div class="bp-canvas">
+                <div class="bp-node bp-monitor <?= isset($cart[11]) ? 'active' : '' ?>">
+                    <i class="fas fa-desktop"></i><span>Monitor</span>
+                </div>
+                
+                <div class="bp-node bp-os <?= isset($cart[9]) ? 'active' : '' ?>">
+                    <i class="fab fa-windows"></i><span>System</span>
+                </div>
+                
+                <div class="bp-container bp-case <?= isset($cart[7]) ? 'active' : '' ?>">
+                    <span class="cont-label">PC Case</span>
+                    
+                    <div class="bp-node bp-fans <?= isset($cart[10]) ? 'active' : '' ?>">
+                        <i class="fas fa-fan"></i><i class="fas fa-fan"></i><i class="fas fa-fan"></i>
+                    </div>
+                    
+                    <div class="bp-node bp-psu <?= isset($cart[6]) ? 'active' : '' ?>">
+                        <i class="fas fa-plug"></i><span>Power Unit</span>
+                    </div>
+                    
+                    <div class="bp-container bp-mobo <?= isset($cart[2]) ? 'active' : '' ?>">
+                        <span class="cont-label">Motherboard</span>
+                        
+                        <div class="bp-node bp-cooler <?= isset($cart[8]) ? 'active' : '' ?>">
+                            <i class="fas fa-snowflake"></i><span>Cooler</span>
+                        </div>
+                        
+                        <div class="bp-node bp-cpu <?= isset($cart[1]) ? 'active' : '' ?>">
+                            <i class="fas fa-microchip"></i><span>CPU</span>
+                        </div>
+                        
+                        <div class="bp-node bp-ram <?= isset($cart[3]) ? 'active' : '' ?>">
+                            <i class="fas fa-memory"></i><span>RAM</span>
+                        </div>
+                        
+                        <div class="bp-node bp-ssd <?= isset($cart[5]) ? 'active' : '' ?>">
+                            <i class="fas fa-hdd"></i><span>SSD</span>
+                        </div>
+                        
+                        <div class="bp-node bp-gpu <?= isset($cart[4]) ? 'active' : '' ?>">
+                            <i class="fas fa-tv"></i><span>Graphics Card</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div style="display: flex; flex-direction: column; gap: 20px;">
             
             <div>
@@ -453,22 +619,87 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 
             <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                 <?php if ($progress == 100): ?>
-                    <a href="name_build.php" class="btn-action btn-select" style="text-align: center; font-size: 1.1rem; padding: 15px; width: 100%; box-sizing: border-box;" title="Discounts applied at checkout!">
+                    <button type="button" onclick="openProcessModal('checkout')" class="btn-action btn-select" style="text-align: center; font-size: 1.1rem; padding: 15px; width: 100%; box-sizing: border-box; border: none; cursor: pointer;" title="Discounts applied at checkout!">
                         CHECKOUT <i class="fas fa-shopping-cart" style="margin-left: 8px;"></i>
-                    </a>
+                    </button>
                 <?php else: ?>
                     <span class="btn-action" style="background: rgba(255,255,255,0.05); color: #64748b; cursor: not-allowed; padding: 15px; border: 1px dashed rgba(255,255,255,0.1); text-align: center; width: 100%; box-sizing: border-box;">
                         Complete Build to Checkout
                     </span>
                 <?php endif; ?>
                 
-                <a href="save_build.php" class="btn-action btn-change" style="text-align: center; padding: 12px; width: 100%; box-sizing: border-box;">
-                    <i class="fas fa-save" style="margin-right: 8px;"></i> Save Draft
-                </a>
+                <?php if ($progress > 0): ?>
+                    <button type="button" onclick="openProcessModal('save')" class="btn-action btn-change" style="text-align: center; padding: 12px; width: 100%; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.08); cursor: pointer; background: transparent;">
+                        <i class="fas fa-save" style="margin-right: 8px;"></i> Save Draft
+                    </button>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
+
+<div id="processBuildModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(8px);">
+    <div style="background: rgba(10, 10, 15, 0.95); margin: 10% auto; padding: 0; width: 90%; max-width: 480px; border-radius: 12px; border: 1px solid #00f2fe; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.7), inset 0 0 20px rgba(0, 242, 254, 0.05); transform: translateY(-20px); animation: modalSlideIn 0.3s forwards;">
+        
+        <div style="padding: 20px 25px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+            <h3 style="margin: 0; color: #fff; font-weight: 900; letter-spacing: -0.5px;" id="processModalTitle"><i class="fa-solid fa-server" style="color: #00f2fe;"></i> Process Configuration</h3>
+            <span onclick="closeProcessModal()" style="color: #64748b; cursor: pointer; font-size: 1.5rem; transition: 0.3s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#64748b'">&times;</span>
+        </div>
+
+        <div style="padding: 30px 25px;">
+            <div style="text-align: center; margin-bottom: 25px;">
+                <div style="font-size: 0.85rem; color: #888; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Total Build Value</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 2rem; color: #00f2fe; font-weight: 900; text-shadow: 0 0 15px rgba(0,242,254,0.3);">RM <?php echo number_format($total_price, 2); ?></div>
+            </div>
+
+            <form action="process_build.php" method="POST">
+                <input type="hidden" name="process_action" id="processActionInput" value="save">
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="color: #00f2fe; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">Name Your Rig (Optional)</label>
+                    <input type="text" name="build_name" placeholder="e.g. Project Midnight, Titan V..." style="width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 14px; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; transition: 0.3s;" onfocus="this.style.borderColor='#00f2fe'; this.style.boxShadow='0 0 15px rgba(0,242,254,0.1)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='none';">
+                </div>
+
+                <button type="submit" id="processSubmitBtn" style="background: #ffffff; color: #000; font-weight: 800; padding: 15px; width: 100%; border-radius: 8px; border: none; cursor: pointer; transition: 0.3s; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(255,255,255,0.1);">
+                    Confirm Action
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes modalSlideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+<script>
+    function openProcessModal(action) {
+        document.getElementById('processBuildModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        
+        document.getElementById('processActionInput').value = action;
+        
+        const title = document.getElementById('processModalTitle');
+        const btn = document.getElementById('processSubmitBtn');
+        
+        if (action === 'checkout') {
+            title.innerHTML = '<i class="fa-solid fa-cart-arrow-down" style="color: #ffd700;"></i> Checkout Build';
+            btn.innerHTML = 'Add to Cart & Checkout <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i>';
+            btn.style.background = '#ffd700';
+            btn.style.color = '#000';
+        } else {
+            title.innerHTML = '<i class="fa-solid fa-save" style="color: #00e676;"></i> Save Draft';
+            btn.innerHTML = 'Secure to Armory <i class="fa-solid fa-shield-halved" style="margin-left: 8px;"></i>';
+            btn.style.background = '#00e676';
+            btn.style.color = '#000';
+        }
+    }
+
+    function closeProcessModal() {
+        document.getElementById('processBuildModal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+</script>
 
 <?php include 'includes/footer.php'; ?>
 

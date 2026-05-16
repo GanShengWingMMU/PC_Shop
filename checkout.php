@@ -83,14 +83,14 @@ while ($row = $cart_result->fetch_assoc()) {
         $pkg_id = $row['package_id'];
         $dynamic_pkg_price = 0;
         
-        $pkg_sql = "SELECT p.price FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = ?";
+        $pkg_sql = "SELECT p.price, pi.quantity FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = ?";
         $pkg_stmt = $conn->prepare($pkg_sql);
         $pkg_stmt->bind_param("i", $pkg_id);
         $pkg_stmt->execute();
         $pkg_res = $pkg_stmt->get_result();
         
         while ($p_row = $pkg_res->fetch_assoc()) {
-            $dynamic_pkg_price += $p_row['price'];
+            $dynamic_pkg_price += ($p_row['price'] * $p_row['quantity']);
         }
         $pkg_stmt->close();
         
@@ -115,334 +115,281 @@ $stmt->close();
 $promo_discount = 0;
 $applied_promo_code = '';
 
+// ==========================================
+// 🛡️ 重構區：嚴格安全的 POST 處理邏輯
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
-    $shipping_address = mysqli_real_escape_string($conn, $_POST['shipping_address']);
-    $final_payment_method = $_POST['payment_method'] ?? '';
-
-    if (empty($final_payment_method)) {
-        $_SESSION['error_msg'] = "Please select a payment method before checking out.";
-        header("Location: checkout.php");
-        exit();
-    }
-
-    $use_coins = isset($_POST['use_coins']) ? true : false;
-    $coins_used = 0;
-    $coin_discount = 0;
-    $promo_discount = 0; 
-    $applied_promo_code = trim($_POST['applied_promo_code'] ?? ''); 
-
-    // ==========================================
-    // 🛒 分類折扣引擎 (Smart Discount Engine)
-    // ==========================================
-    if (!empty($applied_promo_code)) {
-        $subtotal_components = 0; 
-        $subtotal_packages = 0;
+    // 🚨 核心防護：第一時間開啟事務！
+    $conn->begin_transaction();
+    try {
+        // 1. 地址安全處理 (從後端組合字串，不信任前端傳值)
+        $address_id = intval($_POST['shipping_address_id'] ?? 0);
+        if ($address_id <= 0) {
+            throw new Exception("Please select a valid shipping address.");
+        }
         
-        foreach ($cart_items as $item) {
-            $price = 0;
-            if ($item['product_id']) $price = $item['product_price'];
-            elseif ($item['pc_build']) $price = $item['build_price'];
-            elseif ($item['package_id']) $price = $item['package_price'];
-            
-            $item_price = $price * $item['quantity'];
-            
-            if (!empty($item['product_id']) && empty($item['pc_build']) && empty($item['package_id'])) {
-                $subtotal_components += $item_price; 
-            } else {
-                $subtotal_packages += $item_price;   
-            }
+        // 💡 確保這裡的 ID 欄位名稱對應你的資料庫 (可能是 address_id 或 id)
+        $addr_stmt = $conn->prepare("SELECT * FROM customer_addresses WHERE address_id = ? AND customer_id = ?");
+        $addr_stmt->bind_param("ii", $address_id, $customer_id);
+        $addr_stmt->execute();
+        $addr_res = $addr_stmt->get_result();
+        if ($addr_res->num_rows === 0) {
+            throw new Exception("Security Alert: Invalid shipping address selected.");
+        }
+        $addr_data = $addr_res->fetch_assoc();
+        $addr_stmt->close();
+
+        // 組合地址字串供 Order 記錄
+        $recipient = !empty($addr_data['recipient_name']) ? $addr_data['recipient_name'] : 'Customer';
+        $phone = !empty($addr_data['phone_number']) ? $addr_data['phone_number'] : '000-0000000';
+        if (!empty($addr_data['address_line1'])) {
+            $shipping_address = $recipient . " | " . $phone . "\n" . $addr_data['address_line1'] . ", " . $addr_data['postcode'] . " " . $addr_data['city'] . ", " . $addr_data['state'];
+        } else {
+            $shipping_address = $recipient . " | " . $phone . "\n" . $addr_data['full_address'];
         }
 
-        $promo_stmt = $conn->prepare("SELECT * FROM promo_codes WHERE code_name = ? AND status = 'Active'");
-        $promo_stmt->bind_param("s", $applied_promo_code);
-        $promo_stmt->execute();
-        $promo_res = $promo_stmt->get_result();
-        
-        if ($promo_row = $promo_res->fetch_assoc()) {
-            if ($promo_row['is_vip_only'] == 1 && $current_tier !== 'VIP') {
-                $_SESSION['error_msg'] = "The promo code '{$applied_promo_code}' is exclusive to ELITE members only.";
-                header("Location: checkout.php");
-                exit();
-            } else {
-                $target = $promo_row['target_category'];
-                
-                // 完美保留隊友的變數修復邏輯
-                $target_subtotal = 0;
-                if ($target === 'Components') $target_subtotal = $subtotal_components;
-                elseif ($target === 'Packages') $target_subtotal = $subtotal_packages;
-                else $target_subtotal = $subtotal_components + $subtotal_packages;
+        $final_payment_method = $_POST['payment_method'] ?? '';
+        if (empty($final_payment_method)) {
+            throw new Exception("Please select a payment method before checking out.");
+        }
 
-                if ($target_subtotal < $promo_row['min_spend']) {
-                    $_SESSION['error_msg'] = "Min. spend of RM " . number_format($promo_row['min_spend'], 2) . " on {$target} is required to use this code.";
-                    header("Location: checkout.php");
-                    exit();
+        $use_coins = isset($_POST['use_coins']) ? true : false;
+        $coins_used = 0;
+        $coin_discount = 0;
+        $promo_discount = 0; 
+        $applied_promo_code = trim($_POST['applied_promo_code'] ?? ''); 
+        $promo_id_to_log = null;
+
+        // 2. 嚴格優惠券核銷 (防止併發重複使用)
+        if (!empty($applied_promo_code)) {
+            // 重新計算分類小計 (防前端篡改)
+            $sub_comp = 0; $sub_pkg = 0;
+            foreach ($cart_items as $item) {
+                $price = $item['product_id'] ? $item['product_price'] : ($item['pc_build'] ? $item['build_price'] : $item['package_price']);
+                $item_price = $price * $item['quantity'];
+                if ($item['product_id']) { $sub_comp += $item_price; } else { $sub_pkg += $item_price; }
+            }
+
+            // 🚨 FOR UPDATE 鎖定優惠券狀態，並聯表驗證是否已使用
+            $promo_stmt = $conn->prepare("
+                SELECT p.* FROM promo_codes p 
+                LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = ? 
+                WHERE p.code_name = ? AND p.status = 'Active' AND uv.promo_id IS NULL
+                FOR UPDATE
+            ");
+            $promo_stmt->bind_param("is", $customer_id, $applied_promo_code);
+            $promo_stmt->execute();
+            $promo_res = $promo_stmt->get_result();
+            
+            if ($promo_row = $promo_res->fetch_assoc()) {
+                if ($promo_row['is_vip_only'] == 1 && $current_tier !== 'VIP') {
+                    throw new Exception("The promo code '{$applied_promo_code}' is exclusive to ELITE members only.");
                 }
+                
+                $target = $promo_row['target_category'];
+                $target_subtotal = ($target === 'Components') ? $sub_comp : (($target === 'Packages') ? $sub_pkg : ($sub_comp + $sub_pkg));
 
-                if ($target_subtotal <= 0) {
-                    $_SESSION['error_msg'] = "No eligible {$target} items in your cart for this promo code.";
-                    header("Location: checkout.php");
-                    exit();
+                if ($target_subtotal < $promo_row['min_spend'] || $target_subtotal <= 0) {
+                    throw new Exception("Order does not meet criteria for this promo code.");
                 }
 
                 if ($promo_row['discount_type'] === 'Fixed') {
                     $promo_discount = min($promo_row['discount_value'], $target_subtotal);
                 } else {
                     $promo_discount = $target_subtotal * ($promo_row['discount_value'] / 100);
-                    
                     if ($promo_row['max_cap'] > 0 && $promo_discount > $promo_row['max_cap']) {
                         $promo_discount = $promo_row['max_cap'];
                     }
                 }
-            }
-        } else {
-            $_SESSION['error_msg'] = "Invalid or expired promo code: '{$applied_promo_code}'.";
-            header("Location: checkout.php");
-            exit();
-        }
-        $promo_stmt->close();
-    }
-
-    // 🌟 先計算扣除優惠券後的剩餘金額 (防超額扣款)
-    $amount_after_promo = $total_amount - $promo_discount;
-    if ($amount_after_promo < 0) $amount_after_promo = 0;
-
-    if ($use_coins && $current_coins > 0) {
-        $max_coin_discount = floor($current_coins / 10); // 玩家最多可以扣多少錢
-
-        if ($max_coin_discount > $amount_after_promo) {
-            // 🚨 如果金幣折抵超過了結帳金額，只扣剛好可以抵銷的數量！
-            $coin_discount = $amount_after_promo;
-            $coins_used = $coin_discount * 10;
-        } else {
-            // 金幣不夠抵銷全部，就全扣
-            $coin_discount = $max_coin_discount;
-            $coins_used = $coin_discount * 10; 
-        }
-    }
-
-    $discount_amount = $promo_discount + $coin_discount; 
-    $final_amount = $total_amount - $discount_amount;
-    if ($final_amount < 0) $final_amount = 0;
-
-    // ==========================================
-    // 🏦 金流驗證與扣款邏輯 (全能銀行系統)
-    // ==========================================
-    $bank_account_id_to_deduct = null; 
-
-    if ($final_payment_method === 'Credit Card') {
-        $selected_card = $_POST['selected_card'] ?? '';
-
-        if ($selected_card === 'new') {
-            $card_name = trim($_POST['dummy_card_name']);
-            $card_number = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
-            $card_cvc = trim($_POST['dummy_card_cvc']);
-
-            $bank_query = "SELECT * FROM bank WHERE card_number = ? AND cvc = ?";
-            $bank_stmt = $conn->prepare($bank_query);
-            $bank_stmt->bind_param("ss", $card_number, $card_cvc);
-            $bank_stmt->execute();
-            $bank_result = $bank_stmt->get_result();
-
-            if ($bank_result->num_rows > 0) {
-                $bank_data = $bank_result->fetch_assoc();
-                $bank_account_id_to_deduct = $bank_data['id']; 
-
-                $last_four = substr($card_number, -4);
-                $final_payment_method = "Visa ending in " . $last_four; 
+                $promo_id_to_log = $promo_row['promo_id']; 
             } else {
-                $_SESSION['error_msg'] = "Bank Declined: Invalid Card Number or CVC. Please try again.";
-                header("Location: checkout.php");
-                exit();
+                throw new Exception("Invalid, expired, or already used promo code: '{$applied_promo_code}'.");
             }
-            $bank_stmt->close();
+            $promo_stmt->close();
+        }
 
-        } else {
-            $card_id = intval($selected_card);
-            $saved_query = "SELECT card_brand, last_four_digits, bank_id FROM saved_cards WHERE card_id = ? AND customer_id = ?";
-            $saved_stmt = $conn->prepare($saved_query);
-            $saved_stmt->bind_param("ii", $card_id, $customer_id);
-            $saved_stmt->execute();
-            $saved_result = $saved_stmt->get_result();
+        $amount_after_promo = max(0, $total_amount - $promo_discount);
+
+        if ($use_coins && $current_coins > 0) {
+            $max_coin_discount = floor($current_coins / 10);
+            $coin_discount = min($max_coin_discount, $amount_after_promo);
+            $coins_used = $coin_discount * 10;
+        }
+
+        $discount_amount = $promo_discount + $coin_discount; 
+        $final_amount = max(0, $total_amount - $discount_amount);
+
+        // 3. 金流驗證前置 (取得 Bank ID，暫不扣款)
+        $bank_account_id_to_deduct = null; 
+        if ($final_payment_method === 'Credit Card') {
+            $selected_card = $_POST['selected_card'] ?? '';
+            if ($selected_card === 'new') {
+                $card_num = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
+                $card_cvc = trim($_POST['dummy_card_cvc']);
+                $bank_stmt = $conn->prepare("SELECT id FROM bank WHERE card_number = ? AND cvc = ?");
+                $bank_stmt->bind_param("ss", $card_num, $card_cvc);
+                $bank_stmt->execute();
+                $bank_result = $bank_stmt->get_result();
+                if ($bank_result->num_rows > 0) {
+                    $bank_account_id_to_deduct = $bank_result->fetch_assoc()['id']; 
+                    $final_payment_method = "Visa ending in " . substr($card_num, -4); 
+                } else {
+                    throw new Exception("Bank Declined: Invalid Card Number or CVC. Please try again.");
+                }
+            } else {
+                $card_id = intval($selected_card);
+                $saved_stmt = $conn->prepare("SELECT card_brand, last_four_digits, bank_id FROM saved_cards WHERE card_id = ? AND customer_id = ?");
+                $saved_stmt->bind_param("ii", $card_id, $customer_id);
+                $saved_stmt->execute();
+                if ($saved_row = $saved_stmt->get_result()->fetch_assoc()) {
+                    $final_payment_method = $saved_row['card_brand'] . " ending in " . $saved_row['last_four_digits'];
+                    $bank_account_id_to_deduct = $saved_row['bank_id']; 
+                } else {
+                    throw new Exception("Selected card not found.");
+                }
+            }
+        } elseif ($final_payment_method === 'Online Banking (FPX)') {
+            $fpx_user = trim($_POST['fpx_username'] ?? ''); 
+            $fpx_pass = trim($_POST['fpx_password'] ?? '');
+            $fpx_stmt = $conn->prepare("SELECT id FROM bank WHERE fpx_username = ? AND fpx_password = ?");
+            $fpx_stmt->bind_param("ss", $fpx_user, $fpx_pass);
+            $fpx_stmt->execute();
+            if ($fpx_data = $fpx_stmt->get_result()->fetch_assoc()) {
+                 $bank_account_id_to_deduct = $fpx_data['id']; 
+                 $final_payment_method = "FPX - " . ($_POST['selected_bank'] ?? 'Bank');
+            } else {
+                 throw new Exception("FPX Login Failed: Invalid username or password.");
+            }
+        }
+
+        // 4. 🚨 終極防護：原子化拆解所有配件，統一執行庫存鎖定與扣減
+        $required_products = []; 
+        
+        foreach ($cart_items as $item) {
+            $qty = $item['quantity'];
             
-            if ($saved_row = $saved_result->fetch_assoc()) {
-                $final_payment_method = $saved_row['card_brand'] . " ending in " . $saved_row['last_four_digits'];
-                $bank_account_id_to_deduct = $saved_row['bank_id']; 
+            if ($item['product_id']) {
+                $pid = $item['product_id'];
+                $required_products[$pid] = ($required_products[$pid] ?? 0) + $qty;
+            } elseif ($item['pc_build']) {
+                $build_stmt = $conn->prepare("SELECT product_id, quantity FROM build_items WHERE pc_build = ?");
+                $build_stmt->bind_param("i", $item['pc_build']);
+                $build_stmt->execute();
+                $b_res = $build_stmt->get_result();
+                while ($b_item = $b_res->fetch_assoc()) {
+                    $pid = $b_item['product_id'];
+                    $required_products[$pid] = ($required_products[$pid] ?? 0) + ($b_item['quantity'] * $qty);
+                }
+                $build_stmt->close();
+            } elseif ($item['package_id']) {
+                $pkg_stmt = $conn->prepare("SELECT product_id, quantity FROM package_items WHERE package_id = ?");
+                $pkg_stmt->bind_param("i", $item['package_id']);
+                $pkg_stmt->execute();
+                $p_res = $pkg_stmt->get_result();
+                while ($p_item = $p_res->fetch_assoc()) {
+                    $pid = $p_item['product_id'];
+                    $required_products[$pid] = ($required_products[$pid] ?? 0) + ($p_item['quantity'] * $qty);
+                }
+                $pkg_stmt->close();
             }
-            $saved_stmt->close();
-        }
-    }
-    elseif ($final_payment_method === 'Online Banking (FPX)') {
-        $selected_bank = $_POST['selected_bank'] ?? '';
-        
-        if (empty($selected_bank)) {
-            $_SESSION['error_msg'] = "Please select a bank for Online Banking.";
-            header("Location: checkout.php");
-            exit();
-        }
-        
-        // 🌟 保留隊友的升級：接收顧客輸入的真實 FPX 帳號密碼
-        $fpx_user = trim($_POST['fpx_username'] ?? ''); 
-        $fpx_pass = trim($_POST['fpx_password'] ?? '');
-
-        if (empty($fpx_user) || empty($fpx_pass)) {
-            $_SESSION['error_msg'] = "FPX Error: Please enter your internet banking username and password.";
-            header("Location: checkout.php");
-            exit();
         }
 
-        $fpx_query = "SELECT id, balance FROM bank WHERE fpx_username = ? AND fpx_password = ?";
-        $fpx_stmt = $conn->prepare($fpx_query);
-        $fpx_stmt->bind_param("ss", $fpx_user, $fpx_pass);
-        $fpx_stmt->execute();
-        $fpx_result = $fpx_stmt->get_result();
-
-        if ($fpx_result->num_rows > 0) {
-             $fpx_data = $fpx_result->fetch_assoc();
-             $bank_account_id_to_deduct = $fpx_data['id']; 
-             $final_payment_method = "FPX - " . $selected_bank;
-        } else {
-             $_SESSION['error_msg'] = "FPX Login Failed: Invalid username or password.";
-             header("Location: checkout.php");
-             exit();
-        }
-        $fpx_stmt->close();
-    }
-
-    if ($bank_account_id_to_deduct !== null) {
-        $bal_check_stmt = $conn->prepare("SELECT balance FROM bank WHERE id = ?");
-        $bal_check_stmt->bind_param("i", $bank_account_id_to_deduct);
-        $bal_check_stmt->execute();
-        $bank_balance = $bal_check_stmt->get_result()->fetch_assoc()['balance'];
-        $bal_check_stmt->close();
-
-        if ($bank_balance < $final_amount) {
-            $_SESSION['error_msg'] = "Bank Declined: Insufficient funds in your bank account.";
-            header("Location: checkout.php");
-            exit();
-        }
-
-        $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ?");
-        $deduct_stmt->bind_param("di", $final_amount, $bank_account_id_to_deduct);
-        $deduct_stmt->execute();
-        $deduct_stmt->close();
-    }
-
-    if ($final_payment_method === 'E-Wallet' && $current_balance < $final_amount) {
-        $_SESSION['error_msg'] = "Insufficient E-Wallet balance! Please top up or choose another payment method.";
-        header("Location: checkout.php");
-        exit();
-    } 
-    
-    $conn->begin_transaction();
-    try {
-        $order_status = 'Pending';
-        $insert_order = "INSERT INTO orders (customer_id, total_amount, discount_amount, coins_used, order_status, shipping_address) VALUES (?, ?, ?, ?, ?, ?)";
-        $stmt_order = $conn->prepare($insert_order);
-        $stmt_order->bind_param("iddiss", $customer_id, $final_amount, $discount_amount, $coins_used, $order_status, $shipping_address);
-        $stmt_order->execute();
-        $order_id = $stmt_order->insert_id;
-        $stmt_order->close();
-
-        // 🌟 核心防護：保留隊友防止優惠券重複使用的邏輯
-        if (isset($applied_promo_code) && !empty($applied_promo_code)) {
-            $get_promo = $conn->prepare("SELECT promo_id FROM promo_codes WHERE code_name = ?");
-            $get_promo->bind_param("s", $applied_promo_code);
-            $get_promo->execute();
-            $promo_data = $get_promo->get_result()->fetch_assoc();
+        // 執行全局庫存 FOR UPDATE 檢查
+        foreach ($required_products as $pid => $req_qty) {
+            $stock_stmt = $conn->prepare("SELECT stock_quantity, product_name FROM products WHERE product_id = ? FOR UPDATE");
+            $stock_stmt->bind_param("i", $pid);
+            $stock_stmt->execute();
+            $stock_check = $stock_stmt->get_result()->fetch_assoc();
             
-            if ($promo_data) {
-                $p_id = $promo_data['promo_id'];
-                $log_used = $conn->prepare("INSERT INTO used_vouchers (customer_id, promo_id, order_id) VALUES (?, ?, ?)");
-                $log_used->bind_param("iii", $customer_id, $p_id, $order_id);
-                $log_used->execute();
-                $log_used->close();
+            if (!$stock_check || $stock_check['stock_quantity'] < $req_qty) {
+                $p_name = $stock_check ? $stock_check['product_name'] : "Unknown Part ID $pid";
+                throw new Exception("Inventory Error: '{$p_name}' only has " . ($stock_check['stock_quantity'] ?? 0) . " left. Order aborted to prevent phantom stock.");
             }
-            $get_promo->close();
+            
+            // 確定庫存足夠後直接扣減
+            $deduct_stock = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE product_id = ?");
+            $deduct_stock->bind_param("ii", $req_qty, $pid);
+            $deduct_stock->execute();
         }
 
-        // 🌟 完美融合：保留你寫的 Affiliate ID 邏輯
-        $insert_detail = "INSERT INTO order_details (order_id, product_id, pc_build, package_id, affiliate_id, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt_detail = $conn->prepare($insert_detail);
+        // 5. 💰 安全金融扣款
+        if ($bank_account_id_to_deduct !== null) {
+            $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ? AND balance >= ?");
+            $deduct_stmt->bind_param("did", $final_amount, $bank_account_id_to_deduct, $final_amount);
+            $deduct_stmt->execute();
+            if ($deduct_stmt->affected_rows === 0) {
+                throw new Exception("Bank Declined: Insufficient funds in your bank account.");
+            }
+        }
+
+        if ($final_payment_method === 'E-Wallet') {
+            $deduct_wallet = $conn->prepare("UPDATE customers SET wallet_balance = wallet_balance - ? WHERE customer_id = ? AND wallet_balance >= ?");
+            $deduct_wallet->bind_param("did", $final_amount, $customer_id, $final_amount);
+            $deduct_wallet->execute();
+            if ($deduct_wallet->affected_rows === 0) {
+                throw new Exception("Insufficient E-Wallet balance! Please top up or choose another payment method.");
+            }
+            
+            $insert_trans = $conn->prepare("INSERT INTO wallet_transactions (customer_id, type, amount) VALUES (?, 'Payment', ?)");
+            $neg_amount = -$final_amount; 
+            $insert_trans->bind_param("id", $customer_id, $neg_amount);
+            $insert_trans->execute();
+        } 
         
+        // 金幣安全扣減防護
+        if ($coins_used > 0) {
+            $deduct_coins = $conn->prepare("UPDATE customers SET reward_coins = reward_coins - ? WHERE customer_id = ? AND reward_coins >= ?");
+            $deduct_coins->bind_param("iii", $coins_used, $customer_id, $coins_used);
+            $deduct_coins->execute();
+            if ($deduct_coins->affected_rows === 0) {
+                throw new Exception("Coin deduction failed.");
+            }
+        }
+
+        // 6. 📝 訂單與優惠券最終記錄寫入
+        $insert_order = $conn->prepare("INSERT INTO orders (customer_id, total_amount, discount_amount, coins_used, order_status, shipping_address) VALUES (?, ?, ?, ?, 'Pending', ?)");
+        $insert_order->bind_param("iddis", $customer_id, $final_amount, $discount_amount, $coins_used, $shipping_address);
+        $insert_order->execute();
+        $order_id = $insert_order->insert_id;
+
+        if ($promo_id_to_log) {
+            $log_used = $conn->prepare("INSERT INTO used_vouchers (customer_id, promo_id, order_id) VALUES (?, ?, ?)");
+            $log_used->bind_param("iii", $customer_id, $promo_id_to_log, $order_id);
+            $log_used->execute();
+        }
+
+        $insert_detail = $conn->prepare("INSERT INTO order_details (order_id, product_id, pc_build, package_id, affiliate_id, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $reward_stmt = $conn->prepare("UPDATE customers SET reward_coins = reward_coins + ? WHERE customer_id = ?");
         $bounty_per_build = 500; 
 
         foreach ($cart_items as $item) {
-            $pid = $item['product_id'] ? $item['product_id'] : NULL;
-            $build_id = $item['pc_build'] ? $item['pc_build'] : NULL;
-            $pkg_id = $item['package_id'] ? $item['package_id'] : NULL;
-            $aff_id = $item['affiliate_id'] ? $item['affiliate_id'] : NULL; 
-            $qty = $item['quantity'];
+            $pid = $item['product_id'] ?: NULL;
+            $build_id = $item['pc_build'] ?: NULL;
+            $pkg_id = $item['package_id'] ?: NULL;
+            $aff_id = $item['affiliate_id'] ?: NULL; 
             
-            if ($pid) $unit_price = $item['product_price'];
-            elseif ($build_id) $unit_price = $item['build_price'];
-            elseif ($pkg_id) $unit_price = $item['package_price'];
-            else $unit_price = 0;
+            $unit_price = $pid ? $item['product_price'] : ($build_id ? $item['build_price'] : ($pkg_id ? $item['package_price'] : 0));
 
-            // 库存拦截
-            if ($pid) {
-                $stock_stmt = $conn->prepare("SELECT stock_quantity, product_name FROM products WHERE product_id = ? FOR UPDATE");
-                $stock_stmt->bind_param("i", $pid);
-                $stock_stmt->execute();
-                $stock_check = $stock_stmt->get_result()->fetch_assoc();
-                $stock_stmt->close();
-
-                if ($stock_check['stock_quantity'] < $qty) {
-                    throw new Exception("Inventory Error: '" . $stock_check['product_name'] . "' only has " . $stock_check['stock_quantity'] . " left. Order aborted to prevent phantom stock.");
-                }
-
-                $deduct_stock = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE product_id = ?");
-                $deduct_stock->bind_param("ii", $qty, $pid);
-                $deduct_stock->execute();
-                $deduct_stock->close();
-            }
-
-            $stmt_detail->bind_param("iiiiiii", $order_id, $pid, $build_id, $pkg_id, $aff_id, $qty, $unit_price);
-            $stmt_detail->execute();
+            $insert_detail->bind_param("iiiiiii", $order_id, $pid, $build_id, $pkg_id, $aff_id, $item['quantity'], $unit_price);
+            $insert_detail->execute();
 
             if ($aff_id) {
-                $total_bounty = $bounty_per_build * $qty; 
+                $total_bounty = $bounty_per_build * $item['quantity']; 
                 $reward_stmt->bind_param("ii", $total_bounty, $aff_id);
                 $reward_stmt->execute();
             }
         }
-        $stmt_detail->close();
-        $reward_stmt->close();
 
         $payment_status = ($final_payment_method == 'Cash on Delivery') ? 'Pending' : 'Paid';
-        $insert_payment = "INSERT INTO payments (order_id, payment_method, payment_status) VALUES (?, ?, ?)";
-        $stmt_payment = $conn->prepare($insert_payment);
-        $stmt_payment->bind_param("iss", $order_id, $final_payment_method, $payment_status);
-        $stmt_payment->execute();
-        $stmt_payment->close();
+        $insert_payment = $conn->prepare("INSERT INTO payments (order_id, payment_method, payment_status) VALUES (?, ?, ?)");
+        $insert_payment->bind_param("iss", $order_id, $final_payment_method, $payment_status);
+        $insert_payment->execute();
 
-        if ($final_payment_method === 'E-Wallet') {
-            $deduct_wallet = "UPDATE customers SET wallet_balance = wallet_balance - ? WHERE customer_id = ?";
-            $stmt_deduct = $conn->prepare($deduct_wallet);
-            $stmt_deduct->bind_param("di", $final_amount, $customer_id);
-            $stmt_deduct->execute();
-            
-            $type = 'Payment';
-            $insert_trans = "INSERT INTO wallet_transactions (customer_id, type, amount) VALUES (?, ?, ?)";
-            $stmt_trans = $conn->prepare($insert_trans);
-            $neg_amount = -$final_amount; 
-            $stmt_trans->bind_param("isd", $customer_id, $type, $neg_amount);
-            $stmt_trans->execute();
-        }
+        $clear_cart = $conn->prepare("DELETE FROM shopping_cart WHERE customer_id = ?");
+        $clear_cart->bind_param("i", $customer_id);
+        $clear_cart->execute();
 
-        if ($coins_used > 0) {
-            $deduct_coins = "UPDATE customers SET reward_coins = reward_coins - ? WHERE customer_id = ?";
-            $stmt_coins = $conn->prepare($deduct_coins);
-            $stmt_coins->bind_param("ii", $coins_used, $customer_id);
-            $stmt_coins->execute();
-        }
-
-        $clear_cart = "DELETE FROM shopping_cart WHERE customer_id = ?";
-        $stmt_clear = $conn->prepare($clear_cart);
-        $stmt_clear->bind_param("i", $customer_id);
-        $stmt_clear->execute();
-
+        // 7. 完美收官
         $conn->commit();
         $_SESSION['success_msg'] = "Order placed successfully! Your Order ID is #$order_id";
         header("Location: my_orders.php");
@@ -525,10 +472,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             $full_text = $recipient . " | " . $phone . "\n" . $addr['full_address'];
                                         }
                                     }
+                                    
+                                    // 🚨 UX Hygiene 修正：把 address_id 傳給後端，文字放在 data-text 給前端顯示
+                                    $addr_id_val = isset($addr['address_id']) ? $addr['address_id'] : $addr['id'];
                                 ?>
 
                                 <label style="display: flex; align-items: flex-start; cursor: pointer; margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" class="address-option">
-                                    <input type="radio" name="shipping_address" value="<?php echo htmlspecialchars($full_text); ?>" style="margin-right: 15px; margin-top: 5px;" onchange="updateActiveAddress(this)" <?php echo $addr['is_default'] ? 'checked' : ''; ?>>
+                                    <input type="radio" name="shipping_address_id" value="<?php echo htmlspecialchars($addr_id_val); ?>" data-text="<?php echo htmlspecialchars($full_text); ?>" style="margin-right: 15px; margin-top: 5px;" onchange="updateActiveAddress(this)" <?php echo $addr['is_default'] ? 'checked' : ''; ?>>
                                     <div style="flex: 1;">
                                         <?php if($addr['is_default']): ?>
                                             <span style="background: var(--accent-blue); color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-bottom: 5px; display: inline-block;">Default</span><br>
@@ -566,7 +516,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <script>
                     document.addEventListener('DOMContentLoaded', function() {
-                        const defaultRadio = document.querySelector('input[name="shipping_address"]:checked');
+                        const defaultRadio = document.querySelector('input[name="shipping_address_id"]:checked');
                         if (defaultRadio) {
                             updateActiveAddress(defaultRadio);
                         }
@@ -585,7 +535,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     function updateActiveAddress(radio) {
-                        document.getElementById('current_address_text').innerText = radio.value;
+                        // 讀取 data-text 以在 UI 上顯示完整的地址文字
+                        document.getElementById('current_address_text').innerText = radio.getAttribute('data-text');
                         document.getElementById('address_selection_list').style.display = 'none';
                         const changeBtn = document.querySelector('#active_address_display button');
                         if(changeBtn) changeBtn.innerText = 'Change';
@@ -746,6 +697,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                         }
                         newCardForm.style.display = 'none';
+                    }
+
+                    function toggleFPXForm() {
+                        var radios = document.getElementsByName('selected_bank');
+                        var fpxForm = document.getElementById('fpx_login_form');
+                        let isSelected = false;
+                        for (let r of radios) { if (r.checked) isSelected = true; }
+                        if(fpxForm) fpxForm.style.display = isSelected ? 'block' : 'none';
                     }
                 </script>
 

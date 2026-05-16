@@ -14,8 +14,8 @@ $total_price = 0;
 // 🌟 升級 1：SQL 查詢加入 packages 表格的 LEFT JOIN
 $sql = "SELECT c.cart_id, c.quantity, c.product_id, c.pc_build, c.package_id, 
                p.product_name AS product_name, p.price AS product_price, p.image_url,
-               b.build_name, b.total_price AS build_price,
-               pk.package_name, pk.price AS package_price, pk.image_url AS package_image
+               b.build_name, b.total_price AS old_build_price,
+               pk.package_name, pk.price AS old_package_price, pk.image_url AS package_image
         FROM shopping_cart c 
         LEFT JOIN products p ON c.product_id = p.product_id 
         LEFT JOIN saved_builds b ON c.pc_build = b.pc_build
@@ -29,11 +29,12 @@ if ($stmt = $conn->prepare($sql)) {
 
     while ($row = $result->fetch_assoc()) {
         
-        // 🌟 升級 2：精準計算三種不同商品的價格
+        // 🌟 升級 2：精準計算三種不同商品的價格 (防鎖價漏洞)
         if (!empty($row['pc_build'])) {
-            // 自組電腦邏輯
+            // 自組電腦邏輯 (動態計算最新價格)
             $build_id = $row['pc_build'];
             $components = [];
+            $dynamic_build_price = 0;
             
             $comp_sql = "SELECT p.product_name, p.price, p.image_url, cat.category_name, bi.quantity 
                          FROM build_items bi
@@ -47,33 +48,34 @@ if ($stmt = $conn->prepare($sql)) {
             $c_res = $c_stmt->get_result();
             while ($c_row = $c_res->fetch_assoc()) {
                 $components[] = $c_row;
+                // 累加最新零件價格
+                $dynamic_build_price += ($c_row['price'] * $c_row['quantity']);
             }
             $c_stmt->close();
             
             $row['components'] = $components; 
-            $total_price += ($row['build_price'] * $row['quantity']);
+            $row['build_price'] = $dynamic_build_price; // 覆蓋舊價格
+            $total_price += ($dynamic_build_price * $row['quantity']);
             
         } elseif (!empty($row['package_id'])) {
             // 🌟 高阶商业逻辑：套餐价格不读死数据，而是随底层零件实时浮动！
             $pkg_id = $row['package_id'];
             $dynamic_pkg_price = 0;
             
-            // 实时去关联表中抓取属于这个套餐的所有零件，并累加它们的最新的价格
-            $pkg_sql = "SELECT p.price FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = ?";
+            // 实时去关联表中抓取属于这个套餐的所有零件，并累加它们的最新的价格 (已修復乘上 quantity)
+            $pkg_sql = "SELECT p.price, pi.quantity FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = ?";
             $pkg_stmt = $conn->prepare($pkg_sql);
             $pkg_stmt->bind_param("i", $pkg_id);
             $pkg_stmt->execute();
             $pkg_res = $pkg_stmt->get_result();
             
             while ($p_row = $pkg_res->fetch_assoc()) {
-                $dynamic_pkg_price += $p_row['price']; // 实时累加零件价格
+                $dynamic_pkg_price += ($p_row['price'] * $p_row['quantity']); // 修复：加入零件數量乘數
             }
             $pkg_stmt->close();
             
-            // 将动态计算出的真实总价覆盖掉原本的 0 元，这样下面的 HTML 就能正确显示了
+            // 将动态计算出的真实总价覆盖掉原本的 0 元
             $row['package_price'] = $dynamic_pkg_price; 
-            
-            // 算入购物车的 Total
             $total_price += ($dynamic_pkg_price * $row['quantity']);
             
         } else {
