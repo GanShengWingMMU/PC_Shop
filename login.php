@@ -17,7 +17,6 @@ $discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=" . $di
 
 if (!isset($_SESSION['login_attempts'])) { $_SESSION['login_attempts'] = 0; }
 
-// 🌟 核心修复 1：抓取用户是从哪个页面来的
 $redirect_url = isset($_GET['redirect']) ? filter_var($_GET['redirect'], FILTER_SANITIZE_URL) : 'index.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -42,13 +41,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $error_msg = "Account disabled. Please contact support.";
                 } else {
                     if (password_verify($password, $user['password'])) {
+                        
+                        // 🛡️ A+ 级修复：防止 Session Fixation 攻击
+                        session_regenerate_id(true);
+                        
                         unset($_SESSION['login_attempts'], $_SESSION['lockout_time']);
                         $_SESSION['customer_id'] = $user['customer_id'];
                         $_SESSION['username'] = $user['username'];
                         
-                        // 🌟 核心修复 2：智能重定向 (从哪里来，回哪里去)
-                        // 防御机制：如果 URL 包含 http (企图跳出站外)，则强制返回 index.php
-                        if (strpos($redirect_url, 'http') === 0) {
+                        // 🛡️ A+ 级修复：更严谨的 Open Redirect 拦截 (阻断 //evil.com)
+                        $parsed = parse_url($redirect_url);
+                        if (isset($parsed['host']) || isset($parsed['scheme'])) {
                             header("Location: index.php");
                         } else {
                             header("Location: " . $redirect_url);

@@ -10,24 +10,36 @@ if (!isset($_SESSION['reset_email'])) {
 $email = $_SESSION['reset_email'];
 $message = "";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $entered_otp = trim($_POST['otp']);
-    $current_time = date("Y-m-d H:i:s");
-    
-    // 🌟 A+ 级安全修复：Prepared Statement 验证 OTP 有效性
-    $stmt = $conn->prepare("SELECT customer_id FROM customers WHERE email = ? AND reset_token = ? AND reset_token_expire > ?");
-    $stmt->bind_param("sss", $email, $entered_otp, $current_time);
-    $stmt->execute();
-    $result = $stmt->get_result();
+// 🛡️ 初始化 OTP 尝试次数
+if (!isset($_SESSION['otp_attempts'])) {
+    $_SESSION['otp_attempts'] = 0;
+}
 
-    if ($result->num_rows > 0) {
-        $_SESSION['otp_verified'] = true;
-        header("Location: reset_password.php");
-        exit();
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // 🚨 防爆破拦截 (超 5 次直接踢出)
+    if ($_SESSION['otp_attempts'] >= 5) {
+        $message = "SECURITY LOCK: Maximum attempts reached. Please request a new OTP.";
     } else {
-        $message = "Invalid or expired Security Code. Please check your email and try again.";
+        $entered_otp = trim($_POST['otp']);
+        $current_time = date("Y-m-d H:i:s");
+        
+        $stmt = $conn->prepare("SELECT customer_id FROM customers WHERE email = ? AND reset_token = ? AND reset_token_expire > ?");
+        $stmt->bind_param("sss", $email, $entered_otp, $current_time);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            unset($_SESSION['otp_attempts']); // 验证成功，清除尝试次数
+            $_SESSION['otp_verified'] = true;
+            header("Location: reset_password.php");
+            exit();
+        } else {
+            $_SESSION['otp_attempts']++;
+            $remaining = 5 - $_SESSION['otp_attempts'];
+            $message = "Invalid or expired Security Code. " . $remaining . " attempts remaining.";
+        }
+        $stmt->close();
     }
-    $stmt->close();
 }
 ?>
 
@@ -57,19 +69,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <p class="specs">Please check your email for a 6-digit code.</p>
         </div>
 
-        <?php if (!empty($message)) echo "<p class='text-danger' style='text-align: center; margin-bottom: 1rem;'>$message</p>"; ?>
+        <?php if (!empty($message)) echo "<p class='text-danger' style='text-align: center; margin-bottom: 1rem; font-weight: bold;'>$message</p>"; ?>
 
         <form action="verify_otp.php" method="POST" class="form">
             <div class="form-group input-group">
                 <label class="form-label" for="otp">6-Digit OTP</label>
-                <input type="text" id="otp" name="otp" maxlength="6" class="form-control form-control-otp" required placeholder="000000" style="text-align: center; letter-spacing: 8px; font-size: 1.5rem; font-weight: 900;">
+                <input type="text" id="otp" name="otp" maxlength="6" class="form-control form-control-otp" required placeholder="000000" style="text-align: center; letter-spacing: 8px; font-size: 1.5rem; font-weight: 900;" <?php echo (isset($_SESSION['otp_attempts']) && $_SESSION['otp_attempts'] >= 5) ? 'disabled' : ''; ?>>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-submit-login">Verify Code</button>
+            <button type="submit" class="btn btn-primary btn-submit-login" <?php echo (isset($_SESSION['otp_attempts']) && $_SESSION['otp_attempts'] >= 5) ? 'style="opacity:0.5; cursor:not-allowed;" disabled' : ''; ?>>Verify Code</button>
         </form>
         
         <div class="specs" style="margin-top: 1rem; text-align: center;">
-            Didn't receive the email? <a href="forgot_password.php" class="highlight-link">Try again</a>
+            Didn't receive the email or locked out? <a href="forgot_password.php" class="highlight-link">Try again</a>
         </div>
     </div>
 </main>

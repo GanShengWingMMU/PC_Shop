@@ -28,7 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     
     if ($_POST['action'] === 'rename_order') {
         $rename_order_id = intval($_POST['order_id']);
-        $new_name = trim(mysqli_real_escape_string($conn, $_POST['new_order_name']));
+        // 移除 mysqli_real_escape_string 防止雙重轉義，使用 htmlspecialchars 防禦 XSS 即可
+$new_name = htmlspecialchars(trim($_POST['new_order_name']));
         
         if (!empty($new_name)) {
             $rename_stmt = $conn->prepare("UPDATE orders SET order_name = ? WHERE order_id = ? AND customer_id = ?");

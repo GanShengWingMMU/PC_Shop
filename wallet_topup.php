@@ -13,7 +13,6 @@ $error_msg = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $amount = 0;
-
     if (!empty($_POST['custom_amount']) && is_numeric($_POST['custom_amount'])) {
         $amount = (float) $_POST['custom_amount'];
     } elseif (!empty($_POST['topup_option']) && is_numeric($_POST['topup_option'])) {
@@ -24,25 +23,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($amount >= 10) {
         $auth_success = false;
+        $bank_id = null;
 
-        // 🌟 驗證 FPX 登入
+        // 🌟 1. 僅做身份驗證，不先扣款！
         if ($method === 'Online Banking (FPX)') {
             $fpx_user = trim($_POST['fpx_username'] ?? '');
             $fpx_pass = trim($_POST['fpx_password'] ?? '');
             
-            $stmt_bank = $conn->prepare("SELECT * FROM bank WHERE fpx_username = ? AND fpx_password = ?");
+            $stmt_bank = $conn->prepare("SELECT id, balance FROM bank WHERE fpx_username = ? AND fpx_password = ?");
             $stmt_bank->bind_param("ss", $fpx_user, $fpx_pass);
             $stmt_bank->execute();
             $bank_res = $stmt_bank->get_result();
             
             if ($bank_row = $bank_res->fetch_assoc()) {
-                // 檢查銀行餘額夠不夠扣
                 if ($bank_row['balance'] >= $amount) {
-                    // 從真實銀行扣錢
-                    $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ?");
-                    $deduct_stmt->bind_param("di", $amount, $bank_row['id']);
-                    $deduct_stmt->execute();
-                    $deduct_stmt->close();
+                    $bank_id = $bank_row['id'];
                     $auth_success = true;
                 } else {
                     $error_msg = "Bank Declined: Insufficient funds in your bank account.";
@@ -51,26 +46,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error_msg = "FPX Authentication Failed: Invalid Username or Password.";
             }
             $stmt_bank->close();
-            
         } elseif ($method === 'Credit Card') {
-            // 信用卡暫時預設通過 (如果要像結帳頁面一樣驗證 dummy_bank，也可以加在這裡)
             $auth_success = true; 
         } else {
             $error_msg = "Please select a payment method.";
         }
 
-        // 🌟 如果驗證成功，才把錢加進錢包
+        // 🌟 2. 驗證成功後，啟動「原子化事務 (Atomic Transaction)」
         if ($auth_success) {
             $coins_earned = floor($amount / 10);
-            $conn->begin_transaction();
+            $conn->begin_transaction(); // 開啟事務
 
             try {
+                // (1) 如果是 FPX，現在才在事務內扣除銀行存款
+                if ($method === 'Online Banking (FPX)') {
+                    $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ?");
+                    $deduct_stmt->bind_param("di", $amount, $bank_id);
+                    $deduct_stmt->execute();
+                    $deduct_stmt->close();
+                }
+
+                // (2) 增加顧客錢包餘額與金幣
                 $update_sql = "UPDATE customers SET wallet_balance = wallet_balance + ?, reward_coins = reward_coins + ? WHERE customer_id = ?";
                 $stmt_update = $conn->prepare($update_sql);
                 $stmt_update->bind_param("dii", $amount, $coins_earned, $customer_id);
                 $stmt_update->execute();
                 $stmt_update->close();
 
+                // (3) 記錄交易歷史
                 $type = 'Top-up';
                 $insert_sql = "INSERT INTO wallet_transactions (customer_id, type, amount, coins_earned) VALUES (?, ?, ?, ?)";
                 $stmt_insert = $conn->prepare($insert_sql);
@@ -78,12 +81,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_insert->execute();
                 $stmt_insert->close();
 
+                // 全部成功，提交事務
                 $conn->commit();
                 $success_msg = "Successfully topped up RM " . number_format($amount, 2) . "! You earned $coins_earned Coins. 🪙";
                 
             } catch (Exception $e) {
+                // 發生任何意外，立刻回滾 (銀行錢不會扣，錢包也不會加)
                 $conn->rollback();
-                $error_msg = "Top-up failed. Please try again. Error: " . $e->getMessage();
+                $error_msg = "Transaction interrupted safely. No funds were lost. Error: " . $e->getMessage();
             }
         }
     } else {

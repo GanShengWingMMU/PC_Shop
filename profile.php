@@ -28,14 +28,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             } elseif ($new_pass !== $confirm_pass) { $update_err = "Passwords do not match."; }
         }
         if (empty($update_err)) {
-            $stmt = $conn->prepare("UPDATE customers SET username=?, email=?, phone_number=?, birthday=? " . (!empty($new_pass) ? ", password=?" : "") . " WHERE customer_id=?");
-            if (!empty($new_pass)) {
-                $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
-                $stmt->bind_param("sssssi", $new_user, $new_email, $new_phone, $new_birthday, $hashed, $customer_id);
-            } else { 
-                $stmt->bind_param("ssssi", $new_user, $new_email, $new_phone, $new_birthday, $customer_id); 
+            // 🌟 安全修復：防止身份碰撞 (檢查是否與其他人的 Username 或 Email 衝突)
+            $check_stmt = $conn->prepare("SELECT customer_id FROM customers WHERE (email = ? OR username = ?) AND customer_id != ?");
+            $check_stmt->bind_param("ssi", $new_email, $new_user, $customer_id);
+            $check_stmt->execute();
+            if ($check_stmt->get_result()->num_rows > 0) {
+                $update_err = "The selected Username or Email is already taken by another account.";
+            } else {
+                $stmt = $conn->prepare("UPDATE customers SET username=?, email=?, phone_number=?, birthday=? " . (!empty($new_pass) ? ", password=?" : "") . " WHERE customer_id=?");
+                if (!empty($new_pass)) {
+                    $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
+                    $stmt->bind_param("sssssi", $new_user, $new_email, $new_phone, $new_birthday, $hashed, $customer_id);
+                } else { 
+                    $stmt->bind_param("ssssi", $new_user, $new_email, $new_phone, $new_birthday, $customer_id); 
+                }
+                if ($stmt->execute()) { 
+                    $_SESSION['username'] = $new_user; 
+                    $update_msg = "Profile updated successfully."; 
+                }
             }
-            if ($stmt->execute()) { $_SESSION['username'] = $new_user; $update_msg = "Profile updated successfully."; }
+            $check_stmt->close();
         }
     }
 }

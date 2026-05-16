@@ -13,15 +13,19 @@ $discord_redirect_uri = 'http://localhost/projects/discord_callback.php';
 $discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=" . $discord_client_id . "&redirect_uri=" . urlencode($discord_redirect_uri) . "&response_type=code&scope=" . urlencode("identify email");
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $first_name = trim($_POST['first_name']);
-    $last_name = trim($_POST['last_name']);
-    $username = trim($_POST['username']);
+    // 🛡️ 修复：增加 htmlspecialchars 防止 XSS 跨站脚本攻击写入数据库
+    $first_name = htmlspecialchars(trim($_POST['first_name']));
+    $last_name = htmlspecialchars(trim($_POST['last_name']));
+    $username = htmlspecialchars(trim($_POST['username']));
     $email = trim($_POST['email']);
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
 
     if (empty($username) || empty($email) || empty($password)) {
         $error_msg = "ERR: Core fields missing.";
+    } elseif (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username)) {
+        // 🛡️ 修复：增加用户名格式限制，防止输入奇奇怪怪的符号搞崩前端 UI
+        $error_msg = "ERR: Username must be 3-20 alphanumeric characters.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_msg = "ERR: Invalid email format.";
     } elseif ($password !== $confirm_password) {
@@ -39,9 +43,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $insert_stmt = $conn->prepare("INSERT INTO customers (first_name, last_name, username, email, password, account_status) VALUES (?, ?, ?, ?, ?, 'Active')");
             $insert_stmt->bind_param("sssss", $first_name, $last_name, $username, $email, $hashed);
             if ($insert_stmt->execute()) {
+                
+                // 🛡️ A+ 级修复：防止 Session Fixation 攻击
+                session_regenerate_id(true);
+                
                 $_SESSION['customer_id'] = $insert_stmt->insert_id;
                 $_SESSION['username'] = $username;
-                header("Location: index.php"); exit();
+                header("Location: index.php"); 
+                exit();
             }
         }
     }

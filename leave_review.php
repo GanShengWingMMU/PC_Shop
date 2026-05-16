@@ -24,12 +24,28 @@ if (!$product) {
     die("Product not found.");
 }
 
+// 🌟 安全修復 1：驗證「購買真實性」防禦越權刷評 (Broken Access Control)
+$verify_purchase = $conn->prepare("
+    SELECT o.order_id FROM orders o 
+    JOIN order_details od ON o.order_id = od.order_id 
+    WHERE o.customer_id = ? AND od.product_id = ? AND o.order_status = 'Completed' 
+    LIMIT 1
+");
+$verify_purchase->bind_param("ii", $customer_id, $product_id);
+$verify_purchase->execute();
+$has_purchased = $verify_purchase->get_result()->num_rows > 0;
+$verify_purchase->close();
+
 // 3. 處理表單提交
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rating = intval($_POST['rating']);
-    $comment = trim(mysqli_real_escape_string($conn, $_POST['comment']));
+    
+    // 🌟 Bug 修復 2：移除 mysqli_real_escape_string 防止雙重轉義導致的斜槓亂碼
+    $comment = htmlspecialchars(trim($_POST['comment']));
 
-    if ($rating >= 1 && $rating <= 5 && !empty($comment)) {
+    if (!$has_purchased) {
+        $error_msg = "SECURITY ALERT: You can only review products you have purchased and received.";
+    } elseif ($rating >= 1 && $rating <= 5 && !empty($comment)) {
         // 檢查是否已經評價過
         $check_stmt = $conn->prepare("SELECT review_id FROM reviews WHERE product_id = ? AND customer_id = ?");
         $check_stmt->bind_param("ii", $product_id, $customer_id);
@@ -62,7 +78,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Leave Feedback - GridCitY PC</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
-
 </head>
 <body>
 
@@ -92,6 +107,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="fa-solid fa-circle-check" style="color: #4CAF50; font-size: 3rem; margin-bottom: 10px;"></i>
                     <p style="color: #4CAF50; font-weight: bold; font-size: 1.2rem; margin: 0;"><?php echo $success_msg; ?></p>
                     <a href="my_orders.php" class="btn btn-primary" style="margin-top: 20px;">Return to Orders</a>
+                </div>
+            <?php elseif (!$has_purchased && empty($error_msg)): ?>
+                <div class="cart-empty-state" style="border-color: #ff4d4d; padding: 20px;">
+                    <i class="fa-solid fa-lock" style="color: #ff4d4d; font-size: 3rem; margin-bottom: 10px;"></i>
+                    <p style="color: #ff4d4d; font-weight: bold; font-size: 1.1rem; margin: 0;">Verified Buyers Only</p>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">You must purchase and receive this item before leaving a review.</p>
+                    <a href="my_orders.php" class="btn btn-secondary-action" style="margin-top: 20px; border: 1px solid #ff4d4d; color: #ff4d4d;">Check My Orders</a>
                 </div>
             <?php else: ?>
 

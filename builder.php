@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])
         $_SESSION['pc_build'] = []; 
         $id_list = implode(',', array_map('intval', $backup_ids));
         
-        // 抓取所有配件及其兼容性屬性
+        // 抓取所有配件及其兼容性属性
         $res = $conn->query("SELECT product_id, category_id, socket_type, ram_type FROM products WHERE product_id IN ($id_list) AND stock_quantity > 0 ORDER BY category_id ASC");
         
         $temp_build = [];
@@ -67,26 +67,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])
         $conflict_found = false;
 
         while ($row = $res->fetch_assoc()) {
-            $cid = $row['category_id'];
+            $cat_id = $row['category_id'];
             
-            // 兼容性防呆檢查核心
-            if ($cid == 1 && !empty($row['socket_type'])) {
+            // 兼容性防呆检查核心
+            if ($cat_id == 1 && !empty($row['socket_type'])) {
                 $check_socket = $row['socket_type'];
             }
-            if ($cid == 2) {
+            if ($cat_id == 2) {
                 if (!empty($check_socket) && !empty($row['socket_type']) && $check_socket !== $row['socket_type']) {
                     $conflict_found = true;
-                    continue; // 發現主板與CPU不兼容，直接丟棄主板
+                    continue; // 发现主板与CPU不兼容，直接丢弃主板
                 }
                 if (!empty($row['ram_type'])) $check_ram = $row['ram_type'];
             }
-            if ($cid == 3) {
+            if ($cat_id == 3) {
                 if (!empty($check_ram) && !empty($row['ram_type']) && $check_ram !== $row['ram_type']) {
                     $conflict_found = true;
-                    continue; // 發現RAM與主板不兼容，直接丟棄RAM
+                    continue; // 发现RAM与主板不兼容，直接丢弃RAM
                 }
             }
-            $temp_build[$cid] = (int)$row['product_id'];
+            $temp_build[$cat_id] = (int)$row['product_id'];
         }
         
         $_SESSION['pc_build'] = $temp_build;
@@ -118,16 +118,16 @@ if (!empty($_SESSION['pc_build'])) {
     $res = $conn->query($sql);
     
     while ($row = $res->fetch_assoc()) {
-        $cid = $row['category_id'];
+        $cat_id = $row['category_id'];
         
         if ($row['stock_quantity'] <= 0) {
-            cascade_remove($cid, $_SESSION['pc_build'], $dependency_map);
-            unset($_SESSION['pc_build'][$cid]);
+            cascade_remove($cat_id, $_SESSION['pc_build'], $dependency_map);
+            unset($_SESSION['pc_build'][$cat_id]);
             $stock_issue_detected = true;
             continue; 
         }
 
-        $cart[$cid] = [
+        $cart[$cat_id] = [
             'product_id' => $row['product_id'],
             'name'       => $row['product_name'],
             'price'      => (float)$row['price'],
@@ -136,15 +136,15 @@ if (!empty($_SESSION['pc_build'])) {
         ];
 
         $total_price += $row['price']; 
-        if ($cid == 6) {
+        if ($cat_id == 6) {
             $psu_wattage = $row['tdp_wattage']; 
         } else {
             $total_wattage += $row['tdp_wattage']; 
         }
 
         // 🛡️ 属性嗅探：完全废弃正则，直接读取物理字段！
-        if ($cid == 1 && !empty($row['socket_type'])) $socket_param = $row['socket_type'];
-        if ($cid == 2 && !empty($row['ram_type'])) $ram_type_param = $row['ram_type'];
+        if ($cat_id == 1 && !empty($row['socket_type'])) $socket_param = $row['socket_type'];
+        if ($cat_id == 2 && !empty($row['ram_type'])) $ram_type_param = $row['ram_type'];
     }
 }
 
@@ -185,7 +185,6 @@ if (isset($cart[1]) && isset($cart[4])) {
     $cpu_tier = $cart[1]['tier'] ?? 1;
     $gpu_tier = $cart[4]['tier'] ?? 1;
 
-    // 使用真实的 Tier 评级替代粗暴的价格相乘
     if (($gpu_tier - $cpu_tier) >= 3) {
         $bottleneck_color = "#ff4d4d"; 
         $bottleneck_warning = "<strong><i class='fas fa-exclamation-triangle'></i> Severe CPU Bottleneck:</strong><br> Your GPU is heavily throttled by the processor.<br><a href='select_part.php?category_id=1&socket=$socket_param' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE CPU TO FIX</a>";
@@ -268,7 +267,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     .metric-bar-fill { height: 100%; border-radius: 3px; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
 
     /* ==============================================================
-       🌟 全息透视装机线框图 (Holographic Wireframe) V4.0 像素级防溢出版 🌟
+       🌟 全息透视装机线框图 (Holographic Wireframe) V4.0 精准防切断版 🌟
        ============================================================== */
     .blueprint-wrapper {
         position: relative; width: 100%; height: 320px;
@@ -283,13 +282,9 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         background-size: 20px 20px; z-index: 0; pointer-events: none;
     }
     
-    /* 🚨 画布严格锁定为 280px 宽，保证绝对适配任何情况下的 Sidebar，不会被 cut off */
     .bp-canvas { position: relative; width: 280px; height: 280px; z-index: 1; }
-
-    /* 强制盒模型，边框不外溢 */
     .bp-node, .bp-container { box-sizing: border-box; }
 
-    /* 基礎節點 (實際物理零件) */
     .bp-node {
         position: absolute; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.6);
         display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -298,7 +293,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     .bp-node i { font-size: 1rem; color: #555; transition: 0.4s ease; }
     .bp-node span { font-size: 8px; font-weight: 800; margin-top: 4px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.4s ease; text-align: center; white-space: nowrap; }
 
-    /* 基礎節點 (容器 - 极度轻量化，变成纯虚线框) */
     .bp-container {
         position: absolute; border: 1px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.1);
         border-radius: 8px; transition: all 0.4s ease;
@@ -309,7 +303,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         background: #0b0c10; padding: 0 4px;
     }
 
-    /* ⚡ 激活狀態 (絲滑點亮特效) */
     .bp-node.active {
         border-color: var(--bp-color); background: rgba(var(--bp-rgb), 0.15);
         box-shadow: 0 0 12px rgba(var(--bp-rgb), 0.25), inset 0 0 6px rgba(var(--bp-rgb), 0.15);
@@ -323,25 +316,14 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     }
     .bp-container.active > .cont-label { color: var(--bp-color); text-shadow: 0 0 8px var(--bp-color); }
 
-    /* 🧭 V4.0 像素级重算坐标 (宽 280px) */
-    /* 外部组件 */
     .bp-monitor { left: 0px; top: 40px; width: 60px; height: 70px; --bp-color: #facc15; --bp-rgb: 250, 204, 21; }
     .bp-os { left: 0px; top: 130px; width: 60px; height: 50px; --bp-color: #00e676; --bp-rgb: 0, 230, 118; border-radius: 8px; }
-
-    /* 机箱层 - 宽度 205px (刚好占据 75~280 的空间) */
     .bp-case { left: 75px; top: 10px; width: 205px; height: 260px; --bp-color: #00f2fe; --bp-rgb: 0, 242, 254; }
-
-    /* 机箱内部定位 */
     .bp-fans { right: 5px; top: 15px; width: 25px; height: 230px; --bp-color: #00f2fe; --bp-rgb: 0, 242, 254; gap: 15px; }
     .bp-fans i { font-size: 0.9rem; animation: spin 4s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
-    
     .bp-psu { left: 10px; bottom: 10px; width: 145px; height: 45px; --bp-color: #ff007f; --bp-rgb: 255, 0, 127; flex-direction: row; gap: 8px; }
-    
-    /* 主板层 - 宽度 145px */
     .bp-mobo { left: 10px; top: 15px; width: 145px; height: 180px; --bp-color: #a855f7; --bp-rgb: 168, 85, 247; }
-
-    /* 主板内部定位 (散开排列，绝不重叠) */
     .bp-cooler { left: 35px; top: 10px; width: 65px; height: 30px; --bp-color: #00e676; --bp-rgb: 0, 230, 118; flex-direction: row; gap: 5px; }
     .bp-cooler i { font-size: 0.8rem; }
     .bp-cpu { left: 40px; top: 50px; width: 55px; height: 50px; --bp-color: #ff007f; --bp-rgb: 255, 0, 127; }
@@ -349,8 +331,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     .bp-ram { left: 105px; top: 15px; width: 30px; height: 85px; --bp-color: #facc15; --bp-rgb: 250, 204, 21; }
     .bp-ssd { left: 5px; top: 50px; width: 25px; height: 50px; --bp-color: #00e676; --bp-rgb: 0, 230, 118; }
     .bp-gpu { left: 5px; top: 120px; width: 130px; height: 45px; --bp-color: #f97316; --bp-rgb: 249, 115, 22; flex-direction: row; gap: 8px;}
-
-    /* 横向组件的图标与文字间距重置 */
     .bp-psu span, .bp-gpu span, .bp-cooler span { margin-top: 0; }
 </style>
 
@@ -574,8 +554,8 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                 </div>
             </div>
         </div>
+        
         <div style="display: flex; flex-direction: column; gap: 20px;">
-            
             <div>
                 <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">System Tier</div>
                 <div style="font-size: 1.2rem; font-weight: 900; color: <?php echo $tier_color; ?>; text-shadow: 0 0 15px <?php echo $tier_color; ?>88;">
@@ -619,7 +599,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 
             <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                 <?php if ($progress == 100): ?>
-                    <button type="button" onclick="openProcessModal('checkout')" class="btn-action btn-select" style="text-align: center; font-size: 1.1rem; padding: 15px; width: 100%; box-sizing: border-box; border: none; cursor: pointer;" title="Discounts applied at checkout!">
+                    <button type="button" onclick="openProcessModal('checkout')" class="btn-action btn-select" style="text-align: center; font-size: 1.1rem; padding: 15px; width: 100%; box-sizing: border-box; border: none; cursor: pointer;">
                         CHECKOUT <i class="fas fa-shopping-cart" style="margin-left: 8px;"></i>
                     </button>
                 <?php else: ?>
@@ -676,7 +656,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     function openProcessModal(action) {
         document.getElementById('processBuildModal').style.display = 'block';
         document.body.style.overflow = 'hidden';
-        
         document.getElementById('processActionInput').value = action;
         
         const title = document.getElementById('processModalTitle');

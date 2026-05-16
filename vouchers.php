@@ -19,9 +19,18 @@ $stmt->close();
 $current_tier = $user_data['membership_tier'];
 $username = $user_data['username'];
 
-// 計算總共有幾張 Active 狀態的優惠券
-$count_stmt = $conn->query("SELECT COUNT(*) as total FROM promo_codes WHERE status = 'Active'");
-$total_vouchers = $count_stmt->fetch_assoc()['total'];
+// 🌟 邏輯修復：精準計算該顧客「真正可用且未被使用過」的優惠券數量
+$count_query = "
+    SELECT COUNT(p.promo_id) as total FROM promo_codes p 
+    LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = ? 
+    WHERE p.status = 'Active' AND uv.promo_id IS NULL 
+    AND (p.is_vip_only = 0 OR (p.is_vip_only = 1 AND ? = 'VIP'))
+";
+$count_stmt = $conn->prepare($count_query);
+$count_stmt->bind_param("is", $customer_id, $current_tier);
+$count_stmt->execute();
+$total_vouchers = $count_stmt->get_result()->fetch_assoc()['total'];
+$count_stmt->close();
 ?>
 
 <!DOCTYPE html>
@@ -135,7 +144,7 @@ $total_vouchers = $count_stmt->fetch_assoc()['total'];
 
                     <div class="card-middle">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
-                            <h3 style="color: #fff; margin: 0; font-size: 1.1rem;"><?php echo $v['target_category']; ?> Discount</h3>
+                            <h3 style="color: #fff; margin: 0; font-size: 1.1rem;"><?php echo htmlspecialchars($v['target_category']); ?> Discount</h3>
                             <span style="background: rgba(255,215,0,0.1); color: #ffd700; border: 1px solid rgba(255,215,0,0.3); font-size: 0.6rem; padding: 2px 6px; border-radius: 4px;">ELITE</span>
                         </div>
                         
@@ -155,8 +164,8 @@ $total_vouchers = $count_stmt->fetch_assoc()['total'];
                                 <i class="fa-solid fa-lock"></i> Unlock
                             </a>
                         <?php else: ?>
-                            <span style="font-family: monospace; color: #aaa; font-size: 0.75rem; margin-bottom: 8px;">Code: <strong style="color: #fff; font-size: 0.9rem;"><?php echo $v['code_name']; ?></strong></span>
-                            <button class="copy-btn vip-copy-btn" onclick="copyCode('<?php echo $v['code_name']; ?>', this)">Copy Code</button>
+                            <span style="font-family: monospace; color: #aaa; font-size: 0.75rem; margin-bottom: 8px;">Code: <strong style="color: #fff; font-size: 0.9rem;"><?php echo htmlspecialchars($v['code_name']); ?></strong></span>
+                            <button class="copy-btn vip-copy-btn" onclick="copyCode('<?php echo htmlspecialchars($v['code_name']); ?>', this)">Copy Code</button>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -168,8 +177,7 @@ $total_vouchers = $count_stmt->fetch_assoc()['total'];
         <div class="section-title"><i class="fa-solid fa-earth-americas" style="color: #00f2fe;"></i> Public Vouchers <span></span></div>
         <div class="voucher-grid">
             <?php
-            // 注意：這裡的 SQL 已經更新為 discount_value
-// 🌟 過濾已使用的 Public 券
+            // 🌟 過濾已使用的 Public 券
             $pub_stmt = $conn->prepare("
                 SELECT p.* FROM promo_codes p 
                 LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = ? 
@@ -195,7 +203,7 @@ $total_vouchers = $count_stmt->fetch_assoc()['total'];
 
                     <div class="card-middle">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
-                            <h3 style="color: #fff; margin: 0; font-size: 1.1rem;"><?php echo $v['target_category']; ?> Discount</h3>
+                            <h3 style="color: #fff; margin: 0; font-size: 1.1rem;"><?php echo htmlspecialchars($v['target_category']); ?> Discount</h3>
                             <span style="background: rgba(0,242,254,0.1); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); font-size: 0.6rem; padding: 2px 6px; border-radius: 4px;">PUBLIC</span>
                         </div>
                         
@@ -210,8 +218,8 @@ $total_vouchers = $count_stmt->fetch_assoc()['total'];
                     </div>
 
                     <div class="card-right">
-                        <span style="font-family: monospace; color: #aaa; font-size: 0.75rem; margin-bottom: 8px;">Code: <strong style="color: #fff; font-size: 0.9rem;"><?php echo $v['code_name']; ?></strong></span>
-                        <button class="copy-btn" onclick="copyCode('<?php echo $v['code_name']; ?>', this)">Copy Code</button>
+                        <span style="font-family: monospace; color: #aaa; font-size: 0.75rem; margin-bottom: 8px;">Code: <strong style="color: #fff; font-size: 0.9rem;"><?php echo htmlspecialchars($v['code_name']); ?></strong></span>
+                        <button class="copy-btn" onclick="copyCode('<?php echo htmlspecialchars($v['code_name']); ?>', this)">Copy Code</button>
                     </div>
                 </div>
             <?php endwhile; $pub_stmt->close(); ?>
