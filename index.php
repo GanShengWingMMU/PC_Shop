@@ -10,9 +10,14 @@ $dna = ['g' => 0, 'c' => 0, 's' => 0, 'e' => 0];
 
 if (isset($_SESSION['customer_id'])) {
     $cid = $_SESSION['customer_id'];
-    $dna_sql = "SELECT pref_gamer, pref_creator, pref_student, pref_enthusiast FROM customers WHERE customer_id = $cid";
-    $dna_res = mysqli_query($conn, $dna_sql);
-    if ($row = mysqli_fetch_assoc($dna_res)) {
+    
+    // 🌟 安全重构：使用 Prepared Statement 防止隐性注入
+    $stmt = $conn->prepare("SELECT pref_gamer, pref_creator, pref_student, pref_enthusiast FROM customers WHERE customer_id = ?");
+    $stmt->bind_param("i", $cid);
+    $stmt->execute();
+    $dna_res = $stmt->get_result();
+    
+    if ($row = $dna_res->fetch_assoc()) {
         $dna = ['g' => $row['pref_gamer'], 'c' => $row['pref_creator'], 's' => $row['pref_student'], 'e' => $row['pref_enthusiast']];
         // 判定权重最高的身份
         arsort($dna);
@@ -21,6 +26,7 @@ if (isset($_SESSION['customer_id'])) {
             $user_persona = ($top_key == 'g') ? 'Gamer' : (($top_key == 'c') ? 'Creator' : (($top_key == 's') ? 'Student' : 'Enthusiast'));
         }
     }
+    $stmt->close();
 }
 
 // 根据 Persona 定义 Hero 视觉文案与氛围色
@@ -41,9 +47,9 @@ try {
     $recent_builds_sql = "SELECT sb.build_name, sb.total_price, c.username FROM saved_builds sb 
                           JOIN customers c ON sb.customer_id = c.customer_id 
                           ORDER BY sb.save_date DESC LIMIT 3";
-    $recent_builds_res = @mysqli_query($conn, $recent_builds_sql);
+    $recent_builds_res = $conn->query($recent_builds_sql);
     if ($recent_builds_res) {
-        while($row = mysqli_fetch_assoc($recent_builds_res)) { $recent_builds[] = $row; }
+        while($row = $recent_builds_res->fetch_assoc()) { $recent_builds[] = $row; }
     }
 } catch (Exception $e) {
     // 静默失败：如果 saved_builds 不存在，动态栏将隐藏
@@ -53,10 +59,10 @@ try {
 // 🚀 前序功能：拉取跑马灯库存数据
 // =========================================================
 $ticker_sql = "SELECT product_name, stock_quantity FROM products WHERE stock_quantity > 0 AND stock_quantity <= 5 ORDER BY stock_quantity ASC LIMIT 5";
-$ticker_res = mysqli_query($conn, $ticker_sql);
+$ticker_res = $conn->query($ticker_sql);
 $ticker_items = [];
 if ($ticker_res) {
-    while($row = mysqli_fetch_assoc($ticker_res)) { $ticker_items[] = $row; }
+    while($row = $ticker_res->fetch_assoc()) { $ticker_items[] = $row; }
 }
 
 // =========================================================
@@ -69,20 +75,28 @@ $feat_sql = "SELECT * FROM (
                  WHERE pi.package_id = pk.package_id) AS real_price
                 FROM packages pk WHERE pk.stock_status = 'Available'
             ) AS final_packages ORDER BY real_price DESC LIMIT 4";
-$feat_res = mysqli_query($conn, $feat_sql);
+$feat_res = $conn->query($feat_sql);
 $featured_packages = [];
 
-if ($feat_res && mysqli_num_rows($feat_res) > 0) {
-    while($pkg = mysqli_fetch_assoc($feat_res)) {
+if ($feat_res && $feat_res->num_rows > 0) {
+    // 🌟 安全重构：准备好循环内使用的 CPU 和 GPU 价格查询语句
+    $cpu_stmt = $conn->prepare("SELECT p.price FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = ? AND p.category_id = 1 LIMIT 1");
+    $gpu_stmt = $conn->prepare("SELECT p.price FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = ? AND p.category_id = 4 LIMIT 1");
+
+    while($pkg = $feat_res->fetch_assoc()) {
         $pkg_id = $pkg['package_id'];
         
-        $cpu_sql = "SELECT p.price FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = $pkg_id AND p.category_id = 1 LIMIT 1";
-        $cpu_res = mysqli_query($conn, $cpu_sql);
-        $cpu_p = ($cpu_res && $cpu_row = mysqli_fetch_assoc($cpu_res)) ? $cpu_row['price'] : 1500;
+        // 动态绑定获取 CPU 价格
+        $cpu_stmt->bind_param("i", $pkg_id);
+        $cpu_stmt->execute();
+        $cpu_res = $cpu_stmt->get_result();
+        $cpu_p = ($cpu_row = $cpu_res->fetch_assoc()) ? $cpu_row['price'] : 1500;
 
-        $gpu_sql = "SELECT p.price FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = $pkg_id AND p.category_id = 4 LIMIT 1";
-        $gpu_res = mysqli_query($conn, $gpu_sql);
-        $gpu_p = ($gpu_res && $gpu_row = mysqli_fetch_assoc($gpu_res)) ? $gpu_row['price'] : 3000;
+        // 动态绑定获取 GPU 价格
+        $gpu_stmt->bind_param("i", $pkg_id);
+        $gpu_stmt->execute();
+        $gpu_res = $gpu_stmt->get_result();
+        $gpu_p = ($gpu_row = $gpu_res->fetch_assoc()) ? $gpu_row['price'] : 3000;
 
         // 启发式 AI 引擎推演
         $cpu_index = pow($cpu_p / 3000, 0.6) * 100; 
@@ -93,6 +107,8 @@ if ($feat_res && mysqli_num_rows($feat_res) > 0) {
         
         $featured_packages[] = $pkg;
     }
+    $cpu_stmt->close();
+    $gpu_stmt->close();
 }
 
 include 'includes/header.php';
@@ -348,7 +364,6 @@ include 'includes/header.php';
                         </div>
                     </div>
                     
-                    <!-- 🌟 结构与类名与 packages.php 严格一致 -->
                     <div class="mc-tag">CLASS_<?php echo htmlspecialchars($pkg['target_persona']); ?></div>
                     <div class="mc-title"><?php echo htmlspecialchars($pkg['package_name']); ?></div>
                     <div class="mc-price">RM <?php echo number_format($pkg['real_price'], 2); ?></div>

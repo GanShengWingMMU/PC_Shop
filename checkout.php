@@ -34,6 +34,22 @@ while ($addr = $addr_result->fetch_assoc()) {
 }
 $stmt_addr->close();
 
+// 🌟 預先計算預設地址 HTML (解決前端 Loading 錯誤)
+$default_address_html = "<span style='color: #ff4d4d;'><i class='fa-solid fa-triangle-exclamation'></i> Please select a shipping address below.</span>";
+if (!empty($saved_addresses)) {
+    $default_addr = $saved_addresses[0]; 
+    foreach ($saved_addresses as $addr) {
+        if ($addr['is_default']) { $default_addr = $addr; break; }
+    }
+    $recipient = !empty($default_addr['recipient_name']) ? $default_addr['recipient_name'] : 'Customer';
+    $phone = !empty($default_addr['phone_number']) ? $default_addr['phone_number'] : '000-0000000';
+    if (!empty($default_addr['address_line1'])) {
+        $default_address_html = htmlspecialchars($recipient) . " | " . htmlspecialchars($phone) . "<br>" . htmlspecialchars($default_addr['address_line1']) . ", " . htmlspecialchars($default_addr['postcode']) . " " . htmlspecialchars($default_addr['city']) . ", " . htmlspecialchars($default_addr['state']);
+    } else {
+        $default_address_html = strpos($default_addr['full_address'], '|') !== false ? nl2br(htmlspecialchars($default_addr['full_address'])) : htmlspecialchars($recipient) . " | " . htmlspecialchars($phone) . "<br>" . nl2br(htmlspecialchars($default_addr['full_address']));
+    }
+}
+
 $saved_cards = [];
 $query_cards = "SELECT * FROM saved_cards WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
 $stmt_cards = $conn->prepare($query_cards);
@@ -45,7 +61,7 @@ while ($card = $res_cards->fetch_assoc()) {
 }
 $stmt_cards->close();
 
-// 🌟 核心升級：抓取購物車內容，包含 affiliate_id 用於帶貨分傭
+// 抓取購物車內容
 $cart_query = "SELECT c.cart_id, c.quantity, c.affiliate_id, 
                       p.product_id, p.product_name, p.price AS product_price,
                       b.pc_build, b.build_name, b.total_price AS build_price,
@@ -62,7 +78,6 @@ $cart_result = $stmt->get_result();
 
 $cart_items = [];
 $total_amount = 0;
-// 🌟 為了前端即時計算，準備好分類總額
 $subtotal_components = 0; 
 $subtotal_packages = 0;
 
@@ -74,7 +89,6 @@ if ($cart_result->num_rows === 0) {
 while ($row = $cart_result->fetch_assoc()) {
     $cart_items[] = $row;
     
-    // 🌟 动态计算引擎：判断是哪一种商品並抓取/計算對應價格
     if ($row['product_id']) {
         $price = $row['product_price'];
     } elseif ($row['pc_build']) {
@@ -100,7 +114,6 @@ while ($row = $cart_result->fetch_assoc()) {
         $price = 0;
     }
     
-    // 🌟 將商品價格分類，以供優惠券判斷
     $item_total = $price * $row['quantity'];
     $total_amount += $item_total;
     
@@ -116,30 +129,22 @@ $promo_discount = 0;
 $applied_promo_code = '';
 
 // ==========================================
-// 🛡️ 重構區：嚴格安全的 POST 處理邏輯
+// 🛡️ 嚴格安全的 POST 處理邏輯
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 🚨 核心防護：第一時間開啟事務！
     $conn->begin_transaction();
     try {
-        // 1. 地址安全處理 (從後端組合字串，不信任前端傳值)
         $address_id = intval($_POST['shipping_address_id'] ?? 0);
-        if ($address_id <= 0) {
-            throw new Exception("Please select a valid shipping address.");
-        }
+        if ($address_id <= 0) throw new Exception("Please select a valid shipping address.");
         
-        // 💡 確保這裡的 ID 欄位名稱對應你的資料庫 (可能是 address_id 或 id)
         $addr_stmt = $conn->prepare("SELECT * FROM customer_addresses WHERE address_id = ? AND customer_id = ?");
         $addr_stmt->bind_param("ii", $address_id, $customer_id);
         $addr_stmt->execute();
         $addr_res = $addr_stmt->get_result();
-        if ($addr_res->num_rows === 0) {
-            throw new Exception("Security Alert: Invalid shipping address selected.");
-        }
+        if ($addr_res->num_rows === 0) throw new Exception("Security Alert: Invalid shipping address selected.");
         $addr_data = $addr_res->fetch_assoc();
         $addr_stmt->close();
 
-        // 組合地址字串供 Order 記錄
         $recipient = !empty($addr_data['recipient_name']) ? $addr_data['recipient_name'] : 'Customer';
         $phone = !empty($addr_data['phone_number']) ? $addr_data['phone_number'] : '000-0000000';
         if (!empty($addr_data['address_line1'])) {
@@ -149,9 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $final_payment_method = $_POST['payment_method'] ?? '';
-        if (empty($final_payment_method)) {
-            throw new Exception("Please select a payment method before checking out.");
-        }
+        if (empty($final_payment_method)) throw new Exception("Please select a payment method before checking out.");
 
         $use_coins = isset($_POST['use_coins']) ? true : false;
         $coins_used = 0;
@@ -159,10 +162,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $promo_discount = 0; 
         $applied_promo_code = trim($_POST['applied_promo_code'] ?? ''); 
         $promo_id_to_log = null;
+        $cap_triggered_msg = ""; 
 
-        // 2. 嚴格優惠券核銷 (防止併發重複使用)
         if (!empty($applied_promo_code)) {
-            // 重新計算分類小計 (防前端篡改)
             $sub_comp = 0; $sub_pkg = 0;
             foreach ($cart_items as $item) {
                 $price = $item['product_id'] ? $item['product_price'] : ($item['pc_build'] ? $item['build_price'] : $item['package_price']);
@@ -170,7 +172,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($item['product_id']) { $sub_comp += $item_price; } else { $sub_pkg += $item_price; }
             }
 
-            // 🚨 FOR UPDATE 鎖定優惠券狀態，並聯表驗證是否已使用
             $promo_stmt = $conn->prepare("
                 SELECT p.* FROM promo_codes p 
                 LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = ? 
@@ -199,6 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $promo_discount = $target_subtotal * ($promo_row['discount_value'] / 100);
                     if ($promo_row['max_cap'] > 0 && $promo_discount > $promo_row['max_cap']) {
                         $promo_discount = $promo_row['max_cap'];
+                        $cap_triggered_msg = " (Max Capped applied)";
                     }
                 }
                 $promo_id_to_log = $promo_row['promo_id']; 
@@ -219,7 +221,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $discount_amount = $promo_discount + $coin_discount; 
         $final_amount = max(0, $total_amount - $discount_amount);
 
-        // 3. 金流驗證前置 (取得 Bank ID，暫不扣款)
         $bank_account_id_to_deduct = null; 
         if ($final_payment_method === 'Credit Card') {
             $selected_card = $_POST['selected_card'] ?? '';
@@ -262,12 +263,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 4. 🚨 終極防護：原子化拆解所有配件，統一執行庫存鎖定與扣減
         $required_products = []; 
-        
         foreach ($cart_items as $item) {
             $qty = $item['quantity'];
-            
             if ($item['product_id']) {
                 $pid = $item['product_id'];
                 $required_products[$pid] = ($required_products[$pid] ?? 0) + $qty;
@@ -294,7 +292,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 執行全局庫存 FOR UPDATE 檢查
         foreach ($required_products as $pid => $req_qty) {
             $stock_stmt = $conn->prepare("SELECT stock_quantity, product_name FROM products WHERE product_id = ? FOR UPDATE");
             $stock_stmt->bind_param("i", $pid);
@@ -306,29 +303,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception("Inventory Error: '{$p_name}' only has " . ($stock_check['stock_quantity'] ?? 0) . " left. Order aborted to prevent phantom stock.");
             }
             
-            // 確定庫存足夠後直接扣減
             $deduct_stock = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE product_id = ?");
             $deduct_stock->bind_param("ii", $req_qty, $pid);
             $deduct_stock->execute();
         }
 
-        // 5. 💰 安全金融扣款
         if ($bank_account_id_to_deduct !== null) {
             $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ? AND balance >= ?");
             $deduct_stmt->bind_param("did", $final_amount, $bank_account_id_to_deduct, $final_amount);
             $deduct_stmt->execute();
-            if ($deduct_stmt->affected_rows === 0) {
-                throw new Exception("Bank Declined: Insufficient funds in your bank account.");
-            }
+            if ($deduct_stmt->affected_rows === 0) throw new Exception("Bank Declined: Insufficient funds in your bank account.");
         }
 
         if ($final_payment_method === 'E-Wallet') {
             $deduct_wallet = $conn->prepare("UPDATE customers SET wallet_balance = wallet_balance - ? WHERE customer_id = ? AND wallet_balance >= ?");
             $deduct_wallet->bind_param("did", $final_amount, $customer_id, $final_amount);
             $deduct_wallet->execute();
-            if ($deduct_wallet->affected_rows === 0) {
-                throw new Exception("Insufficient E-Wallet balance! Please top up or choose another payment method.");
-            }
+            if ($deduct_wallet->affected_rows === 0) throw new Exception("Insufficient E-Wallet balance! Please top up.");
             
             $insert_trans = $conn->prepare("INSERT INTO wallet_transactions (customer_id, type, amount) VALUES (?, 'Payment', ?)");
             $neg_amount = -$final_amount; 
@@ -336,17 +327,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insert_trans->execute();
         } 
         
-        // 金幣安全扣減防護
         if ($coins_used > 0) {
             $deduct_coins = $conn->prepare("UPDATE customers SET reward_coins = reward_coins - ? WHERE customer_id = ? AND reward_coins >= ?");
             $deduct_coins->bind_param("iii", $coins_used, $customer_id, $coins_used);
             $deduct_coins->execute();
-            if ($deduct_coins->affected_rows === 0) {
-                throw new Exception("Coin deduction failed.");
-            }
+            if ($deduct_coins->affected_rows === 0) throw new Exception("Coin deduction failed.");
         }
 
-        // 6. 📝 訂單與優惠券最終記錄寫入
         $insert_order = $conn->prepare("INSERT INTO orders (customer_id, total_amount, discount_amount, coins_used, order_status, shipping_address) VALUES (?, ?, ?, ?, 'Pending', ?)");
         $insert_order->bind_param("iddis", $customer_id, $final_amount, $discount_amount, $coins_used, $shipping_address);
         $insert_order->execute();
@@ -389,9 +376,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $clear_cart->bind_param("i", $customer_id);
         $clear_cart->execute();
 
-        // 7. 完美收官
         $conn->commit();
-        $_SESSION['success_msg'] = "Order placed successfully! Your Order ID is #$order_id";
+        $_SESSION['success_msg'] = "Order placed successfully! Your Order ID is #$order_id. Promo saved RM " . number_format($promo_discount, 2) . $cap_triggered_msg;
         header("Location: my_orders.php");
         exit();
 
@@ -407,646 +393,570 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GridCitY PC - Secure Checkout</title>
+    <title>Secure Checkout - GridCitY PC</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { background: #030305; color: #fff; font-family: 'Inter', sans-serif; }
+        
+        /* 🌟 Sticky 修復：確保 grid 容器不會干擾子元素的 sticky，並且對齊頂部 */
+        .checkout-layout { display: grid; grid-template-columns: 1fr 420px; gap: 30px; align-items: start; margin-top: 30px; }
+        @media(max-width: 1024px) { .checkout-layout { grid-template-columns: 1fr; } }
+
+        /* 通用面板樣式 */
+        .checkout-panel { background: rgba(10, 10, 15, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 25px; }
+        .panel-title { color: #fff; font-size: 1.3rem; font-weight: 800; margin: 0 0 25px 0; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 12px; }
+        .panel-title i { color: #00f2fe; }
+
+        /* 資訊卡片 (地址、信用卡等) */
+        .info-card { display: flex; align-items: flex-start; cursor: pointer; margin-bottom: 15px; padding: 18px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .info-card:hover { border-color: #00f2fe; background: rgba(0, 242, 254, 0.03); }
+        .info-card input[type="radio"] { margin-right: 15px; margin-top: 5px; accent-color: #00f2fe; transform: scale(1.2); }
+        .info-card .card-content { flex: 1; }
+        .info-badge { background: #00f2fe; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; display: inline-block; }
+
+        /* 🌟 Payment Gateway (高科技卡片式替換 select) */
+        .pm-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px; }
+        @media(max-width: 600px) { .pm-grid { grid-template-columns: 1fr; } }
+        .pm-card { cursor: pointer; display: block; }
+        .pm-card input[type="radio"] { display: none; }
+        .pm-content { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 20px; text-align: center; transition: 0.3s; color: #888; }
+        .pm-content i { font-size: 1.8rem; margin-bottom: 12px; display: block; color: inherit; transition: 0.3s;}
+        .pm-content span { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;}
+        .pm-card:hover .pm-content { border-color: rgba(0,242,254,0.4); background: rgba(0,242,254,0.05); color: #fff; }
+        .pm-card input[type="radio"]:checked + .pm-content { border-color: #00f2fe; background: rgba(0,242,254,0.1); color: #00f2fe; box-shadow: 0 0 20px rgba(0,242,254,0.2); transform: translateY(-2px); }
+
+        /* 網銀選項 (FPX Grid) */
+        .bank-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; }
+        .bank-card { display: flex; align-items: center; cursor: pointer; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .bank-card:hover { border-color: #00f2fe; box-shadow: 0 0 15px rgba(0,242,254,0.1); }
+        .bank-card img { max-height: 35px; max-width: 100%; object-fit: contain; }
+
+        /* 表單控制項 */
+        .cyber-input { width: 100%; background: #0a0a0f; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 14px; border-radius: 8px; font-size: 1rem; font-family: 'Inter', sans-serif; box-sizing: border-box; transition: 0.3s; }
+        .cyber-input:focus { outline: none; border-color: #00f2fe; box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.15); }
+        
+        .cyber-button { background: #00f2fe; color: #000; border: none; padding: 16px; border-radius: 8px; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; font-family: 'Inter', sans-serif; }
+        .cyber-button:hover { background: #fff; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); transform: translateY(-2px); }
+
+        /* 🌟 Sticky 修復：賦予 sidebar 獨立的 sticky 屬性 */
+        .checkout-sidebar { position: -webkit-sticky; position: sticky; top: 100px; height: max-content; }
+        
+        /* 回執單 (Receipt) */
+        .receipt-box { background: #0b0f16; border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 12px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+        .receipt-item { display: flex; justify-content: space-between; margin-bottom: 18px; align-items: flex-start; }
+        .receipt-item .name { color: #cbd5e1; font-weight: 600; font-size: 0.95rem; line-height: 1.4; flex: 1; padding-right: 15px; }
+        .receipt-item .price { color: #fff; font-family: 'JetBrains Mono', monospace; font-weight: 700; white-space: nowrap; }
+        
+        .receipt-sub { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); color: #94a3b8; font-size: 0.9rem; }
+        .receipt-sub .val { font-family: 'JetBrains Mono', monospace; color: #fff; }
+        
+        .receipt-discount { display: flex; justify-content: space-between; margin-top: 10px; color: #00f2fe; font-size: 0.9rem; font-weight: bold; }
+        .receipt-discount.gold { color: #ffd700; }
+        .receipt-discount .val { font-family: 'JetBrains Mono', monospace; }
+
+        .receipt-total { border-top: 1px solid rgba(0, 242, 254, 0.3); margin-top: 20px; padding-top: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .receipt-total .label { font-size: 1.2rem; color: #fff; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .receipt-total .val { font-size: 1.8rem; color: #00f2fe; font-family: 'JetBrains Mono', monospace; font-weight: 900; text-shadow: 0 0 15px rgba(0,242,254,0.3); }
+
+        /* 電子錢包專屬面板 */
+        .ewallet-card { background: linear-gradient(135deg, rgba(0,242,254,0.1) 0%, rgba(168,85,247,0.1) 100%); border: 1px solid #00f2fe; border-radius: 12px; padding: 25px; position: relative; overflow: hidden; }
+        .ewallet-card::after { content: '\f555'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; right: -20px; bottom: -30px; font-size: 8rem; color: rgba(0, 242, 254, 0.05); transform: rotate(-15deg); }
+
+        /* 🌟 Voucher Hover 邏輯修復：用純 CSS 取代 JS */
+        .voucher-card-item { display: flex; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 15px; cursor: pointer; transition: 0.3s; }
+        .voucher-card-item.vip-only:hover { border-color: #ffd700; background: rgba(255,215,0,0.1); transform: scale(1.02); box-shadow: 0 5px 15px rgba(255,215,0,0.2); }
+        .voucher-card-item.public-only:hover { border-color: #00f2fe; background: rgba(0,242,254,0.1); transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,242,254,0.2); }
+    </style>
 </head>
 <body>
 
     <?php include 'includes/header.php'; ?>
 
-    <main class="main-container cart-page-wrapper">
-        <div class="auth-title" style="text-align: left; margin-bottom: 30px;">
-            <h2><i class="fa-solid fa-lock"></i> Secure Checkout</h2>
-            <p class="specs">Complete your order details below.</p>
+    <main class="main-container" style="max-width: 1300px; margin: 0 auto; padding: 40px 20px;">
+        
+        <div style="margin-bottom: 30px;">
+            <h1 style="margin: 0; font-size: 2.5rem; font-weight: 900; letter-spacing: -1px; color: #fff;">SECURE <span style="color: #00f2fe; text-shadow: 0 0 20px rgba(0,242,254,0.4);">CHECKOUT</span></h1>
+            <p style="color: #888; font-size: 1rem; margin-top: 5px;">Encrypted connection. Review your telemetry before transmitting order.</p>
         </div>
 
         <?php 
         if (isset($_SESSION['error_msg'])) {
-            echo "<div class='text-danger' style='margin-bottom: 20px; border-left: 4px solid #ff4d4d; padding-left: 10px;'><i class='fa-solid fa-circle-exclamation'></i> " . $_SESSION['error_msg'] . "</div>";
+            echo "<div style='background: rgba(255,77,77,0.1); border: 1px solid #ff4d4d; color: #ff4d4d; padding: 15px; border-radius: 8px; margin-bottom: 25px;'><i class='fa-solid fa-triangle-exclamation'></i> " . $_SESSION['error_msg'] . "</div>";
             unset($_SESSION['error_msg']);
         }
         if (!empty($error_message)) {
-            echo "<div class='text-danger' style='margin-bottom: 20px; border-left: 4px solid #ff4d4d; padding-left: 10px;'><i class='fa-solid fa-circle-exclamation'></i> $error_message</div>";
+            echo "<div style='background: rgba(255,77,77,0.1); border: 1px solid #ff4d4d; color: #ff4d4d; padding: 15px; border-radius: 8px; margin-bottom: 25px;'><i class='fa-solid fa-triangle-exclamation'></i> " . $error_message . "</div>";
         }
         ?>
 
-        <div class="checkout-grid">
+        <form action="checkout.php" method="POST" id="checkoutForm" class="checkout-layout">
             
-            <div class="auth-container" style="margin: 0; max-width: 100%;">
-                <h3 style="margin-bottom: 20px; color: var(--text-main);"><i class="fa-solid fa-truck-fast"></i> Shipping & Payment</h3>
+            <div class="checkout-main">
                 
-                <form action="checkout.php" method="POST" class="form" id="checkoutForm">
-                    
-                <div class="form-group input-group">
-                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <span><i class="fa-solid fa-location-dot"></i> Delivery Address</span>
-                        <a href="profile.php" style="color: var(--accent-blue); font-size: 0.85rem; text-decoration: none;">
-                            <i class="fa-solid fa-plus"></i> Add New Address
-                        </a>
-                    </label>
+                <div class="checkout-panel">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-location-dot"></i> Shipping Coordinates
+                    </div>
 
-                    <?php if(!empty($saved_addresses)): ?>
-                        <div id="active_address_display" style="padding: 15px; background: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.3); border-radius: 8px; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                            <div id="current_address_text" style="color: var(--text-main); line-height: 1.5; white-space: pre-wrap;">
-                                Loading address...
-                            </div>
-                            <button type="button" onclick="toggleAddressList()" style="background: none; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='rgba(0,243,255,0.1)'" onmouseout="this.style.background='none'">
-                                Change
-                            </button>
+                    <div id="active_address_display" class="info-card" style="border-color: #00f2fe; background: rgba(0,242,254,0.05);">
+                        <div class="card-content" id="current_address_text" style="color: #fff; line-height: 1.6;">
+                            <?php echo $default_address_html; ?>
                         </div>
+                        <button type="button" onclick="toggleAddressList()" style="background: rgba(0,242,254,0.1); border: 1px solid #00f2fe; color: #00f2fe; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8rem; margin-left: 15px;">CHANGE</button>
+                    </div>
 
-                        <div id="address_selection_list" style="display: none; margin-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
-                            <?php foreach ($saved_addresses as $addr): ?>
-                                
-                                <?php 
-                                    $recipient = !empty($addr['recipient_name']) ? $addr['recipient_name'] : 'Customer';
-                                    $phone = !empty($addr['phone_number']) ? $addr['phone_number'] : '000-0000000';
-                                    
-                                    if (!empty($addr['address_line1'])) {
-                                        $full_text = $recipient . " | " . $phone . "\n" . $addr['address_line1'] . ", " . $addr['postcode'] . " " . $addr['city'] . ", " . $addr['state'];
-                                    } else {
-                                        if (strpos($addr['full_address'], '|') !== false) {
-                                            $full_text = $addr['full_address'];
-                                        } else {
-                                            $full_text = $recipient . " | " . $phone . "\n" . $addr['full_address'];
-                                        }
-                                    }
-                                    
-                                    // 🚨 UX Hygiene 修正：把 address_id 傳給後端，文字放在 data-text 給前端顯示
-                                    $addr_id_val = isset($addr['address_id']) ? $addr['address_id'] : $addr['id'];
-                                ?>
-
-                                <label style="display: flex; align-items: flex-start; cursor: pointer; margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" class="address-option">
-                                    <input type="radio" name="shipping_address_id" value="<?php echo htmlspecialchars($addr_id_val); ?>" data-text="<?php echo htmlspecialchars($full_text); ?>" style="margin-right: 15px; margin-top: 5px;" onchange="updateActiveAddress(this)" <?php echo $addr['is_default'] ? 'checked' : ''; ?>>
-                                    <div style="flex: 1;">
-                                        <?php if($addr['is_default']): ?>
-                                            <span style="background: var(--accent-blue); color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-bottom: 5px; display: inline-block;">Default</span><br>
-                                        <?php endif; ?>
-                                        
-                                        <?php if (empty($addr['address_line1']) && strpos($addr['full_address'], '|') !== false): ?>
-                                        <?php else: ?>
-                                            <span style="font-weight: bold; color: var(--text-main); font-size: 0.95rem; display: block; margin-bottom: 4px;">
-                                                <?php echo htmlspecialchars($recipient); ?> | <?php echo htmlspecialchars($phone); ?>
-                                            </span>
-                                        <?php endif; ?>
-                                        
-                                        <span style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; display: block;">
-                                            <?php 
-                                                if (!empty($addr['address_line1'])) {
-                                                    echo htmlspecialchars($addr['address_line1']) . "<br>";
-                                                    if (!empty($addr['address_line2'])) echo htmlspecialchars($addr['address_line2']) . "<br>";
-                                                    echo htmlspecialchars($addr['postcode']) . " " . htmlspecialchars($addr['city']) . ", " . htmlspecialchars($addr['state']) . "<br>";
-                                                    echo htmlspecialchars($addr['country'] ?? 'Malaysia');
-                                                } else {
-                                                    echo nl2br(htmlspecialchars($addr['full_address'])); 
-                                                }
-                                            ?>
-                                        </span>
-                                    </div>
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <div style="padding: 20px; text-align: center; border: 1px dashed #ff4d4d; border-radius: 8px;">
-                            <p style="color: #ff4d4d;">Please add a shipping address in your profile first.</p>
-                        </div>
-                    <?php endif; ?>
+                    <div id="address_selection_list" style="display: none; margin-top: 20px;">
+                        <?php if(!empty($saved_addresses)): foreach ($saved_addresses as $addr): 
+                            $recipient = !empty($addr['recipient_name']) ? $addr['recipient_name'] : 'Customer';
+                            $phone = !empty($addr['phone_number']) ? $addr['phone_number'] : '000-0000000';
+                            if (!empty($addr['address_line1'])) {
+                                $full_text = $recipient . " | " . $phone . "<br>" . $addr['address_line1'] . ", " . $addr['postcode'] . " " . $addr['city'] . ", " . $addr['state'];
+                            } else {
+                                $full_text = strpos($addr['full_address'], '|') !== false ? nl2br($addr['full_address']) : $recipient . " | " . $phone . "<br>" . nl2br($addr['full_address']);
+                            }
+                            $addr_id_val = isset($addr['address_id']) ? $addr['address_id'] : $addr['id'];
+                        ?>
+                            <label class="info-card">
+                                <input type="radio" name="shipping_address_id" value="<?php echo htmlspecialchars($addr_id_val); ?>" data-text="<?php echo htmlspecialchars($full_text); ?>" onchange="updateActiveAddress(this)" <?php echo $addr['is_default'] ? 'checked' : ''; ?>>
+                                <div class="card-content">
+                                    <?php if($addr['is_default']) echo '<span class="info-badge">DEFAULT</span>'; ?>
+                                    <strong style="color: #fff; display: block; margin-bottom: 5px;"><?php echo htmlspecialchars($recipient); ?> | <?php echo htmlspecialchars($phone); ?></strong>
+                                    <span style="color: #888; font-size: 0.85rem; line-height: 1.4;">
+                                        <?php 
+                                            if (!empty($addr['address_line1'])) {
+                                                echo htmlspecialchars($addr['address_line1']) . "<br>" . htmlspecialchars($addr['postcode']) . " " . htmlspecialchars($addr['city']) . ", " . htmlspecialchars($addr['state']);
+                                            } else {
+                                                echo nl2br(htmlspecialchars($addr['full_address'])); 
+                                            }
+                                        ?>
+                                    </span>
+                                </div>
+                            </label>
+                        <?php endforeach; endif; ?>
+                        <a href="profile.php" style="display: block; text-align: center; color: #00f2fe; text-decoration: none; font-size: 0.9rem; margin-top: 10px;"><i class="fa-solid fa-plus"></i> Register New Address</a>
+                    </div>
                 </div>
 
-                <script>
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const defaultRadio = document.querySelector('input[name="shipping_address_id"]:checked');
-                        if (defaultRadio) {
-                            updateActiveAddress(defaultRadio);
-                        }
-                    });
-
-                    function toggleAddressList() {
-                        const list = document.getElementById('address_selection_list');
-                        const btn = event.target;
-                        if (list.style.display === 'none') {
-                            list.style.display = 'block';
-                            btn.innerText = 'Cancel';
-                        } else {
-                            list.style.display = 'none';
-                            btn.innerText = 'Change';
-                        }
-                    }
-
-                    function updateActiveAddress(radio) {
-                        // 讀取 data-text 以在 UI 上顯示完整的地址文字
-                        document.getElementById('current_address_text').innerText = radio.getAttribute('data-text');
-                        document.getElementById('address_selection_list').style.display = 'none';
-                        const changeBtn = document.querySelector('#active_address_display button');
-                        if(changeBtn) changeBtn.innerText = 'Change';
-                    }
-                </script>
-
                 <?php if ($current_coins >= 10): ?>
-                <div class="form-group" style="background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <label style="display: flex; align-items: center; cursor: pointer; color: var(--text-main);">
-                        <input type="checkbox" id="use_coins" name="use_coins" style="margin-right: 10px; width: 18px; height: 18px;">
-                        <span id="coins-label-text">
-                            Use up to <strong><?php echo $current_coins; ?> Coins</strong> for 
-                            <strong style="color: #ffd700;">RM <?php echo number_format(floor($current_coins/10), 2); ?> OFF</strong>
+                <div class="checkout-panel" style="border-color: rgba(255,215,0,0.3); background: rgba(255,215,0,0.02); padding: 20px 30px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="use_coins" name="use_coins" style="margin-right: 15px; width: 20px; height: 20px; accent-color: #ffd700;">
+                        <span id="coins-label-text" style="color: #fff; font-size: 1rem;">
+                            Utilize up to <strong style="color: #ffd700;"><?php echo $current_coins; ?> Coins</strong> for 
+                            <strong style="color: #ffd700; font-family: 'JetBrains Mono';">RM <?php echo number_format(floor($current_coins/10), 2); ?> OFF</strong>
                         </span>
                     </label>
                 </div>
                 <?php endif; ?>
 
-                <div class="form-group input-group" style="margin-bottom: 20px;">
-                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span><i class="fa-solid fa-money-check-dollar"></i> Payment Method</span>
-                    </label>
+                <div class="checkout-panel">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-money-check-dollar"></i> Payment Gateway
+                    </div>
                     
-                    <select id="payment_method" name="payment_method" class="form-control" required onchange="togglePaymentSections()" style="background-color: #000; color: #fff; border: 1px solid rgba(0, 243, 255, 0.4); font-size: 1.05rem; padding: 12px; border-radius: 8px;">
-                        <option value="">-- Select Payment Method --</option>
-                        <option value="E-Wallet">💳 GridCitY Digital E-Wallet</option>
-                        <option value="Credit Card">💳 Credit / Debit Card</option>
-                        <option value="Online Banking (FPX)">🏦 Online Banking (FPX)</option>
-                        <option value="Cash on Delivery">🚚 Cash on Delivery (COD)</option>
-                    </select>
-                </div>
+                    <div class="pm-grid">
+                        <label class="pm-card">
+                            <input type="radio" name="payment_method" value="E-Wallet" onchange="togglePaymentSections()" required>
+                            <div class="pm-content">
+                                <i class="fa-solid fa-wallet"></i>
+                                <span>Digital Wallet</span>
+                            </div>
+                        </label>
+                        <label class="pm-card">
+                            <input type="radio" name="payment_method" value="Credit Card" onchange="togglePaymentSections()">
+                            <div class="pm-content">
+                                <i class="fa-regular fa-credit-card"></i>
+                                <span>Credit / Debit</span>
+                            </div>
+                        </label>
+                        <label class="pm-card">
+                            <input type="radio" name="payment_method" value="Online Banking (FPX)" onchange="togglePaymentSections()">
+                            <div class="pm-content">
+                                <i class="fa-solid fa-building-columns"></i>
+                                <span>FPX Banking</span>
+                            </div>
+                        </label>
+                        <label class="pm-card">
+                            <input type="radio" name="payment_method" value="Cash on Delivery" onchange="togglePaymentSections()">
+                            <div class="pm-content">
+                                <i class="fa-solid fa-truck-fast"></i>
+                                <span>Pay on Delivery</span>
+                            </div>
+                        </label>
+                    </div>
 
-                <div id="ewallet_section" style="display: none; background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); border: 1px solid #00f2fe; padding: 25px; border-radius: 12px; margin-bottom: 25px; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0, 242, 254, 0.15);">
-                    <i class="fa-solid fa-wallet" style="position: absolute; right: -20px; bottom: -20px; font-size: 8rem; color: rgba(0, 243, 255, 0.05); transform: rotate(-15deg);"></i>
-                    
-                    <div style="display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1;">
-                        <div>
-                            <p style="color: #00f2fe; font-size: 0.9rem; margin: 0 0 5px 0; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Available Balance</p>
-                            <h2 style="color: #fff; font-size: 2.2rem; margin: 0; text-shadow: 0 0 10px rgba(0,242,254,0.3);">RM <?php echo number_format($current_balance, 2); ?></h2>
-                        </div>
-                        <div style="text-align: right;">
-                            <a href="wallet_topup.php" style="background: #00f2fe; color: #000; padding: 12px 25px; border-radius: 30px; text-decoration: none; font-weight: 900; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); transition: 0.3s; display: inline-block;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                <i class="fa-solid fa-bolt"></i> Top Up Now
-                            </a>
-                            <p style="color: #aaa; font-size: 0.75rem; margin-top: 8px; margin-bottom: 0;">Instant reload via FPX</p>
+                    <div id="ewallet_section" class="ewallet-card" style="display: none; margin-top: 15px;">
+                        <div style="position: relative; z-index: 1;">
+                            <p style="color: #00f2fe; font-size: 0.8rem; margin: 0 0 5px 0; font-weight: 800; letter-spacing: 1px;">AVAILABLE BALANCE</p>
+                            <h2 style="color: #fff; font-size: 2.2rem; margin: 0; font-family: 'JetBrains Mono', monospace; text-shadow: 0 0 15px rgba(0,242,254,0.5);">RM <?php echo number_format($current_balance, 2); ?></h2>
+                            <a href="wallet_topup.php" style="color: #00f2fe; text-decoration: none; font-size: 0.85rem; font-weight: bold; margin-top: 15px; display: inline-block;"><i class="fa-solid fa-bolt"></i> Recharge Wallet</a>
                         </div>
                     </div>
-                </div>
 
-                <div id="credit_card_section" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 243, 255, 0.2); padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-                    <h4 style="color: var(--accent-blue); margin-top: 0; margin-bottom: 15px; font-size: 1rem;"><i class="fa-regular fa-credit-card"></i> Select or Enter Card Details</h4>
+                    <div id="credit_card_section" style="display: none; margin-top: 15px;">
+                        <p style="color: #888; font-size: 0.85rem; margin-bottom: 15px; text-transform: uppercase;">Saved Credentials</p>
+                        <?php if(!empty($saved_cards)): ?>
+                            <?php foreach ($saved_cards as $index => $card): ?>
+                                <label class="info-card">
+                                    <input type="radio" name="selected_card" value="<?php echo htmlspecialchars($card['card_id']); ?>" onchange="toggleNewCardForm()" <?php echo $card['is_default'] ? 'checked' : ''; ?>>
+                                    <div class="card-content">
+                                        <strong style="color: #fff;"><?php echo htmlspecialchars($card['card_brand']); ?> ending in <?php echo htmlspecialchars($card['last_four_digits']); ?></strong>
+                                        <?php if($card['is_default']) echo '<span class="info-badge" style="margin-left:10px;">DEFAULT</span>'; ?>
+                                    </div>
+                                </label>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+
+                        <label class="info-card" style="border-style: dashed;">
+                            <input type="radio" name="selected_card" value="new" onchange="toggleNewCardForm()">
+                            <strong style="color: #fff;">+ Add New Card</strong>
+                        </label>
+
+                        <div id="new_card_form" style="display: none; margin-top: 15px; padding: 20px; background: rgba(0,0,0,0.4); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                            <p style="color: #facc15; font-size: 0.8rem; margin-top: 0;"><i class="fa-solid fa-shield-halved"></i> Simulated secure connection enabled.</p>
+                            <input type="text" name="dummy_card_name" placeholder="Name on Card" class="cyber-input" style="margin-bottom: 15px;">
+                            <div style="display: flex; gap: 15px;">
+                                <input type="text" name="dummy_card_number" placeholder="Card Number" class="cyber-input" style="flex: 2;">
+                                <input type="text" name="dummy_card_cvc" placeholder="CVC" class="cyber-input" style="flex: 1;" maxlength="3">
+                            </div>
+                        </div>
+                    </div>
                     
-                    <?php if(!empty($saved_cards)): ?>
-                        <?php foreach ($saved_cards as $index => $card): ?>
-                            <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 10px; color: var(--text-muted); padding: 12px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                                <input type="radio" name="selected_card" value="<?php echo htmlspecialchars($card['card_id']); ?>" style="margin-right: 15px;" onchange="toggleNewCardForm()" <?php echo $card['is_default'] ? 'checked' : ''; ?>>
-                                <div style="flex: 1;">
-                                    <strong style="color: var(--text-main);"><?php echo htmlspecialchars($card['card_brand']); ?> ending in <?php echo htmlspecialchars($card['last_four_digits']); ?></strong>
-                                    <?php echo $card['is_default'] ? '<span style="margin-left: 8px; background: var(--accent-blue); color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">Default</span>' : ''; ?>
-                                </div>
+                    <div id="fpx_section" style="display: none; margin-top: 15px;">
+                        <p style="color: #888; font-size: 0.85rem; margin-bottom: 15px; text-transform: uppercase;">Select Banking Node</p>
+                        <div class="bank-grid">
+                            <?php 
+                            $banks = ['Maybank2U' => 'maybank.png', 'CIMB Clicks' => 'cimb.png', 'Public Bank' => 'public.png', 'RHB Now' => 'rhb.png'];
+                            foreach($banks as $bname => $bimg): 
+                            ?>
+                            <label class="bank-card">
+                                <input type="radio" name="selected_bank" value="<?php echo $bname; ?>" style="margin-right: 15px; accent-color:#00f2fe;" onchange="toggleFPXForm()">
+                                <img src="image/<?php echo $bimg; ?>" alt="<?php echo $bname; ?>">
                             </label>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-
-                    <label style="display: flex; align-items: center; cursor: pointer; color: var(--text-main); padding: 12px; background: rgba(0, 243, 255, 0.05); border-radius: 6px; border: 1px dashed rgba(0, 243, 255, 0.5);">
-                        <input type="radio" name="selected_card" value="new" style="margin-right: 15px;" onchange="toggleNewCardForm()">
-                        <strong>➕ Pay with a New Card</strong>
-                    </label>
-
-                    <div id="new_card_form" style="display: none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                        <p style="font-size: 0.85rem; color: #ffcc00; margin-top: 0; margin-bottom: 15px;">
-                            <i class="fa-solid fa-shield-halved"></i> <strong>FYP System Note:</strong> Details entered here will be verified against the Dummy Bank database before processing.
-                        </p>
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <input type="text" name="dummy_card_name" placeholder="Name on Card (e.g., Ali Bin Abu)" class="form-control">
+                            <?php endforeach; ?>
                         </div>
-                        <div style="display: flex; gap: 15px;">
-                            <input type="text" name="dummy_card_number" placeholder="Card Number (16 digits)" class="form-control" style="flex: 2;">
-                            <input type="text" name="dummy_card_cvc" placeholder="CVC" class="form-control" style="flex: 1;" maxlength="3">
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="fpx_section" style="display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 243, 255, 0.2); padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-                    <h4 style="color: var(--accent-blue); margin-top: 0; margin-bottom: 15px; font-size: 1rem;"><i class="fa-solid fa-building-columns"></i> Select Your Bank</h4>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-                        <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="Maybank2U" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;" onchange="toggleFPXForm()">
-                            <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
-                                <img src="image/maybank.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
-                            </div>
-                        </label>
 
-                        <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="CIMB Clicks" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;" onchange="toggleFPXForm()">
-                            <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
-                                <img src="image/cimb.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                        <div id="fpx_login_form" style="display: none; margin-top: 20px; padding: 20px; background: rgba(0,0,0,0.4); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                            <p style="color: #facc15; font-size: 0.8rem; margin-top: 0;"><i class="fa-solid fa-lock"></i> Bank Authentication Required</p>
+                            <div style="display: flex; gap: 15px;">
+                                <input type="text" name="fpx_username" placeholder="Username" class="cyber-input">
+                                <input type="password" name="fpx_password" placeholder="Password" class="cyber-input">
                             </div>
-                        </label>
-
-                        <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="Public Bank" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;" onchange="toggleFPXForm()">
-                            <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
-                                <img src="image/public.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
-                            </div>
-                        </label>
-
-                        <label style="display: flex; align-items: center; cursor: pointer; padding: 12px 15px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="RHB Now" style="transform: scale(1.2); flex-shrink: 0; margin-right: 15px;" onchange="toggleFPXForm()">
-                            <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 45px;">
-                                <img src="image/rhb.png" style="max-height: 100%; max-width: 100%; object-fit: contain;">
-                            </div>
-                        </label>
-                    </div>
-
-                    <div id="fpx_login_form" style="display: none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                        <p style="font-size: 0.85rem; color: #ffcc00; margin-top: 0; margin-bottom: 15px;">
-                            <i class="fa-solid fa-shield-halved"></i> <strong>Secure FPX Login:</strong> Please login to authorize the payment from your bank.
-                        </p>
-                        <div style="display: flex; gap: 15px;">
-                            <input type="text" name="fpx_username" placeholder="FPX Username" class="form-control" style="flex: 1;">
-                            <input type="password" name="fpx_password" placeholder="Password" class="form-control" style="flex: 1;">
                         </div>
                     </div>
                 </div>
 
-                <script>
-                    function togglePaymentSections() {
-                        var method = document.getElementById('payment_method').value;
-                        var ccSection = document.getElementById('credit_card_section');
-                        var fpxSection = document.getElementById('fpx_section');
-                        var ewalletSection = document.getElementById('ewallet_section'); 
-                        var newCardForm = document.getElementById('new_card_form');
-                        
-                        ccSection.style.display = 'none';
-                        fpxSection.style.display = 'none';
-                        ewalletSection.style.display = 'none';
-                        newCardForm.style.display = 'none';
-
-                        if (method === 'Credit Card') {
-                            ccSection.style.display = 'block';
-                            toggleNewCardForm(); 
-                        } else if (method === 'Online Banking (FPX)') {
-                            fpxSection.style.display = 'block';
-                        } else if (method === 'E-Wallet') {
-                            ewalletSection.style.display = 'block'; 
-                        }
-                    }
-
-                    function toggleNewCardForm() {
-                        var radios = document.getElementsByName('selected_card');
-                        var newCardForm = document.getElementById('new_card_form');
-                        for (var i = 0; i < radios.length; i++) {
-                            if (radios[i].checked && radios[i].value === 'new') {
-                                newCardForm.style.display = 'block';
-                                return;
-                            }
-                        }
-                        newCardForm.style.display = 'none';
-                    }
-
-                    function toggleFPXForm() {
-                        var radios = document.getElementsByName('selected_bank');
-                        var fpxForm = document.getElementById('fpx_login_form');
-                        let isSelected = false;
-                        for (let r of radios) { if (r.checked) isSelected = true; }
-                        if(fpxForm) fpxForm.style.display = isSelected ? 'block' : 'none';
-                    }
-                </script>
-
-                <div style="background: rgba(255,255,255,0.05); padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 1px solid <?php echo ($current_tier === 'VIP') ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.1)'; ?>;">
-                    <label style="display: block; color: <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#fff'; ?>; font-size: 0.9rem; font-weight: bold; margin-bottom: 12px; text-transform: uppercase;">
-                        <i class="fa-solid fa-ticket"></i> Promo Code
-                    </label>
+                <div class="checkout-panel" style="border-color: <?php echo ($current_tier === 'VIP') ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.08)'; ?>;">
+                    <div class="panel-title" style="color: <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#fff'; ?>;">
+                        <i class="fa-solid fa-ticket" style="color: inherit;"></i> Apply Voucher Code
+                    </div>
                     
-                    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                        <input type="text" name="applied_promo_code" id="promo_code_input" placeholder="Enter Code here" 
-                               style="flex: 1; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 6px; font-family: monospace;">
-                        <button type="button" onclick="openVoucherModal()" 
-                                style="background: #222; color: #ffd700; border: 1px solid #ffd700; padding: 0 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; white-space: nowrap;">
-                            Select Voucher
+                    <div style="display: flex; gap: 15px;">
+                        <input type="text" name="applied_promo_code" id="promo_code_input" class="cyber-input" placeholder="Enter override code..." style="font-family: 'JetBrains Mono', monospace; text-transform: uppercase;">
+                        <button type="button" onclick="openVoucherModal()" class="cyber-button" style="width: auto; background: transparent; border: 1px solid <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#00f2fe'; ?>; color: <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#00f2fe'; ?>; padding: 0 20px;">
+                            Browse
                         </button>
                     </div>
-
-                    <?php if ($current_tier !== 'VIP'): ?>
-                        <p style="font-size: 0.8rem; color: #888; margin: 0;">ELITE members get up to 20% OFF. <a href="membership.php" style="color: #ffd700; text-decoration: none;">Join Now</a></p>
-                    <?php else: ?>
-                        <p style="font-size: 0.8rem; color: #ffd700; margin: 0;"><i class="fa-solid fa-crown"></i> ELITE Member Exclusive: High-value vouchers available!</p>
-                    <?php endif; ?>
                 </div>
 
-                <div style="background: rgba(0, 242, 254, 0.05); border: 1px dashed #00f2fe; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                    <h4 style="color: #00f2fe; margin-top: 0; font-size: 1.1rem;"><i class="fas fa-truck-fast"></i> Delivery Expectation</h4>
-                    <ul style="list-style: none; padding: 0; margin: 0; color: #cbd5e1; font-size: 0.9rem;">
-                        <li style="margin-bottom: 10px;">
-                            <i class="fas fa-check-circle" style="color: #00e676;"></i> <strong>Inventory Check:</strong> Parts locked and secured upon confirmation.
-                        </li>
-                        <li style="margin-bottom: 10px;">
-                            <i class="fas fa-tools" style="color: #ffd700;"></i> <strong>Assembly & Stress Test:</strong> 48 Hours (Professional Cable Management Included).
-                        </li>
-                        <li>
-                            <i class="fas fa-box" style="color: #a855f7;"></i> <strong>Estimated Arrival:</strong> 
-                            <?php echo date('D, M j', strtotime('+5 days')) . " - " . date('D, M j', strtotime('+7 days')); ?>
-                        </li>
-                    </ul>
-                </div>
-
-                <button type="submit" class="btn btn-primary btn-submit-login" style="width: 100%; margin-top: 10px;">
-                    <i class="fa-solid fa-check-double"></i> Confirm & Place Order
-                </button>
-            </form>
-        </div>
-
-        <div class="auth-container" style="margin: 0; max-width: 100%; background: linear-gradient(145deg, var(--bg-darker), #151a25);">
-            <h3 style="margin-bottom: 20px; color: var(--text-main);"><i class="fa-solid fa-receipt"></i> Order Summary</h3>
-            
-            <div class="summary-list">
-                <?php foreach ($cart_items as $item): ?>
-                    <div class="summary-item">
-                        <div style="flex: 3;">
-                            <span style="color: var(--text-main); display: block; font-weight: bold;">
-                                <?php 
-                                    if ($item['product_id']) {
-                                        echo htmlspecialchars($item['product_name']);
-                                    } elseif ($item['pc_build']) {
-                                        echo htmlspecialchars("Custom Rig: " . $item['build_name']);
-                                    } elseif ($item['package_id']) {
-                                        echo htmlspecialchars("Package: " . $item['package_name']);
-                                    }
-                                ?>
-                            </span>
-                            <span class="specs">Qty: <?php echo $item['quantity']; ?></span>
-                        </div>
-                        <div style="flex: 1; text-align: right; color: var(--text-muted);">
-                            RM <?php 
-                                if ($item['product_id']) echo number_format($item['product_price'], 2);
-                                elseif ($item['pc_build']) echo number_format($item['build_price'], 2);
-                                elseif ($item['package_id']) echo number_format($item['package_price'], 2);
-                            ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
             </div>
 
-            <div class="summary-item" style="margin-top: 15px;">
-                <span class="specs">Subtotal</span>
-                <span class="specs" id="subtotal-display" data-subtotal="<?php echo $total_amount; ?>">RM <?php echo number_format($total_amount, 2); ?></span>
-            </div>
-
-            <div class="summary-item" id="promo-row" style="display: none; color: #00f2fe; margin-top: 10px;">
-                <span>Voucher (<span id="promo-name-display"></span>)</span>
-                <span id="promo-amount-display">- RM 0.00</span>
-            </div>
-            
-            <div class="summary-item" id="discount-row" style="display: none; color: #ffd700; margin-top: 10px;">
-                <span>Coins Discount</span>
-                <span id="discount-display" data-discount="<?php echo floor($current_coins/10); ?>">- RM <?php echo number_format(floor($current_coins/10), 2); ?></span>
-            </div>
-
-            <div class="summary-item total-row" style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2);">
-                <span style="font-size: 1.2rem;">Total</span>
-                <span id="final-total-display" style="font-size: 1.5rem; color: #00f2fe;">RM <?php echo number_format($total_amount, 2); ?></span>
-            </div>
-        </div>
-
-    </div>
-</main>
-
-<div id="voucherModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px);">
-    <div style="background: #1a1a1a; margin: 10% auto; padding: 0; width: 90%; max-width: 500px; border-radius: 16px; border: 1px solid #333; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-        
-        <div style="padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; background: #222;">
-            <h3 style="margin: 0; color: #fff;"><i class="fa-solid fa-ticket" style="color: #ffd700;"></i> Select Voucher</h3>
-            <span onclick="closeVoucherModal()" style="color: #888; cursor: pointer; font-size: 1.5rem;">&times;</span>
-        </div>
-
-        <div style="padding: 20px; max-height: 400px; overflow-y: auto;">
-            
-            <?php
-            // 🌟 升級版：過濾掉該顧客已經用過的優惠券
-            $sql_vouchers = "SELECT p.* FROM promo_codes p 
-                             LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = $customer_id 
-                             WHERE p.status = 'Active' AND uv.promo_id IS NULL AND (p.is_vip_only = 0";
-            if ($current_tier === 'VIP') {
-                $sql_vouchers .= " OR p.is_vip_only = 1";
-            }
-            $sql_vouchers .= ") ORDER BY p.is_vip_only DESC, p.discount_value DESC";
-            
-            $res_vouchers = $conn->query($sql_vouchers);
-
-            if ($res_vouchers->num_rows > 0):
-                while ($v = $res_vouchers->fetch_assoc()):
-                    $is_vip_code = ($v['is_vip_only'] == 1);
-            ?>
-                <div onclick="selectVoucher('<?php echo $v['code_name']; ?>')" 
-                     style="display: flex; background: #222; border: 1px solid <?php echo $is_vip_code ? '#ffd700' : '#00f2fe'; ?>; border-radius: 10px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;"
-                     onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 5px 15px <?php echo $is_vip_code ? "rgba(255,215,0,0.2)" : "rgba(0,242,254,0.2)"; ?>';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+            <div class="checkout-sidebar">
+                <div class="receipt-box">
+                    <h3 style="margin: 0 0 25px 0; color: #fff; font-size: 1.2rem; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 15px;"><i class="fa-solid fa-file-invoice" style="color: #00f2fe; margin-right: 10px;"></i> ORDER MANIFEST</h3>
                     
-                    <div style="background: <?php echo $is_vip_code ? 'linear-gradient(135deg, #ffd700, #f39c12)' : 'linear-gradient(135deg, #00f2fe, #4facfe)'; ?>; color: #000; width: 90px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; border-right: 2px dashed #222;">
-                        <?php if($v['discount_type'] == 'Fixed'): ?>
-                            <span style="font-weight: 900; font-size: 1.1rem;">RM<?php echo floatval($v['discount_value']); ?></span>
-                        <?php else: ?>
-                            <span style="font-weight: 900; font-size: 1.2rem;"><?php echo floatval($v['discount_value']); ?>%</span>
-                        <?php endif; ?>
-                        <span style="font-size: 0.6rem; text-transform: uppercase; font-weight: bold;">OFF</span>
+                    <div style="margin-bottom: 25px;">
+                        <?php foreach ($cart_items as $item): ?>
+                            <div class="receipt-item">
+                                <div class="name">
+                                    <span style="color: #64748b; font-size: 0.8rem; margin-right: 5px;"><?php echo $item['quantity']; ?>x</span>
+                                    <?php 
+                                        if ($item['product_id']) echo htmlspecialchars($item['product_name']);
+                                        elseif ($item['pc_build']) echo htmlspecialchars("Rig: " . $item['build_name']);
+                                        elseif ($item['package_id']) echo htmlspecialchars("Pkg: " . $item['package_name']);
+                                    ?>
+                                </div>
+                                <div class="price">
+                                    RM <?php 
+                                        if ($item['product_id']) echo number_format($item['product_price'] * $item['quantity'], 2);
+                                        elseif ($item['pc_build']) echo number_format($item['build_price'] * $item['quantity'], 2);
+                                        elseif ($item['package_id']) echo number_format($item['package_price'] * $item['quantity'], 2);
+                                    ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
 
-                    <div style="padding: 15px; flex: 1;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <strong style="color: #fff; font-size: 1rem;"><?php echo $v['code_name']; ?></strong>
-                            <?php if($is_vip_code): ?>
-                                <span style="background: #000; color: #ffd700; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffd700;">ELITE ONLY</span>
-                            <?php else: ?>
-                                <span style="background: rgba(0,242,254,0.1); color: #00f2fe; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(0,242,254,0.3);">PUBLIC</span>
-                            <?php endif; ?>
-                        </div>
-                        <p style="color: #ccc; font-size: 0.8rem; margin: 5px 0 2px 0;">For <?php echo $v['target_category']; ?></p>
-                        
-                        <div style="color: #888; font-size: 0.75rem;">
-                            <?php 
-                                $terms = [];
-                                if ($v['min_spend'] > 0) $terms[] = "Min. Spend RM " . floatval($v['min_spend']);
-                                if ($v['max_cap'] > 0) $terms[] = "Capped at RM " . floatval($v['max_cap']);
-                                echo empty($terms) ? "No minimum spend" : implode(' | ', $terms);
-                            ?>
-                        </div>
+                    <div class="receipt-sub">
+                        <span>Subtotal</span>
+                        <span class="val" id="subtotal-display" data-subtotal="<?php echo $total_amount; ?>">RM <?php echo number_format($total_amount, 2); ?></span>
                     </div>
 
-                    <div style="padding: 15px; display: flex; align-items: center; color: <?php echo $is_vip_code ? '#ffd700' : '#00f2fe'; ?>; font-size: 1.2rem;">
-                        <i class="fa-solid fa-chevron-right"></i>
+                    <div class="receipt-discount" id="promo-row" style="display: none;">
+                        <span>Voucher (<span id="promo-name-display"></span>)</span>
+                        <span class="val" id="promo-amount-display">- RM 0.00</span>
                     </div>
+                    
+                    <div class="receipt-discount gold" id="discount-row" style="display: none;">
+                        <span>Coins Reclaimed</span>
+                        <span class="val" id="discount-display" data-discount="<?php echo floor($current_coins/10); ?>">- RM <?php echo number_format(floor($current_coins/10), 2); ?></span>
+                    </div>
+
+                    <div class="receipt-total">
+                        <span class="label">NET TOTAL</span>
+                        <span class="val" id="final-total-display">RM <?php echo number_format($total_amount, 2); ?></span>
+                    </div>
+
+                    <button type="submit" class="cyber-button" style="margin-top: 30px;">
+                        <i class="fa-solid fa-satellite-dish"></i> TRANSMIT ORDER
+                    </button>
+                    
+                    <p style="text-align: center; color: #64748b; font-size: 0.75rem; margin-top: 15px;"><i class="fa-solid fa-shield-halved"></i> 256-bit Encrypted Transaction</p>
                 </div>
-            <?php 
-                endwhile;
-            else:
-                echo '<p style="text-align: center; color: #666;">No vouchers available right now.</p>';
-            endif;
-            ?>
+            </div>
+
+        </form>
+    </main>
+
+    <div id="voucherModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px);">
+        <div style="background: #0b0f16; margin: 5% auto; padding: 0; width: 90%; max-width: 500px; border-radius: 12px; border: 1px solid #00f2fe; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
+            
+            <div style="padding: 20px 25px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: rgba(0,242,254,0.05);">
+                <h3 style="margin: 0; color: #fff; font-weight: 800;"><i class="fa-solid fa-ticket" style="color: #00f2fe; margin-right: 10px;"></i> VOUCHER DATABASE</h3>
+                <span onclick="closeVoucherModal()" style="color: #888; cursor: pointer; font-size: 1.5rem; transition: 0.3s;" onmouseover="this.style.color='#fff'">&times;</span>
+            </div>
+
+            <div style="padding: 25px; max-height: 500px; overflow-y: auto;">
+                <?php
+                $sql_vouchers = "SELECT p.* FROM promo_codes p 
+                                 LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = $customer_id 
+                                 WHERE p.status = 'Active' AND uv.promo_id IS NULL AND (p.is_vip_only = 0";
+                if ($current_tier === 'VIP') { $sql_vouchers .= " OR p.is_vip_only = 1"; }
+                $sql_vouchers .= ") ORDER BY p.is_vip_only DESC, p.discount_value DESC";
+                
+                $res_vouchers = $conn->query($sql_vouchers);
+
+                if ($res_vouchers->num_rows > 0):
+                    while ($v = $res_vouchers->fetch_assoc()):
+                        $is_vip = ($v['is_vip_only'] == 1);
+                        $v_color = $is_vip ? '#ffd700' : '#00f2fe';
+                        $v_bg = $is_vip ? 'rgba(255,215,0,0.1)' : 'rgba(0,242,254,0.1)';
+                        // 🌟 CSS Hover 邏輯修復：完全交給 className 處理
+                        $card_class = $is_vip ? 'voucher-card-item vip-only' : 'voucher-card-item public-only';
+                ?>
+                    <div onclick="selectVoucher('<?php echo $v['code_name']; ?>')" class="<?php echo $card_class; ?>">
+                        
+                        <div style="background: <?php echo $v_color; ?>; color: #000; width: 90px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px 10px; font-family: 'JetBrains Mono', monospace;">
+                            <?php if($v['discount_type'] == 'Fixed'): ?>
+                                <span style="font-weight: 900; font-size: 1.1rem;">RM<?php echo floatval($v['discount_value']); ?></span>
+                            <?php else: ?>
+                                <span style="font-weight: 900; font-size: 1.4rem;"><?php echo floatval($v['discount_value']); ?>%</span>
+                            <?php endif; ?>
+                            <span style="font-size: 0.65rem; font-weight: 800; font-family: 'Inter', sans-serif;">OFF</span>
+                        </div>
+
+                        <div style="padding: 15px; flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                                <strong style="color: #fff; font-size: 1.1rem; letter-spacing: 1px;"><?php echo $v['code_name']; ?></strong>
+                                <span style="background: <?php echo $v_bg; ?>; color: <?php echo $v_color; ?>; border: 1px solid <?php echo $v_color; ?>; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; font-weight: bold;">
+                                    <?php echo $is_vip ? 'ELITE' : 'PUBLIC'; ?>
+                                </span>
+                            </div>
+                            
+                            <div style="color: #888; font-size: 0.8rem; font-family: 'Inter', sans-serif;">
+                                <?php 
+                                    $terms = [];
+                                    if ($v['min_spend'] > 0) $terms[] = "Min RM " . floatval($v['min_spend']);
+                                    if ($v['max_cap'] > 0) $terms[] = "Cap RM " . floatval($v['max_cap']);
+                                    echo empty($terms) ? "No minimum spend" : implode(' • ', $terms);
+                                ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php 
+                    endwhile;
+                else:
+                    echo '<p style="text-align: center; color: #666; font-style: italic;">Database empty. No active vouchers.</p>';
+                endif;
+                ?>
+            </div>
         </div>
     </div>
-</div>
 
-<?php include 'includes/footer.php'; ?>
+    <?php include 'includes/footer.php'; ?>
 
-<script>
-    // ==========================================
-    // 1. 資料初始化 (從 PHP 取得)
-    // ==========================================
-    const cartSubtotals = {
-        'Components': <?php echo (float)$subtotal_components; ?>,
-        'Packages': <?php echo (float)$subtotal_packages; ?>,
-        'All': <?php echo (float)$total_amount; ?>
-    };
-
-    const activeVouchers = {
-        <?php
-        $js_promo_stmt = $conn->query("SELECT * FROM promo_codes WHERE status = 'Active'");
-        while($p = $js_promo_stmt->fetch_assoc()) {
-            echo "'{$p['code_name']}': { type: '{$p['discount_type']}', val: {$p['discount_value']}, min: {$p['min_spend']}, max: {$p['max_cap']}, cat: '{$p['target_category']}', vip: {$p['is_vip_only']} },\n";
-        }
-        ?>
-    };
-
-    const currentTier = '<?php echo $current_tier; ?>';
-    const baseSubtotal = <?php echo (float)$total_amount; ?>;
-    const maxUserCoins = <?php echo (int)$current_coins; ?>;
-    
-    let currentPromoDiscount = 0;
-    let currentCoinsDiscount = 0;
-
-    // ==========================================
-    // 2. 支付方式切換與 UI 顯示控制 (FPX & Card)
-    // ==========================================
-    function togglePaymentSections() {
-        const method = document.getElementById('payment_method').value;
-        const sections = {
-            'Credit Card': document.getElementById('credit_card_section'),
-            'Online Banking (FPX)': document.getElementById('fpx_section'),
-            'E-Wallet': document.getElementById('ewallet_section')
+    <script>
+        const cartSubtotals = {
+            'Components': <?php echo (float)$subtotal_components; ?>,
+            'Packages': <?php echo (float)$subtotal_packages; ?>,
+            'All': <?php echo (float)$total_amount; ?>
         };
-        const fpxForm = document.getElementById('fpx_login_form');
 
-        Object.values(sections).forEach(s => { if(s) s.style.display = 'none'; });
-        if(fpxForm) fpxForm.style.display = 'none';
+        const activeVouchers = {
+            <?php
+            $js_promo_stmt = $conn->query("SELECT * FROM promo_codes WHERE status = 'Active'");
+            while($p = $js_promo_stmt->fetch_assoc()) {
+                echo "'{$p['code_name']}': { type: '{$p['discount_type']}', val: {$p['discount_value']}, min: {$p['min_spend']}, max: {$p['max_cap']}, cat: '{$p['target_category']}', vip: {$p['is_vip_only']} },\n";
+            }
+            ?>
+        };
 
-        if (sections[method]) {
-            sections[method].style.display = 'block';
-            if (method === 'Credit Card') toggleNewCardForm();
-            if (method === 'Online Banking (FPX)') toggleFPXForm();
-        }
-    }
-
-    function toggleNewCardForm() {
-        const radios = document.getElementsByName('selected_card');
-        const newCardForm = document.getElementById('new_card_form');
-        let isNew = false;
-        for (let r of radios) { if (r.checked && r.value === 'new') isNew = true; }
-        if(newCardForm) newCardForm.style.display = isNew ? 'block' : 'none';
-    }
-
-    function toggleFPXForm() {
-        const radios = document.getElementsByName('selected_bank');
-        const fpxForm = document.getElementById('fpx_login_form');
-        let isSelected = false;
-        for (let r of radios) { if (r.checked) isSelected = true; }
-        if(fpxForm) fpxForm.style.display = isSelected ? 'block' : 'none';
-    }
-
-    // ==========================================
-    // 3. 智慧計算核心大管家 (優惠券 & 金幣)
-    // ==========================================
-    function updateFinalTotal() {
-        const promoInput = document.getElementById('promo_code_input');
-        const code = promoInput ? promoInput.value.trim() : '';
-        const promoRow = document.getElementById('promo-row');
+        const currentTier = '<?php echo $current_tier; ?>';
+        const baseSubtotal = <?php echo (float)$total_amount; ?>;
+        const maxUserCoins = <?php echo (int)$current_coins; ?>;
         
-        currentPromoDiscount = 0;
-        if (code && activeVouchers[code]) {
-            const v = activeVouchers[code];
-            const targetSubtotal = cartSubtotals[v.cat] || cartSubtotals['All'];
+        let currentPromoDiscount = 0;
+        let currentCoinsDiscount = 0;
 
-            const isVipValid = (v.vip === 0 || (v.vip === 1 && currentTier === 'VIP'));
-            const isSpendValid = (targetSubtotal >= v.min);
+        function toggleAddressList() {
+            const list = document.getElementById('address_selection_list');
+            const btn = event.target;
+            if (list.style.display === 'none') {
+                list.style.display = 'block';
+                btn.innerText = 'CANCEL';
+            } else {
+                list.style.display = 'none';
+                btn.innerText = 'CHANGE';
+            }
+        }
 
-            if (isVipValid && isSpendValid && targetSubtotal > 0) {
-                if (v.type === 'Fixed') {
-                    currentPromoDiscount = Math.min(v.val, targetSubtotal);
+        function updateActiveAddress(radio) {
+            // 由於 HTML 已經解碼過（防止 XSS），這裡直接使用 innerHTML 將 <br> 標籤還原
+            document.getElementById('current_address_text').innerHTML = radio.getAttribute('data-text');
+            document.getElementById('address_selection_list').style.display = 'none';
+            const changeBtn = document.querySelector('#active_address_display button');
+            if(changeBtn) changeBtn.innerText = 'CHANGE';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // 🌟 Address 不再依賴 JS 的預設觸發，因為 PHP 已經渲染好了！
+            togglePaymentSections();
+            updateFinalTotal();
+        });
+
+        // 🌟 Payment Method 切換邏輯 (適配 Radio Buttons)
+        function togglePaymentSections() {
+            const checkedRadio = document.querySelector('input[name="payment_method"]:checked');
+            const method = checkedRadio ? checkedRadio.value : '';
+            
+            const sections = {
+                'Credit Card': document.getElementById('credit_card_section'),
+                'Online Banking (FPX)': document.getElementById('fpx_section'),
+                'E-Wallet': document.getElementById('ewallet_section')
+            };
+            const fpxForm = document.getElementById('fpx_login_form');
+
+            Object.values(sections).forEach(s => { if(s) s.style.display = 'none'; });
+            if(fpxForm) fpxForm.style.display = 'none';
+
+            if (sections[method]) {
+                sections[method].style.display = 'block';
+                if (method === 'Credit Card') toggleNewCardForm();
+                if (method === 'Online Banking (FPX)') toggleFPXForm();
+            }
+        }
+
+        function toggleNewCardForm() {
+            const radios = document.getElementsByName('selected_card');
+            const newCardForm = document.getElementById('new_card_form');
+            let isNew = false;
+            for (let r of radios) { if (r.checked && r.value === 'new') isNew = true; }
+            if(newCardForm) newCardForm.style.display = isNew ? 'block' : 'none';
+        }
+
+        function toggleFPXForm() {
+            const radios = document.getElementsByName('selected_bank');
+            const fpxForm = document.getElementById('fpx_login_form');
+            let isSelected = false;
+            for (let r of radios) { if (r.checked) isSelected = true; }
+            if(fpxForm) fpxForm.style.display = isSelected ? 'block' : 'none';
+        }
+
+        function updateFinalTotal() {
+            const promoInput = document.getElementById('promo_code_input');
+            const code = promoInput ? promoInput.value.trim().toUpperCase() : '';
+            if (promoInput) promoInput.value = code; 
+            const promoRow = document.getElementById('promo-row');
+            
+            currentPromoDiscount = 0;
+            if (code && activeVouchers[code]) {
+                const v = activeVouchers[code];
+                const targetSubtotal = cartSubtotals[v.cat] || cartSubtotals['All'];
+                const isVipValid = (v.vip === 0 || (v.vip === 1 && currentTier === 'VIP'));
+                const isSpendValid = (targetSubtotal >= v.min);
+
+                if (isVipValid && isSpendValid && targetSubtotal > 0) {
+                    let capNotice = '';
+                    if (v.type === 'Fixed') {
+                        currentPromoDiscount = Math.min(v.val, targetSubtotal);
+                    } else {
+                        currentPromoDiscount = targetSubtotal * (v.val / 100);
+                        if (v.max > 0 && currentPromoDiscount > v.max) {
+                            currentPromoDiscount = v.max;
+                            capNotice = ' <span style="color:#ffcc00; font-size:0.7rem; font-family:\'Inter\'; background:rgba(255,204,0,0.1); padding:2px 6px; border-radius:4px; margin-left:8px;">MAX CAPPED</span>';
+                        }
+                    }
+                    
+                    document.getElementById('promo-name-display').innerHTML = code + capNotice;
+                    document.getElementById('promo-amount-display').innerText = '- RM ' + currentPromoDiscount.toFixed(2);
+                    promoRow.style.display = 'flex';
                 } else {
-                    currentPromoDiscount = targetSubtotal * (v.val / 100);
-                    if (v.max > 0 && currentPromoDiscount > v.max) currentPromoDiscount = v.max;
+                    promoRow.style.display = 'none';
                 }
-                document.getElementById('promo-name-display').innerText = code;
-                document.getElementById('promo-amount-display').innerText = '- RM ' + currentPromoDiscount.toFixed(2);
-                promoRow.style.display = 'flex';
             } else {
                 promoRow.style.display = 'none';
             }
-        } else {
-            promoRow.style.display = 'none';
-        }
 
-        const amountAfterPromo = Math.max(0, baseSubtotal - currentPromoDiscount);
+            const amountAfterPromo = Math.max(0, baseSubtotal - currentPromoDiscount);
 
-        const useCoinsCheckbox = document.getElementById('use_coins');
-        const discountRow = document.getElementById('discount-row');
-        const coinsLabelText = document.getElementById('coins-label-text');
-        
-        currentCoinsDiscount = 0;
-        if (useCoinsCheckbox) {
-            let maxPossibleCoinValue = Math.floor(maxUserCoins / 10);
+            const useCoinsCheckbox = document.getElementById('use_coins');
+            const discountRow = document.getElementById('discount-row');
+            const coinsLabelText = document.getElementById('coins-label-text');
             
-            if (useCoinsCheckbox.checked) {
-                if (maxPossibleCoinValue > amountAfterPromo) {
-                    currentCoinsDiscount = amountAfterPromo;
+            currentCoinsDiscount = 0;
+            if (useCoinsCheckbox) {
+                let maxPossibleCoinValue = Math.floor(maxUserCoins / 10);
+                
+                if (useCoinsCheckbox.checked) {
+                    currentCoinsDiscount = (maxPossibleCoinValue > amountAfterPromo) ? amountAfterPromo : maxPossibleCoinValue;
+                    const coinsToDeduct = currentCoinsDiscount * 10;
+                    document.getElementById('discount-display').innerText = '- RM ' + currentCoinsDiscount.toFixed(2);
+                    coinsLabelText.innerHTML = `Deploy <strong>${coinsToDeduct} Coins</strong> for <strong style="color: #ffd700; font-family: 'JetBrains Mono';">RM ${currentCoinsDiscount.toFixed(2)} OFF</strong>`;
+                    discountRow.style.display = 'flex';
                 } else {
-                    currentCoinsDiscount = maxPossibleCoinValue;
+                    coinsLabelText.innerHTML = `Utilize up to <strong style="color: #ffd700;">${maxUserCoins} Coins</strong> for <strong style="color: #ffd700; font-family: 'JetBrains Mono';">RM ${maxPossibleCoinValue.toFixed(2)} OFF</strong>`;
+                    discountRow.style.display = 'none';
                 }
-                const coinsToDeduct = currentCoinsDiscount * 10;
-                document.getElementById('discount-display').innerText = '- RM ' + currentCoinsDiscount.toFixed(2);
-                coinsLabelText.innerHTML = `Use <strong>${coinsToDeduct} Coins</strong> to get <strong style="color: #ffd700;">RM ${currentCoinsDiscount.toFixed(2)} OFF</strong>`;
-                discountRow.style.display = 'flex';
-            } else {
-                coinsLabelText.innerHTML = `Use up to <strong>${maxUserCoins} Coins</strong> for <strong style="color: #ffd700;">RM ${maxPossibleCoinValue.toFixed(2)} OFF</strong>`;
-                discountRow.style.display = 'none';
             }
+
+            const finalAmount = Math.max(0, amountAfterPromo - currentCoinsDiscount);
+            document.getElementById('final-total-display').innerText = 'RM ' + finalAmount.toFixed(2);
         }
 
-        const finalAmount = Math.max(0, amountAfterPromo - currentCoinsDiscount);
-        document.getElementById('final-total-display').innerText = 'RM ' + finalAmount.toFixed(2);
-    }
+        function openVoucherModal() {
+            document.getElementById('voucherModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
 
-    // ==========================================
-    // 4. 彈窗與事件綁定
-    // ==========================================
-    function openVoucherModal() {
-        document.getElementById('voucherModal').style.display = 'block';
-        document.body.style.overflow = 'hidden';
-    }
+        function closeVoucherModal() {
+            document.getElementById('voucherModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
 
-    function closeVoucherModal() {
-        document.getElementById('voucherModal').style.display = 'none';
-        document.body.style.overflow = 'auto';
-    }
+        function selectVoucher(code) {
+            document.getElementById('promo_code_input').value = code;
+            closeVoucherModal();
+            updateFinalTotal();
+        }
 
-    function selectVoucher(code) {
-        document.getElementById('promo_code_input').value = code;
-        closeVoucherModal();
-        updateFinalTotal();
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        togglePaymentSections();
-        updateFinalTotal();
-
-        const promoInput = document.getElementById('promo_code_input');
-        if(promoInput) promoInput.addEventListener('input', updateFinalTotal);
-
-        const coinsCheckbox = document.getElementById('use_coins');
-        if(coinsCheckbox) coinsCheckbox.addEventListener('change', updateFinalTotal);
-        
-        const paymentMethodSelect = document.getElementById('payment_method');
-        if(paymentMethodSelect) paymentMethodSelect.addEventListener('change', togglePaymentSections);
-    });
-
-    window.onclick = function(event) {
-        const modal = document.getElementById('voucherModal');
-        if (event.target == modal) closeVoucherModal();
-    }
-</script>
+        const promoInputNode = document.getElementById('promo_code_input');
+        if(promoInputNode) promoInputNode.addEventListener('input', updateFinalTotal);
+        const coinsCheckboxNode = document.getElementById('use_coins');
+        if(coinsCheckboxNode) coinsCheckboxNode.addEventListener('change', updateFinalTotal);
+        window.onclick = function(event) { if (event.target == document.getElementById('voucherModal')) closeVoucherModal(); }
+    </script>
 
 </body>
 </html>

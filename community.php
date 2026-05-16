@@ -10,33 +10,57 @@ if (!isset($_SESSION['customer_id'])) {
 $customer_id = $_SESSION['customer_id'];
 $sys_msg = $sys_err = "";
 
-// 1. 处理点赞逻辑
+// 1. 处理点赞逻辑 (🌟 统一 Prepared Statement)
 if (isset($_GET['action']) && $_GET['action'] == 'like' && isset($_GET['post_id'])) {
     $post_id = intval($_GET['post_id']);
-    $check_like = $conn->query("SELECT * FROM community_likes WHERE post_id = $post_id AND customer_id = $customer_id");
-    if ($check_like->num_rows > 0) {
-        $conn->query("DELETE FROM community_likes WHERE post_id = $post_id AND customer_id = $customer_id");
+    
+    $check_like = $conn->prepare("SELECT like_id FROM community_likes WHERE post_id = ? AND customer_id = ?");
+    $check_like->bind_param("ii", $post_id, $customer_id);
+    $check_like->execute();
+    
+    if ($check_like->get_result()->num_rows > 0) {
+        $del_stmt = $conn->prepare("DELETE FROM community_likes WHERE post_id = ? AND customer_id = ?");
+        $del_stmt->bind_param("ii", $post_id, $customer_id);
+        $del_stmt->execute();
     } else {
-        $conn->query("INSERT INTO community_likes (post_id, customer_id) VALUES ($post_id, $customer_id)");
+        $ins_stmt = $conn->prepare("INSERT INTO community_likes (post_id, customer_id) VALUES (?, ?)");
+        $ins_stmt->bind_param("ii", $post_id, $customer_id);
+        $ins_stmt->execute();
     }
-    // 保持当前的 filter 状态
-    $filter_param = isset($_GET['filter']) ? "&filter=" . $_GET['filter'] : "";
+    
+    // 🌟 修复 XSS 漏洞
+    $filter_param = isset($_GET['filter']) ? "&filter=" . htmlspecialchars($_GET['filter']) : "";
     header("Location: community.php?$filter_param"); 
     exit();
 }
 
-// 2. 处理发布新帖
+// 2. 处理发布新帖 (🌟 增加所有权越权防御 IDOR)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
-    $title = trim($_POST['title']);
-    $content = trim($_POST['content']);
+    $title = htmlspecialchars(trim($_POST['title'])); // 防护XSS
+    $content = htmlspecialchars(trim($_POST['content'])); // 防护XSS
     $post_type = $_POST['post_type'];
-    $pc_build_id = ($post_type == 'Showcase' && !empty($_POST['pc_build_id'])) ? intval($_POST['pc_build_id']) : 'NULL';
+    $pc_build_id = null;
+
+    if ($post_type == 'Showcase' && !empty($_POST['pc_build_id'])) {
+        $submitted_build_id = intval($_POST['pc_build_id']);
+        
+        // 🌟 越权拦截：验证该配置确实属于当前登录用户！
+        $verify_owner = $conn->prepare("SELECT pc_build FROM saved_builds WHERE pc_build = ? AND customer_id = ?");
+        $verify_owner->bind_param("ii", $submitted_build_id, $customer_id);
+        $verify_owner->execute();
+        if ($verify_owner->get_result()->num_rows > 0) {
+            $pc_build_id = $submitted_build_id;
+        } else {
+            $sys_err = "SECURITY ALERT: You cannot showcase a blueprint that does not belong to you.";
+        }
+        $verify_owner->close();
+    }
 
     if (empty($title) || empty($content)) {
-        $sys_err = "Data corrupted: Title and Content are required.";
-    } else {
-        $stmt = $conn->prepare("INSERT INTO community_posts (customer_id, pc_build_id, title, content, post_type) VALUES (?, $pc_build_id, ?, ?, ?)");
-        $stmt->bind_param("isss", $customer_id, $title, $content, $post_type);
+        $sys_err = $sys_err ?: "Data corrupted: Title and Content are required.";
+    } elseif (empty($sys_err)) {
+        $stmt = $conn->prepare("INSERT INTO community_posts (customer_id, pc_build_id, title, content, post_type) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("iisss", $customer_id, $pc_build_id, $title, $content, $post_type);
         if ($stmt->execute()) {
             $sys_msg = "Signal transmitted successfully!";
         } else {
@@ -51,6 +75,7 @@ $my_builds = $conn->query("SELECT pc_build, build_name, total_price FROM saved_b
 // 过滤器
 $filter_type = isset($_GET['filter']) ? $_GET['filter'] : 'All';
 $where_clause = "";
+// 🌟 已修复：安全判断，只允许预设参数生效
 if ($filter_type == 'Showcase') $where_clause = "WHERE cp.post_type = 'Showcase'";
 elseif ($filter_type == 'Discussion') $where_clause = "WHERE cp.post_type IN ('Discussion', 'Question')";
 
@@ -82,7 +107,7 @@ function getRankBadge($coins) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- 🌟 开启移动端视口缩放 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neural Network - GridCitY PC</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
@@ -243,7 +268,6 @@ function getRankBadge($coins) {
     <?php if($sys_msg) echo "<div style='color:#00e676; padding:15px; border:1px solid #00e676; border-radius:8px; margin-bottom:20px; background:rgba(0,230,118,0.1);'><i class='fas fa-check'></i> $sys_msg</div>"; ?>
     <?php if($sys_err) echo "<div style='color:#ff4d4d; padding:15px; border:1px solid #ff4d4d; border-radius:8px; margin-bottom:20px; background:rgba(255,77,77,0.1);'><i class='fas fa-exclamation-triangle'></i> $sys_err</div>"; ?>
 
-    <!-- 发帖控制台 (增加引导提示) -->
     <div class="post-form-container" id="post-form">
         <h3 style="margin:0 0 20px 0; color:#fff; font-size: 1.4rem;"><i class="fas fa-satellite-dish" style="color:#00f2fe; margin-right:10px;"></i> Initialize Transmission</h3>
         <form method="POST" action="community.php">
@@ -264,7 +288,7 @@ function getRankBadge($coins) {
                         <?php 
                         if ($my_builds->num_rows > 0) {
                             while($mb = $my_builds->fetch_assoc()) {
-                                echo "<option value='{$mb['pc_build']}'>{$mb['build_name']} (RM " . number_format($mb['total_price'], 2) . ")</option>";
+                                echo "<option value='{$mb['pc_build']}'>".htmlspecialchars($mb['build_name'])." (RM " . number_format($mb['total_price'], 2) . ")</option>";
                             }
                         } else {
                             echo "<option value='' disabled>No builds found! Please use PC Builder first.</option>";
@@ -290,13 +314,12 @@ function getRankBadge($coins) {
 
     <div class="community-layout">
         
-        <!-- 左侧：主信息流 -->
         <div class="main-feed-column">
             
             <div class="filter-bar">
-                <a href="community.php?filter=All" class="filter-btn <?php echo $filter_type == 'All' ? 'active' : ''; ?>">All Signals</a>
-                <a href="community.php?filter=Showcase" class="filter-btn <?php echo $filter_type == 'Showcase' ? 'active' : ''; ?>"><i class="fas fa-fire"></i> Build Showcases</a>
-                <a href="community.php?filter=Discussion" class="filter-btn <?php echo $filter_type == 'Discussion' ? 'active' : ''; ?>">Discussions & Q&A</a>
+                <a href="community.php?filter=All" class="filter-btn <?php echo htmlspecialchars($filter_type) == 'All' ? 'active' : ''; ?>">All Signals</a>
+                <a href="community.php?filter=Showcase" class="filter-btn <?php echo htmlspecialchars($filter_type) == 'Showcase' ? 'active' : ''; ?>"><i class="fas fa-fire"></i> Build Showcases</a>
+                <a href="community.php?filter=Discussion" class="filter-btn <?php echo htmlspecialchars($filter_type) == 'Discussion' ? 'active' : ''; ?>">Discussions & Q&A</a>
             </div>
 
             <div class="post-feed">
@@ -323,7 +346,6 @@ function getRankBadge($coins) {
                         <h2 class="post-title"><?php echo htmlspecialchars($p['title']); ?></h2>
                         <div class="post-content"><?php echo nl2br(htmlspecialchars($p['content'])); ?></div>
                         
-                        <!-- 🌟 极致 PC Builder 联动展示 -->
                         <?php if ($p['post_type'] == 'Showcase' && $p['pc_build_id']): ?>
                             <div class="showcase-box">
                                 <div class="showcase-header">
@@ -334,53 +356,50 @@ function getRankBadge($coins) {
                                     <div class="showcase-price">RM <?php echo number_format($p['total_price'], 2); ?></div>
                                 </div>
                                 
-                                <!-- 动态抓取这台机器的核心硬件 (CPU, GPU, MB) -->
-<!-- 联动预览硬件模块 (带终极悬浮窗交互) -->
-<div class="specs-preview">
-    <?php
-    $b_id = $p['pc_build_id'];
-    // 🌟 升级：多抓取 price, stock_quantity 和 status
-    $specs_sql = "SELECT c.category_name, p.product_name, p.price, p.stock_quantity, p.status 
-                  FROM build_items bi 
-                  JOIN products p ON bi.product_id = p.product_id 
-                  JOIN categories c ON p.category_id = c.category_id 
-                  WHERE bi.pc_build = $b_id 
-                  AND (c.category_name LIKE '%CPU%' OR c.category_name LIKE '%GPU%' OR c.category_name LIKE '%Motherboard%')
-                  LIMIT 3";
-    $specs_res = $conn->query($specs_sql);
-    
-    if ($specs_res->num_rows > 0) {
-        while ($spec = $specs_res->fetch_assoc()) {
-            $icon = 'fa-microchip'; 
-            if (stripos($spec['category_name'], 'GPU') !== false) $icon = 'fa-video';
-            if (stripos($spec['category_name'], 'Motherboard') !== false) $icon = 'fa-chess-board';
-            
-            $short_name = strlen($spec['product_name']) > 20 ? substr($spec['product_name'],0,20)."..." : $spec['product_name'];
-            
-            // 库存逻辑判断
-            $stock_color = $spec['stock_quantity'] > 0 ? '#00e676' : '#ff4d4d';
-            $stock_text = $spec['stock_quantity'] > 0 ? $spec['stock_quantity'].' In Stock' : 'Out of Stock';
-            
-            echo "
-            <div class='spec-tag has-tooltip'>
-                <i class='fas $icon'></i> ".htmlspecialchars($short_name)."
-                
-                <!-- 🌟 隐藏的悬浮数据面板 (Tooltip) -->
-                <div class='tech-tooltip'>
-                    <div class='tt-cat'>".htmlspecialchars($spec['category_name'])."</div>
-                    <div class='tt-name'>".htmlspecialchars($spec['product_name'])."</div>
-                    <div class='tt-footer'>
-                        <span class='tt-price'>RM ".number_format($spec['price'], 2)."</span>
-                        <span class='tt-stock' style='color: $stock_color;'><i class='fas fa-box'></i> $stock_text</span>
-                    </div>
-                </div>
-            </div>";
-        }
-    } else {
-        echo "<span style='color:#64748b; font-size:0.85rem;'>Full specs available inside.</span>";
-    }
-    ?>
-</div>
+                                <div class="specs-preview">
+                                    <?php
+                                    $b_id = $p['pc_build_id'];
+                                    // 🌟 升级：多抓取 price, stock_quantity 和 status
+                                    $specs_sql = "SELECT c.category_name, p.product_name, p.price, p.stock_quantity, p.status 
+                                                  FROM build_items bi 
+                                                  JOIN products p ON bi.product_id = p.product_id 
+                                                  JOIN categories c ON p.category_id = c.category_id 
+                                                  WHERE bi.pc_build = $b_id 
+                                                  AND (c.category_name LIKE '%CPU%' OR c.category_name LIKE '%GPU%' OR c.category_name LIKE '%Motherboard%')
+                                                  LIMIT 3";
+                                    $specs_res = $conn->query($specs_sql);
+                                    
+                                    if ($specs_res->num_rows > 0) {
+                                        while ($spec = $specs_res->fetch_assoc()) {
+                                            $icon = 'fa-microchip'; 
+                                            if (stripos($spec['category_name'], 'GPU') !== false) $icon = 'fa-video';
+                                            if (stripos($spec['category_name'], 'Motherboard') !== false) $icon = 'fa-chess-board';
+                                            
+                                            $short_name = strlen($spec['product_name']) > 20 ? substr($spec['product_name'],0,20)."..." : $spec['product_name'];
+                                            
+                                            // 库存逻辑判断
+                                            $stock_color = $spec['stock_quantity'] > 0 ? '#00e676' : '#ff4d4d';
+                                            $stock_text = $spec['stock_quantity'] > 0 ? $spec['stock_quantity'].' In Stock' : 'Out of Stock';
+                                            
+                                            echo "
+                                            <div class='spec-tag has-tooltip'>
+                                                <i class='fas $icon'></i> ".htmlspecialchars($short_name)."
+                                                
+                                                <div class='tech-tooltip'>
+                                                    <div class='tt-cat'>".htmlspecialchars($spec['category_name'])."</div>
+                                                    <div class='tt-name'>".htmlspecialchars($spec['product_name'])."</div>
+                                                    <div class='tt-footer'>
+                                                        <span class='tt-price'>RM ".number_format($spec['price'], 2)."</span>
+                                                        <span class='tt-stock' style='color: $stock_color;'><i class='fas fa-box'></i> $stock_text</span>
+                                                    </div>
+                                                </div>
+                                            </div>";
+                                        }
+                                    } else {
+                                        echo "<span style='color:#64748b; font-size:0.85rem;'>Full specs available inside.</span>";
+                                    }
+                                    ?>
+                                </div>
                                 
                                 <a href="load_build.php?id=<?php echo $p['pc_build_id']; ?>&action=cart" class="tech-btn" style="width: 100%; text-align: center; display: block; padding: 10px; font-size:0.9rem;">
                                 <i class="fas fa-cart-plus"></i> Load This Build to Cart
@@ -389,7 +408,7 @@ function getRankBadge($coins) {
                         <?php endif; ?>
 
                         <div class="post-actions">
-                            <a href="community.php?action=like&post_id=<?php echo $p['post_id']; ?><?php echo $filter_type != 'All' ? '&filter='.$filter_type : ''; ?>" class="action-btn <?php echo $p['user_liked'] > 0 ? 'liked' : ''; ?>">
+                            <a href="community.php?action=like&post_id=<?php echo $p['post_id']; ?><?php echo htmlspecialchars($filter_type) != 'All' ? '&filter='.htmlspecialchars($filter_type) : ''; ?>" class="action-btn <?php echo $p['user_liked'] > 0 ? 'liked' : ''; ?>">
                                 <i class="<?php echo $p['user_liked'] > 0 ? 'fas' : 'far'; ?> fa-heart"></i> <?php echo $p['like_count']; ?> Likes
                             </a>
                             <a href="#" class="action-btn">
@@ -409,10 +428,8 @@ function getRankBadge($coins) {
 
         </div>
 
-        <!-- 右侧：挂件栏 (在移动端会移到最上方) -->
         <div class="sidebar">
             
-            <!-- 🌟 新增：用户交互引导 CTA -->
             <div class="widget-cta">
                 <h3><i class="fas fa-bolt" style="color:#ffd700; margin-right:8px;"></i> Show Off Your Masterpiece</h3>
                 <p>Designed a killer rig in our PC Builder? Publish it to the Neural Network and let others marvel at your creation (or load it to buy!).</p>

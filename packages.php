@@ -58,13 +58,55 @@ if (array_sum($user_dna) > 0) {
 }
 
 // ==========================================
-// 🔍 模块二：动态多维筛选器 (保留升级的精准双向过滤)
+// 🔍 模块二：动态多维筛选器 (🌟 升级为动态 Prepared Statement)
 // ==========================================
-$search_query = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
-$persona_filter = isset($_GET['persona']) ? $conn->real_escape_string($_GET['persona']) : '';
+$search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
+$persona_filter = isset($_GET['persona']) ? trim($_GET['persona']) : '';
 $sort_by = isset($_GET['sort']) ? $_GET['sort'] : '';
 $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? floatval($_GET['min_price']) : 0;
 $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? floatval($_GET['max_price']) : 0;
+
+$filter_active = false;
+$conditions = [];
+$params = [];
+$types = "";
+
+if (!empty($search_query)) {
+    // 🌟 使用 ? 占位符，防止任何形式的 SQL 注入
+    $conditions[] = "(package_name LIKE ? OR description LIKE ?)";
+    $search_param = "%" . $search_query . "%";
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $types .= "ss";
+    $filter_active = true;
+}
+if (!empty($persona_filter)) {
+    $conditions[] = "target_persona = ?";
+    $params[] = $persona_filter;
+    $types .= "s";
+    $filter_active = true;
+}
+if ($min_price > 0) {
+    $conditions[] = "real_price >= ?";
+    $params[] = $min_price;
+    $types .= "d";
+    $filter_active = true;
+}
+if ($max_price > 0) {
+    $conditions[] = "real_price <= ?";
+    $params[] = $max_price;
+    $types .= "d";
+    $filter_active = true;
+}
+
+$where_clause = "1=1";
+if (!empty($conditions)) {
+    $where_clause .= " AND " . implode(" AND ", $conditions);
+}
+
+$order_clause = "ORDER BY package_id DESC";
+if ($sort_by == 'price_asc') { $order_clause = "ORDER BY real_price ASC"; } 
+elseif ($sort_by == 'price_desc') { $order_clause = "ORDER BY real_price DESC"; }
 
 $sql = "SELECT * FROM (
             SELECT pk.*, 
@@ -72,32 +114,15 @@ $sql = "SELECT * FROM (
              FROM package_items pi JOIN products p ON pi.product_id = p.product_id 
              WHERE pi.package_id = pk.package_id) AS real_price
             FROM packages pk WHERE pk.stock_status = 'Available'
-        ) AS final_packages WHERE 1=1";
+        ) AS final_packages WHERE $where_clause $order_clause";
 
-$filter_active = false;
-
-if (!empty($search_query)) {
-    $sql .= " AND (package_name LIKE '%$search_query%' OR description LIKE '%$search_query%')";
-    $filter_active = true;
+$stmt = $conn->prepare($sql);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
 }
-if (!empty($persona_filter)) {
-    $sql .= " AND target_persona = '$persona_filter'";
-    $filter_active = true;
-}
-if ($min_price > 0) {
-    $sql .= " AND real_price >= $min_price";
-    $filter_active = true;
-}
-if ($max_price > 0) {
-    $sql .= " AND real_price <= $max_price";
-    $filter_active = true;
-}
-
-if ($sort_by == 'price_asc') { $sql .= " ORDER BY real_price ASC"; } 
-elseif ($sort_by == 'price_desc') { $sql .= " ORDER BY real_price DESC"; } 
-else { $sql .= " ORDER BY package_id DESC"; }
-
-$catalog_result = mysqli_query($conn, $sql);
+$stmt->execute();
+$catalog_result = $stmt->get_result();
+$stmt->close();
 
 include 'includes/header.php';
 ?>

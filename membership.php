@@ -23,6 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // 🎯 情況 A：第一次加入 (首月免費)
     if (isset($_POST['join_vip'])) {
+        // 🌟 致命修復：嚴格檢查是否已經是 VIP，防止無限刷 500 金幣漏洞！
+        if ($current_tier === 'VIP') {
+            $_SESSION['error_msg'] = "SECURITY ALERT: You are already an ELITE member.";
+            header("Location: membership.php");
+            exit();
+        }
+
         $expiry_date = date('Y-m-d H:i:s', strtotime('+30 days'));
 
         $update_sql = "UPDATE customers 
@@ -45,6 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // 🎯 情況 B：切換自動續約 (Toggle Auto-Renew)
     if (isset($_POST['toggle_auto_renew'])) {
+        // 🌟 邏輯修復：只有 VIP 才能切換自動續約
+        if ($current_tier !== 'VIP') {
+            $_SESSION['error_msg'] = "Only active ELITE members can toggle auto-renew.";
+            header("Location: membership.php");
+            exit();
+        }
+
         $new_status = ($user_data['auto_renew'] == 1) ? 0 : 1;
         
         $toggle_sql = "UPDATE customers SET auto_renew = ? WHERE customer_id = ?";

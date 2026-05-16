@@ -83,22 +83,32 @@ foreach ($execution_order as $cat_id) {
         $target_budget = max($target_budget, 150); // 强制电源底线
     }
 
-    // 🎯 尝试 1：预算内找最强的
-    $sql = "SELECT * FROM products WHERE category_id = $cat_id AND stock_quantity > 0 AND price <= $target_budget $extra_sql ORDER BY price DESC LIMIT 1";
-    $res = mysqli_query($conn, $sql);
+    // 🎯 尝试 1：预算内找最强的 (🌟 规范化：替换为 Prepared Statement)
+    $sql = "SELECT * FROM products WHERE category_id = ? AND stock_quantity > 0 AND price <= ? $extra_sql ORDER BY price DESC LIMIT 1";
+    $stmt_find = $conn->prepare($sql);
+    $stmt_find->bind_param("id", $cat_id, $target_budget);
+    $stmt_find->execute();
+    $res = $stmt_find->get_result();
 
-    if ($res && mysqli_num_rows($res) > 0) {
-        $part = mysqli_fetch_assoc($res);
+    if ($res && $res->num_rows > 0) {
+        $part = $res->fetch_assoc();
     } else {
         // ⚠️ 尝试 2：保底生存模式 (拿兼容的最便宜货)
-        $sql_fb = "SELECT * FROM products WHERE category_id = $cat_id AND stock_quantity > 0 $extra_sql ORDER BY price ASC LIMIT 1";
-        $res_fb = mysqli_query($conn, $sql_fb);
-        if ($res_fb && mysqli_num_rows($res_fb) > 0) {
-            $part = mysqli_fetch_assoc($res_fb);
+        $sql_fb = "SELECT * FROM products WHERE category_id = ? AND stock_quantity > 0 $extra_sql ORDER BY price ASC LIMIT 1";
+        $stmt_fb = $conn->prepare($sql_fb);
+        $stmt_fb->bind_param("i", $cat_id);
+        $stmt_fb->execute();
+        $res_fb = $stmt_fb->get_result();
+        
+        if ($res_fb && $res_fb->num_rows > 0) {
+            $part = $res_fb->fetch_assoc();
         } else {
+            $stmt_fb->close();
             continue; // 如果真的没货，只能跳过
         }
+        $stmt_fb->close();
     }
+    $stmt_find->close();
 
     // 装入蓝图
     $ai_build[$cat_id] = [
@@ -146,7 +156,7 @@ foreach ($ai_build as $cat_id => $part) {
     ];
 }
 
-// 🌟 预警与预期管理反馈机制 (修复多重错误叠加显示)
+// 🌟 预警与预期管理反馈机制
 $error_messages = [];
 
 // 独立检测 1：零件是否缺失
@@ -162,10 +172,8 @@ if ($actual_total > $budget) {
 
 // 统合输出机制
 if (!empty($error_messages)) {
-    // 如果存在一个或多个错误，使用 <br><br> 将它们拼接成多行警告
     $_SESSION['error_msg'] = implode("<br><br>", $error_messages);
 } else {
-    // 完美状态
     $_SESSION['success_msg'] = "✅ AI Blueprint Fully Deployed: All 11 slots optimally filled for " . strtoupper($persona) . ". Target Budget: RM " . number_format($budget, 2) . " | Actual Cost: RM " . number_format($actual_total, 2) . ".";
 }
 
