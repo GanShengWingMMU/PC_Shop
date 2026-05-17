@@ -167,12 +167,27 @@ while ($item = $details_result->fetch_assoc()) {
                 <span>Subtotal:</span>
                 <span>RM <?php echo number_format($subtotal, 2); ?></span>
             </div>
-            <?php if ($order['coins_used'] > 0): ?>
+            
+            <?php 
+            // 🌟 财务逻辑修复：将总折扣拆分为“金币折扣”和“优惠券折扣”
+            $coin_discount = $order['coins_used'] / 10;
+            $promo_discount = $order['discount_amount'] - $coin_discount;
+            ?>
+
+            <?php if ($promo_discount > 0): ?>
             <div class="totals-row" style="color: #e53935;">
-                <span>Coins Discount (<?php echo $order['coins_used']; ?> Coins):</span>
-                <span>- RM <?php echo number_format($order['discount_amount'], 2); ?></span>
+                <span>Voucher Discount:</span>
+                <span>- RM <?php echo number_format($promo_discount, 2); ?></span>
             </div>
             <?php endif; ?>
+
+            <?php if ($order['coins_used'] > 0): ?>
+            <div class="totals-row" style="color: #e53935;">
+                <span>Coins Reclaimed (<?php echo $order['coins_used']; ?> Coins):</span>
+                <span>- RM <?php echo number_format($coin_discount, 2); ?></span>
+            </div>
+            <?php endif; ?>
+
             <div class="totals-row grand-total">
                 <span>Total Paid:</span>
                 <span>RM <?php echo number_format($order['total_amount'], 2); ?></span>

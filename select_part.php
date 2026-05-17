@@ -16,15 +16,25 @@ if ($category_id == 0) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
     $product_id = intval($_POST['product_id']);
     
-    // 只存 ID，绝对不把价格固化在 Session 里
-    $stmt = $conn->prepare("SELECT product_id FROM products WHERE product_id = ? AND category_id = ? AND stock_quantity > 0 AND status = 'Available'");
-    $stmt->execute([$product_id, $category_id]);
+    // 🌟 修复 2：使用标准 bind_param，并抓取需要的所有字段
+    $stmt = $conn->prepare("SELECT product_id, product_name, price, tdp_wattage FROM products WHERE product_id = ? AND category_id = ? AND stock_quantity > 0 AND status = 'Available'");
+    $stmt->bind_param("ii", $product_id, $category_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
     
-    if ($stmt->get_result()->num_rows > 0) {
-        $_SESSION['pc_build'][$category_id] = $product_id;
+    if ($res->num_rows > 0) {
+        $row = $res->fetch_assoc();
+        // 🌟 修复 1：数据结构对齐！必须是数组，否则 builder.php 会报 Fatal Error 崩溃
+        $_SESSION['pc_build'][$category_id] = [
+            'product_id' => $row['product_id'],
+            'name'       => $row['product_name'],
+            'price'      => $row['price'],
+            'wattage'    => $row['tdp_wattage'] ?? 0
+        ];
     } else {
         $_SESSION['error_msg'] = "Sorry, this item just went out of stock or is invalid.";
     }
+    $stmt->close();
     
     header("Location: builder.php");
     exit();

@@ -24,8 +24,8 @@ $stmt_pkg->close();
 // 清空并初始化装机台
 $_SESSION['pc_build'] = [];
 
-// 获取底层真实零件
-$sql = "SELECT p.product_id, p.product_name, p.price, p.tdp_wattage, p.category_id 
+// 获取底层真实零件 (🌟 修复：加入库存与上架状态防呆检查)
+$sql = "SELECT p.product_id, p.product_name, p.price, p.tdp_wattage, p.category_id, p.stock_quantity, p.status 
         FROM package_items pi
         JOIN products p ON pi.product_id = p.product_id
         WHERE pi.package_id = ?";
@@ -36,29 +36,32 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 $loaded_count = 0;
+$out_of_stock_items = [];
 
 while ($row = $result->fetch_assoc()) {
-    $cat_id = $row['category_id'];
-    $_SESSION['pc_build'][$cat_id] = [
-        'product_id' => $row['product_id'],
-        'name'       => $row['product_name'],
-        'price'      => $row['price'], // 绝对的底层原价
-        'wattage'    => $row['tdp_wattage'] ?? 0
-    ];
-    $loaded_count++;
+    // 只有当有货且未下架时，才允许加载入蓝图
+    if ($row['stock_quantity'] > 0 && $row['status'] === 'Available') {
+        $cat_id = $row['category_id'];
+        $_SESSION['pc_build'][$cat_id] = [
+            'product_id' => $row['product_id'],
+            'name'       => $row['product_name'],
+            'price'      => $row['price'], 
+            'wattage'    => $row['tdp_wattage'] ?? 0
+        ];
+        $loaded_count++;
+    } else {
+        $out_of_stock_items[] = $row['product_name'];
+    }
 }
 $stmt->close();
 
-if ($loaded_count === 0) {
-    $_SESSION['error_msg'] = "This package has no linked components yet.";
-    header("Location: packages.php");
-    exit();
-}
-
-// 🌟 剥离之前的花哨打折逻辑，恢复统一标价的纯洁性
-if (isset($_SESSION['customer_id'])) {
-    $_SESSION['success_msg'] = "Loaded <strong>$package_name</strong>! Base components loaded at unified retail prices.";
+// 人性化反馈提示
+if (!empty($out_of_stock_items)) {
+    $_SESSION['error_msg'] = "Package loaded, but some parts are out of stock: " . implode(", ", $out_of_stock_items) . ". Please select alternatives manually.";
+} else {
+    $_SESSION['success_msg'] = "Package '" . htmlspecialchars($package_name) . "' successfully loaded into the builder!";
 }
 
 header("Location: builder.php");
 exit();
+?>
