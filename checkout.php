@@ -2,7 +2,6 @@
 session_start();
 require_once 'config.php';
 
-// 1. 權限與購物車檢查
 if (!isset($_SESSION['customer_id'])) {
     header("Location: login.php");
     exit();
@@ -11,7 +10,7 @@ if (!isset($_SESSION['customer_id'])) {
 $customer_id = $_SESSION['customer_id'];
 $error_message = "";
 
-// 取得顧客目前的錢包餘額與金幣
+// 取得顾客目前的钱包余额与金币
 $user_query = "SELECT wallet_balance, reward_coins, membership_tier FROM customers WHERE customer_id = ?";
 $stmt_user = $conn->prepare($user_query);
 $stmt_user->bind_param("i", $customer_id);
@@ -34,7 +33,7 @@ while ($addr = $addr_result->fetch_assoc()) {
 }
 $stmt_addr->close();
 
-// 🌟 預先計算預設地址 HTML (解決前端 Loading 錯誤)
+// 预先计算默认地址 HTML
 $default_address_html = "<span style='color: #ff4d4d;'><i class='fa-solid fa-triangle-exclamation'></i> Please select a shipping address below.</span>";
 if (!empty($saved_addresses)) {
     $default_addr = $saved_addresses[0]; 
@@ -61,7 +60,7 @@ while ($card = $res_cards->fetch_assoc()) {
 }
 $stmt_cards->close();
 
-// 抓取購物車內容
+// 抓取购物车内容
 $cart_query = "SELECT c.cart_id, c.quantity, c.affiliate_id, 
                       p.product_id, p.product_name, p.price AS product_price,
                       b.pc_build, b.build_name, b.total_price AS build_price,
@@ -129,7 +128,7 @@ $promo_discount = 0;
 $applied_promo_code = '';
 
 // ==========================================
-// 🛡️ 嚴格安全的 POST 處理邏輯
+// 🛡️ 严格安全的 POST 处理逻辑
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn->begin_transaction();
@@ -172,6 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($item['product_id']) { $sub_comp += $item_price; } else { $sub_pkg += $item_price; }
             }
 
+            // 🌟 修复：防止并发 (Race Condition)
             $promo_stmt = $conn->prepare("
                 SELECT p.* FROM promo_codes p 
                 LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = ? 
@@ -226,14 +226,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $selected_card = $_POST['selected_card'] ?? '';
             if ($selected_card === 'new') {
                 $card_num = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
+                if(strlen($card_num) < 15 || strlen($card_num) > 16) {
+                    throw new Exception("Security Alert: Invalid Card Format.");
+                }
                 $card_cvc = trim($_POST['dummy_card_cvc']);
                 $bank_stmt = $conn->prepare("SELECT id FROM bank WHERE card_number = ? AND cvc = ?");
                 $bank_stmt->bind_param("ss", $card_num, $card_cvc);
                 $bank_stmt->execute();
                 $bank_result = $bank_stmt->get_result();
                 if ($bank_result->num_rows > 0) {
+                    
                     $bank_account_id_to_deduct = $bank_result->fetch_assoc()['id']; 
+                    
+                    $save_new_card = isset($_POST['save_new_card']) ? 1 : 0;
+                    if ($save_new_card) {
+                        $cardholder_name = htmlspecialchars(trim($_POST['dummy_card_name'] ?? 'Cardholder'));
+                        $expiry_date = htmlspecialchars(trim($_POST['dummy_card_expiry'] ?? '12/99'));
+                        $last_four = substr($card_num, -4);
+                        
+                        $first_digit = substr($card_num, 0, 1);
+                        if ($first_digit === '4') $card_brand = 'Visa';
+                        elseif ($first_digit === '5') $card_brand = 'Mastercard';
+                        elseif ($first_digit === '3') $card_brand = 'American Express';
+                        else $card_brand = 'Credit Card';
+
+                        $check_first = $conn->query("SELECT COUNT(*) as count FROM saved_cards WHERE customer_id = $customer_id");
+                        $is_def = ($check_first->fetch_assoc()['count'] == 0) ? 1 : 0;
+
+                        $insert_card = $conn->prepare("INSERT INTO saved_cards (customer_id, bank_id, cardholder_name, last_four_digits, expiry_date, card_brand, is_default) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                        $insert_card->bind_param("iissssi", $customer_id, $bank_account_id_to_deduct, $cardholder_name, $last_four, $expiry_date, $card_brand, $is_def);
+                        $insert_card->execute();
+                    }
+
                     $final_payment_method = "Visa ending in " . substr($card_num, -4); 
+
                 } else {
                     throw new Exception("Bank Declined: Invalid Card Number or CVC. Please try again.");
                 }
@@ -308,23 +334,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $deduct_stock->execute();
         }
 
-        if ($bank_account_id_to_deduct !== null) {
-            $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ? AND balance >= ?");
-            $deduct_stmt->bind_param("did", $final_amount, $bank_account_id_to_deduct, $final_amount);
-            $deduct_stmt->execute();
-            if ($deduct_stmt->affected_rows === 0) throw new Exception("Bank Declined: Insufficient funds in your bank account.");
-        }
+        if ($final_amount > 0) {
+            if ($bank_account_id_to_deduct !== null) {
+                $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ? AND balance >= ?");
+                $deduct_stmt->bind_param("did", $final_amount, $bank_account_id_to_deduct, $final_amount);
+                $deduct_stmt->execute();
+                if ($deduct_stmt->affected_rows === 0) throw new Exception("Bank Declined: Insufficient funds in your bank account.");
+            }
 
-        if ($final_payment_method === 'E-Wallet') {
-            $deduct_wallet = $conn->prepare("UPDATE customers SET wallet_balance = wallet_balance - ? WHERE customer_id = ? AND wallet_balance >= ?");
-            $deduct_wallet->bind_param("did", $final_amount, $customer_id, $final_amount);
-            $deduct_wallet->execute();
-            if ($deduct_wallet->affected_rows === 0) throw new Exception("Insufficient E-Wallet balance! Please top up.");
-            
-            $insert_trans = $conn->prepare("INSERT INTO wallet_transactions (customer_id, type, amount) VALUES (?, 'Payment', ?)");
-            $neg_amount = -$final_amount; 
-            $insert_trans->bind_param("id", $customer_id, $neg_amount);
-            $insert_trans->execute();
+            if ($final_payment_method === 'E-Wallet') {
+                $deduct_wallet = $conn->prepare("UPDATE customers SET wallet_balance = wallet_balance - ? WHERE customer_id = ? AND wallet_balance >= ?");
+                $deduct_wallet->bind_param("did", $final_amount, $customer_id, $final_amount);
+                $deduct_wallet->execute();
+                if ($deduct_wallet->affected_rows === 0) throw new Exception("Insufficient E-Wallet balance! Please top up.");
+                
+                $insert_trans = $conn->prepare("INSERT INTO wallet_transactions (customer_id, type, amount) VALUES (?, 'Payment', ?)");
+                $neg_amount = -$final_amount; 
+                $insert_trans->bind_param("id", $customer_id, $neg_amount);
+                $insert_trans->execute();
+            }
         } 
         
         if ($coins_used > 0) {
@@ -340,9 +368,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $order_id = $insert_order->insert_id;
 
         if ($promo_id_to_log) {
+            // 🌟 修复：最后执行记录，通过 affected_rows 防止并发多线程同时刷入
             $log_used = $conn->prepare("INSERT INTO used_vouchers (customer_id, promo_id, order_id) VALUES (?, ?, ?)");
             $log_used->bind_param("iii", $customer_id, $promo_id_to_log, $order_id);
-            $log_used->execute();
+            try {
+                if (!$log_used->execute() || $log_used->affected_rows === 0) {
+                    throw new Exception("Concurrency Error: Voucher already used.");
+                }
+            } catch (mysqli_sql_exception $e) {
+                // 如果数据库有了 UNIQUE Index 报错也会被抓到
+                throw new Exception("Security Alert: Voucher usage conflict detected.");
+            }
         }
 
         $insert_detail = $conn->prepare("INSERT INTO order_details (order_id, product_id, pc_build, package_id, affiliate_id, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -399,24 +435,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="css/style.css">
     <style>
         body { background: #030305; color: #fff; font-family: 'Inter', sans-serif; }
-        
-        /* 🌟 Sticky 修復：確保 grid 容器不會干擾子元素的 sticky，並且對齊頂部 */
         .checkout-layout { display: grid; grid-template-columns: 1fr 420px; gap: 30px; align-items: start; margin-top: 30px; }
         @media(max-width: 1024px) { .checkout-layout { grid-template-columns: 1fr; } }
-
-        /* 通用面板樣式 */
         .checkout-panel { background: rgba(10, 10, 15, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 25px; }
         .panel-title { color: #fff; font-size: 1.3rem; font-weight: 800; margin: 0 0 25px 0; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 12px; }
         .panel-title i { color: #00f2fe; }
-
-        /* 資訊卡片 (地址、信用卡等) */
         .info-card { display: flex; align-items: flex-start; cursor: pointer; margin-bottom: 15px; padding: 18px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
         .info-card:hover { border-color: #00f2fe; background: rgba(0, 242, 254, 0.03); }
         .info-card input[type="radio"] { margin-right: 15px; margin-top: 5px; accent-color: #00f2fe; transform: scale(1.2); }
         .info-card .card-content { flex: 1; }
         .info-badge { background: #00f2fe; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin-bottom: 5px; display: inline-block; }
-
-        /* 🌟 Payment Gateway (高科技卡片式替換 select) */
         .pm-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px; }
         @media(max-width: 600px) { .pm-grid { grid-template-columns: 1fr; } }
         .pm-card { cursor: pointer; display: block; }
@@ -426,45 +454,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .pm-content span { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;}
         .pm-card:hover .pm-content { border-color: rgba(0,242,254,0.4); background: rgba(0,242,254,0.05); color: #fff; }
         .pm-card input[type="radio"]:checked + .pm-content { border-color: #00f2fe; background: rgba(0,242,254,0.1); color: #00f2fe; box-shadow: 0 0 20px rgba(0,242,254,0.2); transform: translateY(-2px); }
-
-        /* 網銀選項 (FPX Grid) */
         .bank-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; }
         .bank-card { display: flex; align-items: center; cursor: pointer; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
         .bank-card:hover { border-color: #00f2fe; box-shadow: 0 0 15px rgba(0,242,254,0.1); }
         .bank-card img { max-height: 35px; max-width: 100%; object-fit: contain; }
-
-        /* 表單控制項 */
         .cyber-input { width: 100%; background: #0a0a0f; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 14px; border-radius: 8px; font-size: 1rem; font-family: 'Inter', sans-serif; box-sizing: border-box; transition: 0.3s; }
         .cyber-input:focus { outline: none; border-color: #00f2fe; box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.15); }
-        
         .cyber-button { background: #00f2fe; color: #000; border: none; padding: 16px; border-radius: 8px; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; font-family: 'Inter', sans-serif; }
         .cyber-button:hover { background: #fff; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); transform: translateY(-2px); }
-
-        /* 🌟 Sticky 修復：賦予 sidebar 獨立的 sticky 屬性 */
         .checkout-sidebar { position: -webkit-sticky; position: sticky; top: 100px; height: max-content; }
-        
-        /* 回執單 (Receipt) */
         .receipt-box { background: #0b0f16; border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 12px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
         .receipt-item { display: flex; justify-content: space-between; margin-bottom: 18px; align-items: flex-start; }
         .receipt-item .name { color: #cbd5e1; font-weight: 600; font-size: 0.95rem; line-height: 1.4; flex: 1; padding-right: 15px; }
         .receipt-item .price { color: #fff; font-family: 'JetBrains Mono', monospace; font-weight: 700; white-space: nowrap; }
-        
         .receipt-sub { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); color: #94a3b8; font-size: 0.9rem; }
         .receipt-sub .val { font-family: 'JetBrains Mono', monospace; color: #fff; }
-        
         .receipt-discount { display: flex; justify-content: space-between; margin-top: 10px; color: #00f2fe; font-size: 0.9rem; font-weight: bold; }
         .receipt-discount.gold { color: #ffd700; }
         .receipt-discount .val { font-family: 'JetBrains Mono', monospace; }
-
         .receipt-total { border-top: 1px solid rgba(0, 242, 254, 0.3); margin-top: 20px; padding-top: 20px; display: flex; justify-content: space-between; align-items: center; }
         .receipt-total .label { font-size: 1.2rem; color: #fff; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
         .receipt-total .val { font-size: 1.8rem; color: #00f2fe; font-family: 'JetBrains Mono', monospace; font-weight: 900; text-shadow: 0 0 15px rgba(0,242,254,0.3); }
-
-        /* 電子錢包專屬面板 */
         .ewallet-card { background: linear-gradient(135deg, rgba(0,242,254,0.1) 0%, rgba(168,85,247,0.1) 100%); border: 1px solid #00f2fe; border-radius: 12px; padding: 25px; position: relative; overflow: hidden; }
         .ewallet-card::after { content: '\f555'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; right: -20px; bottom: -30px; font-size: 8rem; color: rgba(0, 242, 254, 0.05); transform: rotate(-15deg); }
-
-        /* 🌟 Voucher Hover 邏輯修復：用純 CSS 取代 JS */
         .voucher-card-item { display: flex; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 15px; cursor: pointer; transition: 0.3s; }
         .voucher-card-item.vip-only:hover { border-color: #ffd700; background: rgba(255,215,0,0.1); transform: scale(1.02); box-shadow: 0 5px 15px rgba(255,215,0,0.2); }
         .voucher-card-item.public-only:hover { border-color: #00f2fe; background: rgba(0,242,254,0.1); transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,242,254,0.2); }
@@ -508,7 +520,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div id="address_selection_list" style="display: none; margin-top: 20px;">
-                        <?php if(!empty($saved_addresses)): foreach ($saved_addresses as $addr): 
+                        
+                        <?php 
+                        $has_default = false;
+                        if (!empty($saved_addresses)) {
+                            foreach ($saved_addresses as $a) {
+                                if ($a['is_default']) { $has_default = true; break; }
+                            }
+                        }
+                        $is_first = true;
+
+                        if(!empty($saved_addresses)): foreach ($saved_addresses as $addr): 
                             $recipient = !empty($addr['recipient_name']) ? $addr['recipient_name'] : 'Customer';
                             $phone = !empty($addr['phone_number']) ? $addr['phone_number'] : '000-0000000';
                             if (!empty($addr['address_line1'])) {
@@ -517,16 +539,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $full_text = strpos($addr['full_address'], '|') !== false ? nl2br($addr['full_address']) : $recipient . " | " . $phone . "<br>" . nl2br($addr['full_address']);
                             }
                             $addr_id_val = isset($addr['address_id']) ? $addr['address_id'] : $addr['id'];
+                            
+                            $is_checked = false;
+                            if ($addr['is_default']) {
+                                $is_checked = true;
+                            } else if (!$has_default && $is_first) {
+                                $is_checked = true;
+                            }
+                            $is_first = false;
                         ?>
                             <label class="info-card">
-                                <input type="radio" name="shipping_address_id" value="<?php echo htmlspecialchars($addr_id_val); ?>" data-text="<?php echo htmlspecialchars($full_text); ?>" onchange="updateActiveAddress(this)" <?php echo $addr['is_default'] ? 'checked' : ''; ?>>
+                                <input type="radio" name="shipping_address_id" value="<?php echo htmlspecialchars($addr_id_val); ?>" data-text="<?php echo htmlspecialchars($full_text); ?>" onchange="updateActiveAddress(this)" <?php echo $is_checked ? 'checked' : ''; ?>>
                                 <div class="card-content">
                                     <?php if($addr['is_default']) echo '<span class="info-badge">DEFAULT</span>'; ?>
                                     <strong style="color: #fff; display: block; margin-bottom: 5px;"><?php echo htmlspecialchars($recipient); ?> | <?php echo htmlspecialchars($phone); ?></strong>
                                     <span style="color: #888; font-size: 0.85rem; line-height: 1.4;">
                                         <?php 
                                             if (!empty($addr['address_line1'])) {
-                                                echo htmlspecialchars($addr['address_line1']) . "<br>" . htmlspecialchars($addr['postcode']) . " " . htmlspecialchars($addr['city']) . ", " . htmlspecialchars($addr['state']);
+                                                echo htmlspecialchars($addr['address_line1']) . "<br>" . htmlspecialchars($addr['postcode']) . " " . htmlspecialchars($addr['city']) . ", " . $addr['state'];
                                             } else {
                                                 echo nl2br(htmlspecialchars($addr['full_address'])); 
                                             }
@@ -535,6 +565,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                             </label>
                         <?php endforeach; endif; ?>
+
                         <a href="profile.php" style="display: block; text-align: center; color: #00f2fe; text-decoration: none; font-size: 0.9rem; margin-top: 10px;"><i class="fa-solid fa-plus"></i> Register New Address</a>
                     </div>
                 </div>
@@ -616,10 +647,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <div id="new_card_form" style="display: none; margin-top: 15px; padding: 20px; background: rgba(0,0,0,0.4); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
                             <p style="color: #facc15; font-size: 0.8rem; margin-top: 0;"><i class="fa-solid fa-shield-halved"></i> Simulated secure connection enabled.</p>
-                            <input type="text" name="dummy_card_name" placeholder="Name on Card" class="cyber-input" style="margin-bottom: 15px;">
+                            
+                            <div style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                                <input type="text" name="dummy_card_name" placeholder="Name on Card" class="cyber-input" style="flex: 2; text-transform: uppercase;">
+                                <label style="flex: 1; display: flex; align-items: center; cursor: pointer; color: #fff; font-size: 0.9rem; background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.3); padding: 0 15px; border-radius: 8px;">
+                                    <input type="checkbox" name="save_new_card" value="1" style="margin-right: 10px; width: 18px; height: 18px; accent-color: #00f2fe;"> 
+                                    Save this card
+                                </label>
+                            </div>
+                            
                             <div style="display: flex; gap: 15px;">
-                                <input type="text" name="dummy_card_number" placeholder="Card Number" class="cyber-input" style="flex: 2;">
-                                <input type="text" name="dummy_card_cvc" placeholder="CVC" class="cyber-input" style="flex: 1;" maxlength="3">
+                                <input type="text" id="dummy_card_number" name="dummy_card_number" placeholder="0000 0000 0000 0000" class="cyber-input" style="flex: 2;" maxlength="19">
+                                <input type="text" id="dummy_card_expiry" name="dummy_card_expiry" placeholder="MM/YY" class="cyber-input" style="flex: 1;" maxlength="5">
+                                <input type="password" name="dummy_card_cvc" placeholder="CVC" class="cyber-input" style="flex: 1;" maxlength="4">
                             </div>
                         </div>
                     </div>
@@ -743,7 +783,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $is_vip = ($v['is_vip_only'] == 1);
                         $v_color = $is_vip ? '#ffd700' : '#00f2fe';
                         $v_bg = $is_vip ? 'rgba(255,215,0,0.1)' : 'rgba(0,242,254,0.1)';
-                        // 🌟 CSS Hover 邏輯修復：完全交給 className 處理
                         $card_class = $is_vip ? 'voucher-card-item vip-only' : 'voucher-card-item public-only';
                 ?>
                     <div onclick="selectVoucher('<?php echo $v['code_name']; ?>')" class="<?php echo $card_class; ?>">
@@ -823,7 +862,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         function updateActiveAddress(radio) {
-            // 由於 HTML 已經解碼過（防止 XSS），這裡直接使用 innerHTML 將 <br> 標籤還原
             document.getElementById('current_address_text').innerHTML = radio.getAttribute('data-text');
             document.getElementById('address_selection_list').style.display = 'none';
             const changeBtn = document.querySelector('#active_address_display button');
@@ -831,12 +869,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            // 🌟 Address 不再依賴 JS 的預設觸發，因為 PHP 已經渲染好了！
             togglePaymentSections();
             updateFinalTotal();
         });
 
-        // 🌟 Payment Method 切換邏輯 (適配 Radio Buttons)
         function togglePaymentSections() {
             const checkedRadio = document.querySelector('input[name="payment_method"]:checked');
             const method = checkedRadio ? checkedRadio.value : '';
@@ -949,6 +985,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.getElementById('promo_code_input').value = code;
             closeVoucherModal();
             updateFinalTotal();
+        }
+        
+        const dummyCardInput = document.getElementById('dummy_card_number');
+        if (dummyCardInput) {
+            dummyCardInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, ''); 
+                let formattedValue = '';
+                for (let i = 0; i < value.length; i++) {
+                    if (i > 0 && i % 4 === 0) formattedValue += ' ';
+                    formattedValue += value[i];
+                }
+                e.target.value = formattedValue;
+            });
+        }
+        
+        const expiryInput = document.getElementById('dummy_card_expiry');
+        if (expiryInput) {
+            expiryInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 2) {
+                    value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                }
+                e.target.value = value;
+            });
         }
 
         const promoInputNode = document.getElementById('promo_code_input');

@@ -7,92 +7,156 @@ $customer_id = $_SESSION['customer_id'];
 $update_msg = $update_err = "";
 $addr_msg = $addr_err = "";
 
-// 默认展开的面板
 $open_acc = 'account';
 
-// 🌟 核心逻辑 1：处理个人资料更新
+// ==========================================
+// 🌟 核心逻辑 1：处理个人资料更新与密码安全验证
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     $new_user = trim($_POST['username']);
     $new_email = trim($_POST['email']);
     $new_pass = $_POST['new_password'];
     $confirm_pass = $_POST['confirm_password'];
-    $new_phone = trim($_POST['phone_number']);
     $new_birthday = trim($_POST['birthday']);
 
-    if (empty($new_user) || empty($new_email)) { $update_err = "Core fields cannot be empty."; }
-    elseif (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) { $update_err = "Invalid email format."; }
-    else {
+    $raw_phone = trim($_POST['phone_number']);
+    if (!empty($raw_phone)) {
+        $raw_phone = preg_replace('/^\+?60/', '', $raw_phone); 
+        $raw_phone = ltrim($raw_phone, '0'); 
+        $new_phone = "+60" . $raw_phone; 
+    } else {
+        $new_phone = "";
+    }
+
+    // 后端严谨校验
+    if (empty($new_user) || empty($new_email)) { 
+        $update_err = "Core fields (Username/Email) cannot be empty."; 
+    } elseif (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $new_user)) {
+        $update_err = "Username must be 3-20 characters (letters, numbers, underscore).";
+    } elseif (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) { 
+        $update_err = "Invalid email format."; 
+    } elseif (!empty($new_phone) && !preg_match('/^\+60[0-9]{8,10}$/', $new_phone)) {
+        $update_err = "Phone number must be a valid Malaysian format (8 to 10 digits after +60).";
+    } elseif (!empty($new_birthday) && (strtotime($new_birthday) === false || strtotime($new_birthday) > time())) {
+        // 🌟 修复：严谨的生日日期检查，防止写入非法或未来日期
+        $update_err = "Invalid birthday date.";
+    } else {
+        
         if (!empty($new_pass)) {
-            if (strlen($new_pass) < 8 || !preg_match('/[A-Z]/', $new_pass) || !preg_match('/[0-9]/', $new_pass) || !preg_match('/[\W]/', $new_pass)) {
-                $update_err = "Password must be 8+ chars with uppercase, number, and symbol.";
-            } elseif ($new_pass !== $confirm_pass) { $update_err = "Passwords do not match."; }
+            $current_pass = $_POST['current_password'] ?? '';
+            
+            $stmt_pwd = $conn->prepare("SELECT password FROM customers WHERE customer_id = ?");
+            $stmt_pwd->bind_param("i", $customer_id);
+            $stmt_pwd->execute();
+            $curr_hash = $stmt_pwd->get_result()->fetch_assoc()['password'];
+            $stmt_pwd->close();
+
+            if (empty($current_pass)) {
+                $update_err = "Authentication required: Please enter your Current Password to authorize password change.";
+            } elseif (!password_verify($current_pass, $curr_hash)) {
+                $update_err = "Authentication failed: Incorrect Current Password.";
+            } elseif (strlen($new_pass) < 12 || !preg_match('/[A-Z]/', $new_pass) || !preg_match('/[0-9]/', $new_pass) || !preg_match('/[\W]/', $new_pass)) {
+                $update_err = "New password must be at least 12 characters and include uppercase, number, and symbol.";
+            } elseif ($new_pass !== $confirm_pass) { 
+                $update_err = "New passwords do not match."; 
+            }
         }
+        
         if (empty($update_err)) {
-            // 🌟 安全修復：防止身份碰撞 (檢查是否與其他人的 Username 或 Email 衝突)
             $check_stmt = $conn->prepare("SELECT customer_id FROM customers WHERE (email = ? OR username = ?) AND customer_id != ?");
             $check_stmt->bind_param("ssi", $new_email, $new_user, $customer_id);
             $check_stmt->execute();
             if ($check_stmt->get_result()->num_rows > 0) {
                 $update_err = "The selected Username or Email is already taken by another account.";
             } else {
-                $stmt = $conn->prepare("UPDATE customers SET username=?, email=?, phone_number=?, birthday=? " . (!empty($new_pass) ? ", password=?" : "") . " WHERE customer_id=?");
+                $sql = "UPDATE customers SET username=?, email=?, phone_number=?, birthday=? " . (!empty($new_pass) ? ", password=?" : "") . " WHERE customer_id=?";
+                $stmt = $conn->prepare($sql);
+                
                 if (!empty($new_pass)) {
                     $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
                     $stmt->bind_param("sssssi", $new_user, $new_email, $new_phone, $new_birthday, $hashed, $customer_id);
                 } else { 
                     $stmt->bind_param("ssssi", $new_user, $new_email, $new_phone, $new_birthday, $customer_id); 
                 }
+                
                 if ($stmt->execute()) { 
                     $_SESSION['username'] = $new_user; 
                     $update_msg = "Profile updated successfully."; 
+                } else {
+                    $update_err = "Database error. Failed to update profile.";
                 }
+                $stmt->close();
             }
             $check_stmt->close();
         }
     }
 }
 
+// ==========================================
 // 🌟 核心逻辑 2：处理地址管理
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_address'])) {
     $open_acc = 'address'; 
-    $recipient = trim($_POST['recipient_name']);
-    $phone = trim($_POST['addr_phone']);
-    $line1 = trim($_POST['address_line1']);
-    $line2 = trim($_POST['address_line2']);
-    $city = trim($_POST['city']);
-    $state = trim($_POST['state']);
+    $recipient = htmlspecialchars(trim($_POST['recipient_name']));
+    $line1 = htmlspecialchars(trim($_POST['address_line1']));
+    $line2 = htmlspecialchars(trim($_POST['address_line2']));
+    $city = htmlspecialchars(trim($_POST['city']));
+    $state = htmlspecialchars(trim($_POST['state']));
     $postcode = trim($_POST['postcode']);
     
-    $full_addr = $line1 . ($line2 ? ", " . $line2 : "") . ", " . $postcode . " " . $city . ", " . $state;
+    $raw_addr_phone = trim($_POST['addr_phone']);
+    $raw_addr_phone = preg_replace('/^\+?60/', '', $raw_addr_phone);
+    $raw_addr_phone = ltrim($raw_addr_phone, '0');
+    $phone = "+60" . $raw_addr_phone;
     
-    $stmt = $conn->prepare("INSERT INTO customer_addresses (customer_id, recipient_name, phone_number, address_line1, address_line2, city, state, postcode, full_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("issssssss", $customer_id, $recipient, $phone, $line1, $line2, $city, $state, $postcode, $full_addr);
-    if($stmt->execute()) { $addr_msg = "New address added."; }
-    else { $addr_err = "Failed to add address."; }
+    if (!preg_match('/^\+60[0-9]{8,10}$/', $phone)) {
+        $addr_err = "Delivery phone must be a valid Malaysian format (8 to 10 digits).";
+    } elseif (!preg_match('/^[0-9]{5}$/', $postcode)) {
+        // 🌟 修复：严谨的邮政编码后端验证 (大马邮政编码固定5位数字)
+        $addr_err = "Postcode must be exactly 5 digits.";
+    } else {
+        $postcode = htmlspecialchars($postcode);
+        $full_addr = $line1 . ($line2 ? ", " . $line2 : "") . ", " . $postcode . " " . $city . ", " . $state;
+        
+        $stmt = $conn->prepare("INSERT INTO customer_addresses (customer_id, recipient_name, phone_number, address_line1, address_line2, city, state, postcode, full_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("issssssss", $customer_id, $recipient, $phone, $line1, $line2, $city, $state, $postcode, $full_addr);
+        if($stmt->execute()) { $addr_msg = "New address added."; }
+        else { $addr_err = "Failed to add address."; }
+        $stmt->close();
+    }
 }
 
 if (isset($_GET['del_addr'])) {
     $open_acc = 'address';
     $addr_id = intval($_GET['del_addr']);
-    $conn->query("DELETE FROM customer_addresses WHERE address_id = $addr_id AND customer_id = $customer_id");
+    $stmt = $conn->prepare("DELETE FROM customer_addresses WHERE address_id = ? AND customer_id = ?");
+    $stmt->bind_param("ii", $addr_id, $customer_id);
+    $stmt->execute();
     header("Location: profile.php?tab=address"); exit();
 }
 
 if (isset($_GET['set_default'])) {
     $open_acc = 'address';
     $addr_id = intval($_GET['set_default']);
-    $conn->query("UPDATE customer_addresses SET is_default = 0 WHERE customer_id = $customer_id");
-    $conn->query("UPDATE customer_addresses SET is_default = 1 WHERE address_id = $addr_id AND customer_id = $customer_id");
+    
+    // 🌟 修复：杜绝 SQL 注入隐患，改用 Prepared Statements
+    $stmt_reset = $conn->prepare("UPDATE customer_addresses SET is_default = 0 WHERE customer_id = ?");
+    $stmt_reset->bind_param("i", $customer_id);
+    $stmt_reset->execute();
+    $stmt_reset->close();
+
+    $stmt = $conn->prepare("UPDATE customer_addresses SET is_default = 1 WHERE address_id = ? AND customer_id = ?");
+    $stmt->bind_param("ii", $addr_id, $customer_id);
+    $stmt->execute();
     header("Location: profile.php?tab=address"); exit();
 }
 
-// 通过 URL 参数强制展开对应面板
 if (isset($_GET['tab'])) { $open_acc = $_GET['tab']; }
 
-// 抓取基础数据
 $user = $conn->query("SELECT * FROM customers WHERE customer_id = $customer_id")->fetch_assoc();
 $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = $customer_id ORDER BY is_default DESC, created_at DESC");
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -126,6 +190,7 @@ $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = 
         .bal-item span { font-size: 0.75rem; color: #64748b; font-weight: 800; letter-spacing: 1px; }
 
         .dashboard-grid { display: grid; grid-template-columns: 1fr 400px; gap: 40px; }
+        @media(max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
         
         .accordion-item { background: rgba(0,0,0,0.3); border: 1px solid rgba(0, 242, 254, 0.15); border-radius: 8px; margin-bottom: 20px; overflow: hidden; transition: 0.3s; }
         .accordion-item:hover { border-color: rgba(0, 242, 254, 0.4); box-shadow: 0 0 15px rgba(0, 242, 254, 0.1); }
@@ -136,22 +201,38 @@ $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = 
         .accordion-item.active { border-color: #00f2fe; box-shadow: 0 0 20px rgba(0, 242, 254, 0.15); }
         .accordion-item.active .accordion-header { background: rgba(0,242,254,0.1); }
         .accordion-item.active .accordion-header i.chevron { transform: rotate(180deg); }
-        .accordion-item.active .accordion-content { max-height: 2000px; opacity: 1; padding: 25px; border-top: 1px solid rgba(0, 242, 254, 0.2); }
+        .accordion-item.active .accordion-content { max-height: 2500px; opacity: 1; padding: 25px; border-top: 1px solid rgba(0, 242, 254, 0.2); }
 
-        .tech-input-group { margin-bottom: 20px; }
-        /* 🌟 直白直观的 Label 样式 */
+        .tech-input-group { margin-bottom: 20px; position: relative; }
         .tech-label { color: #94a3b8; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; display: block; }
-        .tech-input { width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 0.95rem; transition: 0.3s; font-family: 'Inter', sans-serif; }
+        .tech-input { width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 0.95rem; transition: 0.3s; font-family: 'Inter', sans-serif; box-sizing: border-box;}
         .tech-input:focus { outline: none; border-color: #00f2fe; background: rgba(0, 242, 254, 0.03); box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
         .tech-btn { background: transparent; color: #00f2fe; border: 1px solid #00f2fe; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 12px 20px; border-radius: 6px; cursor: pointer; transition: 0.3s; display: inline-block; text-align: center; text-decoration: none; box-sizing: border-box; }
         .tech-btn:hover { background: #00f2fe; color: #000; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
 
-        /* Vouchers 设计 */
-        .voucher-card { background: linear-gradient(135deg, rgba(0,242,254,0.05), transparent); border: 1px dashed rgba(0,242,254,0.4); padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden;}
-        .voucher-card::before { content: ''; position: absolute; left: -10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #0a0a0f; border-radius: 50%; border-right: 1px dashed rgba(0,242,254,0.4); }
-        .voucher-card::after { content: ''; position: absolute; right: -10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #0a0a0f; border-radius: 50%; border-left: 1px dashed rgba(0,242,254,0.4); }
+        /* 🌟 核心修复 1：电话号码专属 Input Group UI */
+        .phone-input-group { display: flex; align-items: center; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; transition: 0.3s; }
+        .phone-input-group:focus-within { border-color: #00f2fe; box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
+        .phone-prefix { padding: 12px 15px; background: rgba(255,255,255,0.05); color: #00f2fe; font-weight: bold; border-right: 1px solid rgba(255, 255, 255, 0.1); font-family: 'JetBrains Mono', monospace; }
+        .phone-input-group .tech-input { border: none; background: transparent; box-shadow: none; border-radius: 0; flex: 1; }
+
+        /* 🌟 核心修复 2：将 Date Picker 原生日历图标变成白色赛博朋克风 */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+            opacity: 0.6;
+            transition: 0.3s;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
+        .pwd-checklist { list-style: none; padding: 0; margin: 10px 0 0 0; font-size: 0.75rem; color: #64748b; font-family: 'JetBrains Mono', monospace; display: none; }
+        .pwd-checklist li { margin-bottom: 5px; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
+        .pwd-checklist li.valid { color: #00e676; }
 
         .address-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        @media(max-width: 600px) { .address-grid { grid-template-columns: 1fr; } }
         .addr-card { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); padding: 20px; border-radius: 8px; position: relative; }
         .addr-card.is-default { border-color: #00f2fe; background: rgba(0, 242, 254, 0.03); }
         .badge-default { position: absolute; top: 15px; right: 15px; background: #00f2fe; color: #000; font-size: 0.65rem; font-weight: bold; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
@@ -207,7 +288,6 @@ $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = 
         
         <div class="main-column">
             
-            <!-- 手风琴 1: Account Settings (文案直白化) -->
             <div class="accordion-item <?php echo $open_acc == 'account' ? 'active' : ''; ?>" id="acc-account">
                 <div class="accordion-header" onclick="toggleAccordion('acc-account')">
                     <span><i class="fas fa-user-shield" style="margin-right: 10px;"></i> Account Settings</span>
@@ -221,40 +301,60 @@ $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                             <div class="tech-input-group">
                                 <label class="tech-label">Username</label>
-                                <input type="text" name="username" class="tech-input" value="<?php echo htmlspecialchars($user['username']); ?>" required>
+                                <input type="text" name="username" class="tech-input" value="<?php echo htmlspecialchars($user['username']); ?>" pattern="[a-zA-Z0-9_]{3,20}" title="3-20 letters, numbers, or underscores" required>
                             </div>
                             <div class="tech-input-group">
                                 <label class="tech-label">Email Address</label>
                                 <input type="email" name="email" class="tech-input" value="<?php echo htmlspecialchars($user['email']); ?>" required>
                             </div>
                             <div class="tech-input-group">
-                                <label class="tech-label">Phone Number</label>
-                                <input type="text" name="phone_number" class="tech-input" value="<?php echo htmlspecialchars($user['phone_number']); ?>">
+                                <label class="tech-label">Account Phone Number</label>
+                                <div class="phone-input-group">
+                                    <span class="phone-prefix">+60</span>
+                                    <?php 
+                                        // 从数据库抓出来时，清洗掉前面多余的 60 或 +60 以及 0，还给用户最干净的纯数字
+                                        $display_phone = preg_replace('/^\+?60/', '', $user['phone_number'] ?? ''); 
+                                        $display_phone = ltrim($display_phone, '0');
+                                    ?>
+                                    <input type="tel" name="phone_number" class="tech-input" value="<?php echo htmlspecialchars($display_phone); ?>" pattern="[0-9]{8,10}" maxlength="10" title="Enter 8 to 10 digits (e.g., 123456789)" placeholder="123456789">
+                                </div>
                             </div>
                             <div class="tech-input-group">
                                 <label class="tech-label">Date of Birth</label>
-                                <input type="date" name="birthday" class="tech-input" value="<?php echo htmlspecialchars($user['birthday']); ?>">
+                                <input type="date" name="birthday" class="tech-input" value="<?php echo htmlspecialchars($user['birthday']); ?>" max="<?php echo date('Y-m-d'); ?>">
                             </div>
                         </div>
                         
-                        <h4 style="color: #cbd5e1; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">Change Password</h4>
+                        <h4 style="color: #cbd5e1; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">Security Credentials</h4>
+                        <p style="font-size: 0.75rem; color: #64748b; margin-top: 0;">Leave password fields blank if you only want to update the profile details above.</p>
+                        
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                            <div class="tech-input-group" style="grid-column: span 2;">
+                                <label class="tech-label" style="color: #facc15;"><i class="fas fa-lock"></i> Current Password (Required if changing password)</label>
+                                <input type="password" name="current_password" class="tech-input" placeholder="Type current password to authorize changes" autocomplete="new-password" style="padding-right: 40px; font-family: 'JetBrains Mono'; border-color: rgba(250, 204, 21, 0.4);">
+                                <i class="fas fa-eye toggle-password" style="position: absolute; right: 15px; top: 38px; cursor: pointer; color: #64748b; transition: 0.3s;"></i>
+                            </div>
+
                             <div class="tech-input-group">
                                 <label class="tech-label">New Password</label>
-                                <input type="password" name="new_password" id="new_password" class="tech-input" placeholder="Leave blank to keep current">
-                                <!-- 🌟 密码安全强度条 -->
-                                <div style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 10px; overflow: hidden;">
-                                    <div id="pwd-bar" style="height: 100%; width: 0%; transition: 0.3s;"></div>
-                                </div>
-                                <div id="pwd-text" style="font-size: 0.75rem; margin-top: 5px; text-align: right; min-height: 15px; font-weight: bold;"></div>
+                                <input type="password" name="new_password" id="new_password" class="tech-input" placeholder="Type new password (Min 12 chars)" autocomplete="new-password" style="padding-right: 40px; font-family: 'JetBrains Mono';">
+                                <i class="fas fa-eye toggle-password" style="position: absolute; right: 15px; top: 38px; cursor: pointer; color: #64748b; transition: 0.3s;"></i>
+                                
+                                <ul class="pwd-checklist" id="pwd-checklist">
+                                    <li id="req-len"><i class="fas fa-times-circle"></i> 12+ characters</li>
+                                    <li id="req-up"><i class="fas fa-times-circle"></i> 1 Uppercase</li>
+                                    <li id="req-num"><i class="fas fa-times-circle"></i> 1 Number</li>
+                                    <li id="req-sym"><i class="fas fa-times-circle"></i> 1 Symbol</li>
+                                </ul>
                             </div>
                             <div class="tech-input-group">
                                 <label class="tech-label">Confirm New Password</label>
-                                <input type="password" name="confirm_password" class="tech-input">
+                                <input type="password" name="confirm_password" class="tech-input" placeholder="Retype new password" autocomplete="new-password" style="padding-right: 40px; font-family: 'JetBrains Mono';">
+                                <i class="fas fa-eye toggle-password" style="position: absolute; right: 15px; top: 38px; cursor: pointer; color: #64748b; transition: 0.3s;"></i>
                             </div>
                         </div>
                         
-                        <button type="submit" name="update_profile" class="tech-btn" style="width: auto;">Save Changes</button>
+                        <button type="submit" name="update_profile" class="tech-btn" style="width: auto; margin-top: 15px;">Update Profile</button>
                     </form>
                 </div>
             </div>
@@ -264,58 +364,30 @@ $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = 
                     <span><i class="fas fa-crown" style="margin-right: 10px; color: #ffd700;"></i> ELITE Status & Vouchers</span>
                     <i class="fas fa-chevron-down chevron"></i>
                 </div>
-                
                 <div class="accordion-content">
-                    
                     <?php if ($user['membership_tier'] === 'VIP'): ?>
-                        <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(10,10,15,0.9) 100%); border: 1px solid rgba(255,215,0,0.4); padding: 30px; border-radius: 16px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                            <i class="fa-solid fa-crown" style="position: absolute; right: -20px; bottom: -30px; font-size: 10rem; color: rgba(255,215,0,0.05); transform: rotate(-15deg); pointer-events: none;"></i>
-                            
-                            <div style="position: relative; z-index: 2;">
-                                <h4 style="color: #ffd700; margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 900; display: flex; align-items: center; gap: 10px;">
-                                    <i class="fa-solid fa-circle-check"></i> ELITE Member
-                                </h4>
-                                <p style="font-size: 0.95rem; color: #e2e8f0; margin: 0 0 8px 0; line-height: 1.6;">
-                                    Your premium status is active. You have access to exclusive high-value vouchers.
-                                </p>
-                                <p style="font-size: 0.85rem; color: #94a3b8; font-family: 'JetBrains Mono', monospace; margin: 0 0 25px 0;">
-                                    Valid until: <span style="color: #fff; font-weight: bold;"><?php echo date('d M Y', strtotime($user['vip_expiry_date'])); ?></span>
-                                </p>
-                                
-                                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                                    <a href="vouchers.php" class="tech-btn" style="background: #ffd700; color: #000; border: none; padding: 12px 24px; font-size: 0.9rem; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(255,215,0,0.3);">
-                                        <i class="fa-solid fa-ticket"></i> Open Voucher Wallet
-                                    </a>
-                                    <a href="membership.php" class="tech-btn" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,215,0,0.5); color: #ffd700; padding: 12px 24px; font-size: 0.9rem; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: 0.3s;">
-                                        Manage Subscription
-                                    </a>
-                                </div>
+                        <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(10,10,15,0.9) 100%); border: 1px solid rgba(255,215,0,0.4); padding: 30px; border-radius: 16px; position: relative; overflow: hidden;">
+                            <h4 style="color: #ffd700; margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 900;"><i class="fa-solid fa-circle-check"></i> ELITE Member</h4>
+                            <p style="font-size: 0.95rem; color: #e2e8f0; margin: 0 0 8px 0;">Premium status active. Accessing high-value codes.</p>
+                            <p style="font-size: 0.85rem; color: #94a3b8; font-family: 'JetBrains Mono'; margin: 0 0 25px 0;">Valid until: <span style="color: #fff; font-weight: bold;"><?php echo date('d M Y', strtotime($user['vip_expiry_date'])); ?></span></p>
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                <a href="vouchers.php" class="tech-btn" style="background: #ffd700; color: #000; border: none; box-shadow: 0 4px 15px rgba(255,215,0,0.3);"><i class="fa-solid fa-ticket"></i> Open Voucher Wallet</a>
+                                <a href="membership.php" class="tech-btn" style="border: 1px solid rgba(255,215,0,0.5); color: #ffd700;">Manage Subscription</a>
                             </div>
                         </div>
-
                     <?php else: ?>
-                        <div style="background: rgba(15, 23, 42, 0.6); border: 1px dashed rgba(0, 242, 254, 0.5); padding: 30px; border-radius: 16px; position: relative;">
+                        <div style="background: rgba(15, 23, 42, 0.6); border: 1px dashed rgba(0, 242, 254, 0.5); padding: 30px; border-radius: 16px;">
                             <h4 style="color: #fff; margin: 0 0 12px 0; font-size: 1.3rem; font-weight: 800;">Standard Member</h4>
-                            <p style="font-size: 0.95rem; color: #94a3b8; margin: 0 0 25px 0; line-height: 1.6;">
-                                You currently have access to <span style="color:#00f2fe; font-weight:bold;">Public Vouchers</span>. <br>
-                                Upgrade to <strong style="color:#ffd700; letter-spacing: 1px;">ELITE</strong> to unlock up to 25% OFF exclusive codes, instant 500 Reward Coins, and priority shipping!
-                            </p>
-                            
+                            <p style="font-size: 0.95rem; color: #94a3b8; margin: 0 0 25px 0; line-height: 1.6;">Access <span style="color:#00f2fe; font-weight:bold;">Public Vouchers</span>. Upgrade to <strong style="color:#ffd700;">ELITE</strong> to unlock 25% OFF codes & 500 Coins!</p>
                             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                                <a href="membership.php" class="tech-btn" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; border: none; padding: 12px 24px; font-size: 0.9rem; font-weight: 900; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,242,254,0.4);">
-                                    <i class="fa-solid fa-bolt"></i> Upgrade to ELITE
-                                </a>
-                                <a href="vouchers.php" class="tech-btn" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #cbd5e1; padding: 12px 24px; font-size: 0.9rem; font-weight: 600; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: 0.3s;">
-                                    View Public Vouchers
-                                </a>
+                                <a href="membership.php" class="tech-btn" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; border: none; box-shadow: 0 4px 15px rgba(0,242,254,0.4);"><i class="fa-solid fa-bolt"></i> Upgrade to ELITE</a>
+                                <a href="vouchers.php" class="tech-btn" style="color: #cbd5e1; border-color: rgba(255,255,255,0.2);">View Public Vouchers</a>
                             </div>
                         </div>
                     <?php endif; ?>
-                    
                 </div>
             </div>
 
-            <!-- 手风琴 3: Address Book -->
             <div class="accordion-item <?php echo $open_acc == 'address' ? 'active' : ''; ?>" id="acc-address">
                 <div class="accordion-header" onclick="toggleAccordion('acc-address')">
                     <span><i class="fas fa-location-crosshairs" style="margin-right: 10px;"></i> Address Book</span>
@@ -332,9 +404,15 @@ $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = 
                         <form method="POST" action="profile.php">
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                                 <div class="tech-input-group" style="margin-bottom:0;"><label class="tech-label">Recipient Name</label><input type="text" name="recipient_name" class="tech-input" required></div>
-                                <div class="tech-input-group" style="margin-bottom:0;"><label class="tech-label">Phone Number</label><input type="text" name="addr_phone" class="tech-input" required></div>
+                                <div class="tech-input-group" style="margin-bottom:0;">
+                                    <label class="tech-label">Delivery Phone</label>
+                                    <div class="phone-input-group">
+                                        <span class="phone-prefix">+60</span>
+                                        <input type="tel" name="addr_phone" class="tech-input" value="<?php echo htmlspecialchars($display_phone); ?>" pattern="[0-9]{8,10}" maxlength="10" title="Enter 8 to 10 digits" placeholder="123456789" required>
+                                    </div>
+                                </div>
                                 <div class="tech-input-group" style="grid-column: span 2; margin-bottom:0;"><label class="tech-label">Address Line 1</label><input type="text" name="address_line1" class="tech-input" required></div>
-                                <div class="tech-input-group" style="grid-column: span 2; margin-bottom:0;"><label class="tech-label">Address Line 2</label><input type="text" name="address_line2" class="tech-input"></div>
+                                <div class="tech-input-group" style="grid-column: span 2; margin-bottom:0;"><label class="tech-label">Address Line 2 (Optional)</label><input type="text" name="address_line2" class="tech-input"></div>
                                 <div class="tech-input-group" style="margin-bottom:0;"><label class="tech-label">City</label><input type="text" name="city" class="tech-input" required></div>
                                 <div class="tech-input-group" style="margin-bottom:0;"><label class="tech-label">State</label><input type="text" name="state" class="tech-input" required></div>
                                 <div class="tech-input-group" style="margin-bottom:0;"><label class="tech-label">Postcode</label><input type="text" name="postcode" class="tech-input" required></div>
@@ -383,10 +461,8 @@ $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = 
 
         </div>
 
-        <!-- 右侧：侧边栏面板 -->
         <div class="side-panel">
             
-            <!-- 蓝图滚动区域 -->
             <div class="tech-auth-card" style="padding: 25px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3 style="margin:0; font-weight: 900; font-size: 1.1rem;"><i class="fas fa-microchip" style="color: #00f2fe; margin-right: 8px;"></i> Saved Blueprints</h3>
@@ -453,7 +529,6 @@ $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = 
 
 <?php include 'includes/footer.php'; ?>
 
-<!-- 交互脚本 -->
 <script>
 // 1. 手风琴面板切换
 function toggleAccordion(id) {
@@ -467,61 +542,50 @@ function toggleAccordion(id) {
     });
 }
 
-// 2. 动态密码安全强度条
-document.getElementById('new_password').addEventListener('input', function() {
-    const val = this.value;
-    const bar = document.getElementById('pwd-bar');
-    const text = document.getElementById('pwd-text');
-    let score = 0;
-
-    if (!val) {
-        bar.style.width = '0%';
-        text.textContent = '';
-        return;
-    }
-
-    if (val.length >= 8) score++;
-    if (val.length >= 12) score++;
-    if (/[A-Z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
-
-    let color = '#ff4d4d'; // Red (Weak)
-    let width = '30%';
-    let msg = 'Weak';
-
-    if (score >= 3 && score < 5) {
-        color = '#facc15'; // Yellow (Medium)
-        width = '60%';
-        msg = 'Medium';
-    } else if (score >= 5) {
-        color = '#00e676'; // Green (Strong)
-        width = '100%';
-        msg = 'Strong';
-    }
-
-    bar.style.width = width;
-    bar.style.backgroundColor = color;
-    text.textContent = msg;
-    text.style.color = color;
+// 2. 密码眼睛切换 (支持多个密码框)
+document.querySelectorAll('.toggle-password').forEach(icon => {
+    icon.addEventListener('click', function() {
+        const input = this.previousElementSibling;
+        if (input.type === 'password') {
+            input.type = 'text';
+            this.classList.replace('fa-eye', 'fa-eye-slash');
+            this.style.color = '#00f2fe';
+        } else {
+            input.type = 'password';
+            this.classList.replace('fa-eye-slash', 'fa-eye');
+            this.style.color = '#64748b';
+        }
+    });
 });
 
-// 3. Voucher 复制按钮交互
-document.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const code = this.getAttribute('data-code');
-        navigator.clipboard.writeText(code).then(() => {
-            const originalText = this.innerText;
-            this.innerText = 'COPIED!';
-            this.style.backgroundColor = '#00f2fe';
-            this.style.color = '#000';
-            setTimeout(() => {
-                this.innerText = originalText;
-                this.style.backgroundColor = 'transparent';
-                this.style.color = '#00f2fe';
-            }, 2000);
-        });
-    });
+// 3. 动态密码安全条件打勾面板
+document.getElementById('new_password').addEventListener('input', function() {
+    const val = this.value;
+    const checklist = document.getElementById('pwd-checklist');
+    
+    // 输入框有值时显示面板
+    if(val.length > 0) { checklist.style.display = 'block'; } 
+    else { checklist.style.display = 'none'; return; }
+
+    const reqLen = document.getElementById('req-len');
+    const reqUp = document.getElementById('req-up');
+    const reqNum = document.getElementById('req-num');
+    const reqSym = document.getElementById('req-sym');
+
+    const tick = '<i class="fas fa-check-circle"></i> ';
+    const cross = '<i class="fas fa-times-circle"></i> ';
+
+    if(val.length >= 12) { reqLen.className = 'valid'; reqLen.innerHTML = tick + '12+ characters'; }
+    else { reqLen.className = ''; reqLen.innerHTML = cross + '12+ characters'; }
+
+    if(/[A-Z]/.test(val)) { reqUp.className = 'valid'; reqUp.innerHTML = tick + '1 Uppercase'; }
+    else { reqUp.className = ''; reqUp.innerHTML = cross + '1 Uppercase'; }
+
+    if(/[0-9]/.test(val)) { reqNum.className = 'valid'; reqNum.innerHTML = tick + '1 Number'; }
+    else { reqNum.className = ''; reqNum.innerHTML = cross + '1 Number'; }
+
+    if(/[\W]/.test(val)) { reqSym.className = 'valid'; reqSym.innerHTML = tick + '1 Symbol'; }
+    else { reqSym.className = ''; reqSym.innerHTML = cross + '1 Symbol'; }
 });
 </script>
 

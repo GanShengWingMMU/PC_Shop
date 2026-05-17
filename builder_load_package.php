@@ -21,10 +21,10 @@ if ($pkg_result->num_rows === 0) {
 $package_name = $pkg_result->fetch_assoc()['package_name'];
 $stmt_pkg->close();
 
-// 清空并初始化装机台
+// 🌟 强力洗消：不管里面有多脏，强制清空并变成干净的数组
 $_SESSION['pc_build'] = [];
 
-// 获取底层真实零件 (🌟 修复：加入库存与上架状态防呆检查)
+// 获取底层真实零件 
 $sql = "SELECT p.product_id, p.product_name, p.price, p.tdp_wattage, p.category_id, p.stock_quantity, p.status 
         FROM package_items pi
         JOIN products p ON pi.product_id = p.product_id
@@ -39,15 +39,10 @@ $loaded_count = 0;
 $out_of_stock_items = [];
 
 while ($row = $result->fetch_assoc()) {
-    // 只有当有货且未下架时，才允许加载入蓝图
     if ($row['stock_quantity'] > 0 && $row['status'] === 'Available') {
         $cat_id = $row['category_id'];
-        $_SESSION['pc_build'][$cat_id] = [
-            'product_id' => $row['product_id'],
-            'name'       => $row['product_name'],
-            'price'      => $row['price'], 
-            'wattage'    => $row['tdp_wattage'] ?? 0
-        ];
+        // 🌟 核心修复：只存整数 ID！绝对不要存价格和名字，让 builder 去处理
+        $_SESSION['pc_build'][$cat_id] = (int)$row['product_id'];
         $loaded_count++;
     } else {
         $out_of_stock_items[] = $row['product_name'];
@@ -55,7 +50,6 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// 人性化反馈提示
 if (!empty($out_of_stock_items)) {
     $_SESSION['error_msg'] = "Package loaded, but some parts are out of stock: " . implode(", ", $out_of_stock_items) . ". Please select alternatives manually.";
 } else {

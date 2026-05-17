@@ -46,17 +46,26 @@ if (isset($_GET['action']) && $_GET['action'] == 'cart') {
     
     // -- 模式 A：一键加入购物车 (带货模式) --
     
-    // 检查这个配置是不是已经在购物车里了
-    $check_cart = $conn->query("SELECT cart_id FROM shopping_cart WHERE customer_id = $current_user AND pc_build = $build_id");
+    // 🌟 统一架构：全量使用 Prepared Statement 防御
+    $check_stmt = $conn->prepare("SELECT cart_id FROM shopping_cart WHERE customer_id = ? AND pc_build = ?");
+    $check_stmt->bind_param("ii", $current_user, $build_id);
+    $check_stmt->execute();
+    $check_cart = $check_stmt->get_result();
     
     if ($check_cart->num_rows > 0) {
-        // 如果有了，数量 +1
-        $conn->query("UPDATE shopping_cart SET quantity = quantity + 1 WHERE customer_id = $current_user AND pc_build = $build_id");
+        $update_stmt = $conn->prepare("UPDATE shopping_cart SET quantity = quantity + 1 WHERE customer_id = ? AND pc_build = ?");
+        $update_stmt->bind_param("ii", $current_user, $build_id);
+        $update_stmt->execute();
+        $update_stmt->close();
     } else {
-        // 如果没有，作为新商品插入，🌟关键：把 affiliate_id 写进去！
-        $insert_query = "INSERT INTO shopping_cart (customer_id, pc_build, affiliate_id, quantity) VALUES ($current_user, $build_id, $affiliate_id, 1)";
-        $conn->query($insert_query);
+        $insert_stmt = $conn->prepare("INSERT INTO shopping_cart (customer_id, pc_build, affiliate_id, quantity) VALUES (?, ?, ?, 1)");
+        // Affiliate ID 可能是 NULL，我们需要正确处理绑定
+        $aff_bind = ($affiliate_id === 'NULL') ? null : $affiliate_id;
+        $insert_stmt->bind_param("iii", $current_user, $build_id, $aff_bind);
+        $insert_stmt->execute();
+        $insert_stmt->close();
     }
+    $check_stmt->close();
     
     $_SESSION['success_msg'] = "Blueprint [{$build_data['build_name']}] successfully injected into your cart!";
     header("Location: cart.php");
@@ -88,12 +97,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'cart') {
     while ($row = $items_res->fetch_assoc()) {
         if ($row['stock_quantity'] > 0) {
             $cat_id = $row['category_id'];
-            $_SESSION['pc_build'][$cat_id] = [
-                'product_id' => $row['product_id'],
-                'name'       => $row['product_name'],
-                'price'      => $row['price'],
-                'wattage'    => $row['tdp_wattage'] ?? 0
-            ];
+            // 🌟 终极修复：只存整数 ID！
+            $_SESSION['pc_build'][$cat_id] = (int)$row['product_id'];
         } else {
             $out_of_stock_items[] = $row['product_name'];
         }

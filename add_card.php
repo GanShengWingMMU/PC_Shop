@@ -15,8 +15,9 @@ $error_msg = "";
 // 2. 處理新增卡片請求 (POST Request)
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $cardholder_name = trim(mysqli_real_escape_string($conn, $_POST['cardholder_name']));
-    $expiry_date = trim(mysqli_real_escape_string($conn, $_POST['expiry_date']));
+    // 🌟 A+ 级安全修复：防御持卡人姓名的 XSS 注入
+    $cardholder_name = htmlspecialchars(trim($_POST['cardholder_name']));
+    $expiry_date = htmlspecialchars(trim($_POST['expiry_date']));
     $is_default = isset($_POST['is_default']) ? 1 : 0;
     
     // 取得卡號並移除所有空白

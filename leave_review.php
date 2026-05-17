@@ -36,36 +36,33 @@ $verify_purchase->execute();
 $has_purchased = $verify_purchase->get_result()->num_rows > 0;
 $verify_purchase->close();
 
-// 3. 處理表單提交
+// ==========================================
+// 处理提交评价 (POST Request)
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $rating = intval($_POST['rating']);
-    
-    // 🌟 Bug 修復 2：移除 mysqli_real_escape_string 防止雙重轉義導致的斜槓亂碼
+    // 🌟 强类型转换防越权：确保评分在 1-5 之间，防止有人抓包提交 100 星或负数星
+    $rating = isset($_POST['rating']) ? intval($_POST['rating']) : 5;
+    if ($rating < 1) $rating = 1;
+    if ($rating > 5) $rating = 5;
+
+    // 🌟 核心防线：对评论内容进行严格的 XSS 净化！
     $comment = htmlspecialchars(trim($_POST['comment']));
 
-    if (!$has_purchased) {
-        $error_msg = "SECURITY ALERT: You can only review products you have purchased and received.";
-    } elseif ($rating >= 1 && $rating <= 5 && !empty($comment)) {
-        // 檢查是否已經評價過
-        $check_stmt = $conn->prepare("SELECT review_id FROM reviews WHERE product_id = ? AND customer_id = ?");
-        $check_stmt->bind_param("ii", $product_id, $customer_id);
-        $check_stmt->execute();
-        if ($check_stmt->get_result()->num_rows > 0) {
-            $error_msg = "You have already reviewed this product.";
-        } else {
-            // 新增評價
-            $insert_stmt = $conn->prepare("INSERT INTO reviews (product_id, customer_id, rating, comment) VALUES (?, ?, ?, ?)");
-            $insert_stmt->bind_param("iiis", $product_id, $customer_id, $rating, $comment);
-            if ($insert_stmt->execute()) {
-                $success_msg = "Thank you for your feedback! Your review has been submitted.";
-            } else {
-                $error_msg = "Error submitting review. Please try again.";
-            }
-            $insert_stmt->close();
-        }
-        $check_stmt->close();
+    if (empty($comment)) {
+        $error_msg = "Please write a comment.";
     } else {
-        $error_msg = "Please select a star rating and write a comment.";
+        // 使用 Prepared Statement 写入数据库
+        $insert_review = $conn->prepare("INSERT INTO product_reviews (product_id, customer_id, rating, comment) VALUES (?, ?, ?, ?)");
+        $insert_review->bind_param("iiis", $product_id, $customer_id, $rating, $comment);
+        
+        if ($insert_review->execute()) {
+            $_SESSION['success_msg'] = "Thank you! Your feedback has been recorded.";
+            header("Location: product_detail.php?id=" . $product_id);
+            exit();
+        } else {
+            $error_msg = "System Error: Failed to submit review.";
+        }
+        $insert_review->close();
     }
 }
 ?>

@@ -15,7 +15,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 1;
     if ($quantity <= 0) $quantity = 1;
 
-    // 判斷是否為 Buy Now 動作
     $is_buy_now = (isset($_POST['action']) && $_POST['action'] === 'buy_now');
 
     // ==========================================
@@ -24,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['product_id'])) {
         $product_id = intval($_POST['product_id']);
 
-        // 庫存檢查
         $stock_query = "SELECT stock_quantity, product_name FROM products WHERE product_id = ?";
         $stmt_stock = $conn->prepare($stock_query);
         $stmt_stock->bind_param("i", $product_id);
@@ -36,19 +34,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $available_stock = $product_data['stock_quantity'];
             $product_name = $product_data['product_name'];
 
-            if ($quantity > $available_stock) {
-                $_SESSION['error_msg'] = "Sorry, only $available_stock units of '$product_name' available.";
-            } else {
-                // 檢查購物車是否已有
-                $check_cart = "SELECT cart_id, quantity FROM shopping_cart WHERE customer_id = ? AND product_id = ?";
-                $stmt_check = $conn->prepare($check_cart);
-                $stmt_check->bind_param("ii", $customer_id, $product_id);
-                $stmt_check->execute();
-                $cart_result = $stmt_check->get_result();
+            // 🌟 核心修复：检查购物车里是否已经有该商品，计算总数
+            $check_cart = "SELECT cart_id, quantity FROM shopping_cart WHERE customer_id = ? AND product_id = ?";
+            $stmt_check = $conn->prepare($check_cart);
+            $stmt_check->bind_param("ii", $customer_id, $product_id);
+            $stmt_check->execute();
+            $cart_result = $stmt_check->get_result();
+            
+            $existing_qty = 0;
+            $cart_row = null;
+            if ($cart_result->num_rows > 0) {
+                $cart_row = $cart_result->fetch_assoc();
+                $existing_qty = $cart_row['quantity'];
+            }
 
-                if ($cart_result->num_rows > 0) {
-                    $cart_row = $cart_result->fetch_assoc();
-                    $new_qty = min($cart_row['quantity'] + $quantity, $available_stock);
+            if (($quantity + $existing_qty) > $available_stock) {
+                if ($existing_qty > 0) {
+                    $_SESSION['error_msg'] = "Sorry, you already have $existing_qty in cart. Only $available_stock units of '$product_name' available in total.";
+                } else {
+                    $_SESSION['error_msg'] = "Sorry, only $available_stock units of '$product_name' available.";
+                }
+            } else {
+                if ($cart_row) {
+                    $new_qty = $existing_qty + $quantity;
                     $update_cart = "UPDATE shopping_cart SET quantity = ? WHERE cart_id = ?";
                     $stmt_update = $conn->prepare($update_cart);
                     $stmt_update->bind_param("ii", $new_qty, $cart_row['cart_id']);
@@ -70,7 +78,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (isset($_POST['package_id'])) {
         $package_id = intval($_POST['package_id']);
 
-        // 檢查套餐狀態與底層零件庫存 (嚴格防呆)
         $pkg_query = "SELECT package_name, stock_status FROM packages WHERE package_id = ?";
         $stmt_pkg = $conn->prepare($pkg_query);
         $stmt_pkg->bind_param("i", $package_id);
@@ -84,7 +91,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($pkg_data['stock_status'] !== 'Available') {
                 $_SESSION['error_msg'] = "Sorry, '$package_name' is currently marked as out of stock.";
             } else {
-                // 🚨 深入檢查底層零件庫存
+                // 🌟 核心修复：检查购物车里是否已经有该套餐，合并计算需要的零件数
+                $check_cart = "SELECT cart_id, quantity FROM shopping_cart WHERE customer_id = ? AND package_id = ?";
+                $stmt_check = $conn->prepare($check_cart);
+                $stmt_check->bind_param("ii", $customer_id, $package_id);
+                $stmt_check->execute();
+                $cart_result = $stmt_check->get_result();
+                
+                $existing_qty = 0;
+                $cart_row = null;
+                if ($cart_result->num_rows > 0) {
+                    $cart_row = $cart_result->fetch_assoc();
+                    $existing_qty = $cart_row['quantity'];
+                }
+                
+                $total_future_qty = $quantity + $existing_qty;
+
+                // 🚨 深入檢查底層零件庫存 (包含购物车已有的数量)
                 $parts_ok = true;
                 $short_part_name = "";
                 
@@ -98,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $parts_res = $stmt_parts->get_result();
                 
                 while ($part = $parts_res->fetch_assoc()) {
-                    $total_req = $part['req_qty'] * $quantity;
+                    $total_req = $part['req_qty'] * $total_future_qty;
                     if ($part['stock_quantity'] < $total_req) {
                         $parts_ok = false;
                         $short_part_name = $part['product_name'];
@@ -110,16 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$parts_ok) {
                     $_SESSION['error_msg'] = "Cannot add '$package_name'. An underlying part ('$short_part_name') lacks sufficient stock.";
                 } else {
-                    // 檢查購物車是否已有
-                    $check_cart = "SELECT cart_id, quantity FROM shopping_cart WHERE customer_id = ? AND package_id = ?";
-                    $stmt_check = $conn->prepare($check_cart);
-                    $stmt_check->bind_param("ii", $customer_id, $package_id);
-                    $stmt_check->execute();
-                    $cart_result = $stmt_check->get_result();
-
-                    if ($cart_result->num_rows > 0) {
-                        $cart_row = $cart_result->fetch_assoc();
-                        $new_qty = $cart_row['quantity'] + $quantity;
+                    if ($cart_row) {
+                        $new_qty = $existing_qty + $quantity;
                         $update_cart = "UPDATE shopping_cart SET quantity = ? WHERE cart_id = ?";
                         $stmt_update = $conn->prepare($update_cart);
                         $stmt_update->bind_param("ii", $new_qty, $cart_row['cart_id']);
@@ -137,22 +152,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ==========================================
-    // 🌟 智慧路由 (防禦 Open Redirect 攻擊)
-    // ==========================================
+    // 🌟 智慧路由
     if ($is_buy_now && !isset($_SESSION['error_msg'])) {
         header("Location: checkout.php");
     } else {
         $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : 'index.php';
-        
-        // 解析 Referer，確保它屬於同一域名，防止跳轉到惡意網站
         $parsed_url = parse_url($referer);
         $safe_host = $_SERVER['HTTP_HOST'];
         
         if (isset($parsed_url['host']) && $parsed_url['host'] !== $safe_host) {
             $referer = 'index.php';
         }
-        
         header("Location: $referer");
     }
     exit();
