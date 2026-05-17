@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'db_connect.php'; 
+require_once 'config.php'; 
 
 // 🌟 终极防线：只有老板 (superadmin) 才能招人！
 if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'superadmin') {
@@ -9,40 +9,44 @@ if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'superadmin')
 }
 
 $error = "";
+$success = "";
 
-// 处理提交表单的逻辑
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
     $password = $_POST['password'];
-    $role = mysqli_real_escape_string($conn, $_POST['role']); 
+    $role = trim($_POST['role']); 
     
-    // 🛡️ 核心新增：PHP 后端强密码验证 (至少12位，包含大小写、数字和特殊符号)
-    $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=]).{12,}$/';
+    // 🛡️ PHP 后端强密码验证
+    $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W]).{12,}$/';
     
     if (!preg_match($pattern, $password)) {
-        $error = "Password must be at least 12 characters long and contain uppercase, lowercase, numbers, and special symbols (!@#$%^&*()).";
+        $error = "Password must be at least 12 characters and contain uppercase, lowercase, numbers, and symbols.";
+    } elseif ($role !== 'admin' && $role !== 'superadmin') {
+        $error = "Invalid role selected.";
     } else {
-        // 检查这个账号名是否已经被用过了
-        $check_sql = "SELECT * FROM admins WHERE username = '$username'";
-        $check_res = mysqli_query($conn, $check_sql);
+        // 🌟 Prepared Statement 拦截 SQL 注入
+        $check_stmt = $conn->prepare("SELECT admin_id FROM admins WHERE username = ? OR email = ?");
+        $check_stmt->bind_param("ss", $username, $email);
+        $check_stmt->execute();
         
-        if (mysqli_num_rows($check_res) > 0) {
-            $error = "Username already exists. Please choose another one.";
+        if ($check_stmt->get_result()->num_rows > 0) {
+            $error = "Username or Email already exists!";
         } else {
-            // 密码合格且账号没重复，进行加密处理
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            // 🌟 核心防线：永远不在数据库存储明文密码！
+            $hashed_pwd = password_hash($password, PASSWORD_DEFAULT);
             
-            $insert_sql = "INSERT INTO admins (username, password, email, role) 
-                           VALUES ('$username', '$hashed_password', '$email', '$role')";
-                           
-            if (mysqli_query($conn, $insert_sql)) {
-                header("Location: manage_staff.php?success=1");
-                exit();
+            $insert_stmt = $conn->prepare("INSERT INTO admins (username, email, password, role) VALUES (?, ?, ?, ?)");
+            $insert_stmt->bind_param("ssss", $username, $email, $hashed_pwd, $role);
+            
+            if ($insert_stmt->execute()) {
+                $success = "Staff member successfully added!";
             } else {
-                $error = "Database Error: Failed to add new staff.";
+                $error = "Database Error.";
             }
+            $insert_stmt->close();
         }
+        $check_stmt->close();
     }
 }
 ?>

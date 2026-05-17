@@ -1,8 +1,7 @@
 <?php
 session_start();
-include 'db_connect.php'; 
+require_once 'config.php'; 
 
-// ✅ 聪明的超级保安：只有 superadmin (不管大小写) 才能进！
 if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'superadmin') {
     header("Location: admin_dashboard.php");
     exit();
@@ -10,23 +9,27 @@ if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'superadmin')
 
 $message = "";
 
-// 处理删除员工逻辑
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
     
-    // 保护机制：防止老板不小心把自己（ID为1的初始账号）给删了！
-    if ($delete_id == 1) {
-        $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Action Denied: You cannot delete the primary SuperAdmin account!</div>";
+    // 保护机制：不允许删除 ID=1 或是自己
+    if ($delete_id == 1 || (isset($_SESSION['admin_id']) && $delete_id == $_SESSION['admin_id'])) {
+        $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Action Denied: You cannot delete the primary SuperAdmin or yourself!</div>";
     } else {
-        // ✅ 改成了 admin_id
-        $sql_delete = "DELETE FROM admins WHERE admin_id = $delete_id";
-        if (mysqli_query($conn, $sql_delete)) {
+        $stmt_del = $conn->prepare("DELETE FROM admins WHERE admin_id = ?");
+        $stmt_del->bind_param("i", $delete_id);
+        if ($stmt_del->execute()) {
             header("Location: manage_staff.php?deleted=1");
             exit();
         } else {
             $message = "<div class='error-msg'>⚠️ Failed to delete staff.</div>";
         }
+        $stmt_del->close();
     }
+}
+
+if (isset($_GET['deleted'])) {
+    $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'>✅ Staff removed successfully.</div>";
 }
 ?>
 <!DOCTYPE html>

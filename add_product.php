@@ -1,63 +1,72 @@
 <?php
 session_start();
-include 'db_connect.php'; 
+require_once 'config.php'; // 统一使用 config.php
 
-
-
-if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'superadmin')) {
+// 权限拦截：必须是 admin 或 superadmin
+if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && strtolower($_SESSION['role']) !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
 
 $message = "";
 
-// ==========================================
-// 1. 处理表单提交 (Add New Product & Photo)
-// ==========================================
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
     
-    $name = mysqli_real_escape_string($conn, $_POST['product_name']);
+    $name = trim($_POST['product_name']);
     $category_id = intval($_POST['category']); 
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
-    $specs = mysqli_real_escape_string($conn, $_POST['specs']);
-    $description = isset($_POST['description']) ? mysqli_real_escape_string($conn, $_POST['description']) : '';
+    $specs = trim($_POST['specs']);
+    $description = trim($_POST['description'] ?? '');
 
-    // --- 图片上传逻辑开始 ---
-    $image_url = 'default-product.png'; // 如果没上传图片，给一个默认的占位图
+    $image_url = 'image/placeholder_pc.png'; 
+    $upload_ok = true;
     
-    // 检查是否有上传文件，并且没有错误
-    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
-        $target_dir = "uploads/"; // 图片要保存的文件夹
+    // 🌟 企业级防木马上传引擎
+    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] === UPLOAD_ERR_OK) {
+        $file_tmp = $_FILES['product_image']['tmp_name'];
+        $file_size = $_FILES['product_image']['size'];
         
-        // 如果 uploads 文件夹不存在，PHP 会自动帮你建一个
-        if (!is_dir($target_dir)) {
-            mkdir($target_dir, 0777, true);
-        }
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime_type = finfo_file($finfo, $file_tmp);
+        finfo_close($finfo);
+        
+        $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
+        
+        if (!in_array($mime_type, $allowed_mimes)) {
+            $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Upload Denied: Only JPG, PNG, WEBP allowed!</div>";
+            $upload_ok = false;
+        } elseif ($file_size > 5 * 1024 * 1024) { 
+            $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Upload Denied: Max 5MB allowed.</div>";
+            $upload_ok = false;
+        } else {
+            $ext = strtolower(pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) $ext = 'jpg'; 
+            
+            $new_filename = uniqid('prod_') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+            $target_dir = "uploads/";
+            if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
+            $target_file = $target_dir . $new_filename;
 
-        // 给图片重新命名 (加上时间戳防止名字重复覆盖)
-        $file_name = time() . "_" . basename($_FILES["product_image"]["name"]);
-        $target_file = $target_dir . $file_name;
-
-        // 把图片从临时区域移动到 uploads 文件夹
-        if (move_uploaded_file($_FILES["product_image"]["tmp_name"], $target_file)) {
-            $image_url = $target_file; // 如果成功，就把路径存进数据库
+            if (move_uploaded_file($file_tmp, $target_file)) {
+                $image_url = $target_file;
+            } else {
+                $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ System Error: Failed to save image.</div>";
+                $upload_ok = false;
+            }
         }
     }
-    // --- 图片上传逻辑结束 ---
 
-    try {
-        // 💡 SQL 加入了 image_url
-        $sql_insert = "INSERT INTO products (name, category_id, price, stock_quantity, specs, description, image_url) 
-                       VALUES ('$name', '$category_id', '$price', '$stock_quantity', '$specs', '$description', '$image_url')";
-                       
-        if (mysqli_query($conn, $sql_insert)) {
-            $message = "<div class='success-msg'>✅ Product and Photo added successfully!</div>";
+    if ($upload_ok) {
+        $stmt = $conn->prepare("INSERT INTO products (product_name, category_id, price, stock_quantity, specifications, description, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sidisss", $name, $category_id, $price, $stock_quantity, $specs, $description, $image_url);
+        
+        if ($stmt->execute()) {
+            $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'>✅ Product added successfully!</div>";
         } else {
-            throw new Exception("Error inserting data: " . mysqli_error($conn));
+            $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Database Error.</div>";
         }
-    } catch (Exception $e) {
-        $message = "<div class='error-msg'>⚠️ Database Error: " . $e->getMessage() . "</div>";
+        $stmt->close();
     }
 }
 ?>
