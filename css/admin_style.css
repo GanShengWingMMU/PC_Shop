@@ -32,7 +32,7 @@ body {
 }
 
 /* ====== 侧边栏 (Sidebar) ====== */
-.sidebar {
+.admin-sidebar {
     width: 250px;
     background-color: var(--bg-sidebar);
     border-right: 1px solid var(--border-color);
@@ -40,39 +40,33 @@ body {
     flex-direction: column;
 }
 
-/* ====== 侧边栏标题 (让文字和图片并排) ====== */
-.sidebar h2 {
-    display: flex;               /* 开启 Flex 布局 */
-    flex-direction: row;         /* 强制横向排列 (Side by side) */
-    align-items: center;         /* 垂直居中对齐 */
-    justify-content: center;     /* 水平居中对齐 */
-    gap: 10px;                   
-    font-family: 'Inter', serif;
+.sidebar-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     padding: 25px 0;             
     border-bottom: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.sidebar-header h3 {
     margin: 0;
-    /* 🌟 科技感渐变文字 */
     background: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent; 
     font-weight: 800;
+    font-size: 1.2rem;
 }
 
-/* ====== Logo 图片样式 (缩小 + 去除黑底) ====== */
-.sidebar-logo {
-    width: 30px;                 
-    height: auto;                
-    display: block;
-    mix-blend-mode: screen;      /* ✨保留你的去黑底魔法！ */
-}
-
-.sidebar ul {
+.admin-sidebar ul.sidebar-menu {
     list-style: none;
     padding: 0;
     margin: 0;
 }
-.sidebar ul li a {
+
+.admin-sidebar ul.sidebar-menu li a {
     display: block;
     padding: 18px 20px;
     color: var(--text-muted);
@@ -83,15 +77,30 @@ body {
 }
 
 /* 🌟 侧边栏 Hover 特效：霓虹光效 */
-.sidebar ul li a:hover, .sidebar ul li a.active {
+.admin-sidebar ul.sidebar-menu li a:hover, 
+.admin-sidebar ul.sidebar-menu li a.active {
     background-color: rgba(0, 242, 254, 0.05);
     color: var(--accent-blue);
     border-left: 4px solid var(--accent-blue);
     text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
 }
 
+/* ====== 全局排版佈局 ====== */
+.admin-container {
+    display: flex;         /* 🌟 核心魔法：強制裡面的東西橫向並排！ */
+    min-height: 100vh;     /* 讓高度至少佔滿整個螢幕 */
+    background-color: var(--bg-main); /* 確保背景是暗黑色 */
+}
+
+.admin-content {
+    flex: 1;               /* 🌟 讓右邊的主內容區塊自動填滿剩下的寬度 */
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;      /* 如果右邊內容太長，允許滾動 */
+    padding: 30px;
+}
 .logout-btn {
-    margin-top: auto; /* 把退出按钮推到最底部 */
+    margin-top: auto; 
     border-top: 1px solid var(--border-color);
 }
 
@@ -468,19 +477,29 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); backgro
 .price-display { display: flex; justify-content: space-between; color: var(--text-muted); font-weight: bold; font-size: 14px; }
 .price-display span span { color: var(--accent-blue); font-size: 16px; text-shadow: 0 0 5px rgba(0,242,254,0.3); }
 
-.manage_order 
-{.badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
-.badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
-        .badge-pending { background: rgba(243, 156, 18, 0.1); color: var(--accent-warning); border: 1px solid rgba(243, 156, 18, 0.3); }
-        .badge-processing { background: rgba(0, 242, 254, 0.1); color: var(--accent-blue); border: 1px solid rgba(0, 242, 254, 0.3); }
-        .badge-shipped { background: rgba(155, 89, 182, 0.1); color: #9b59b6; border: 1px solid rgba(155, 89, 182, 0.3); }
-        .badge-completed { background: rgba(0, 230, 118, 0.1); color: #00e676; border: 1px solid rgba(0, 230, 118, 0.3); }
-        .badge-cancelled { background: rgba(255, 77, 77, 0.1); color: var(--accent-danger); border: 1px solid rgba(255, 77, 77, 0.3); }
-        
-        /* 下拉菜单暗黑美化 */
-        .status-select 
-        {
-            background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color);
-            padding: 6px; border-radius: 4px; font-family: 'Inter', sans-serif; cursor: pointer;
-        }
+/* =========================================
+   13. Manage Orders Badges (訂單狀態徽章美化)
+   ========================================= */
+.badge { 
+    padding: 5px 10px; 
+    border-radius: 4px; 
+    font-size: 12px; 
+    font-weight: bold; 
+    text-transform: uppercase; 
+}
+.badge-pending { background: rgba(243, 156, 18, 0.1); color: var(--accent-warning); border: 1px solid rgba(243, 156, 18, 0.3); }
+.badge-processing { background: rgba(0, 242, 254, 0.1); color: var(--accent-blue); border: 1px solid rgba(0, 242, 254, 0.3); }
+.badge-shipped { background: rgba(155, 89, 182, 0.1); color: #9b59b6; border: 1px solid rgba(155, 89, 182, 0.3); }
+.badge-completed { background: rgba(0, 230, 118, 0.1); color: #00e676; border: 1px solid rgba(0, 230, 118, 0.3); }
+.badge-cancelled { background: rgba(255, 77, 77, 0.1); color: var(--accent-danger); border: 1px solid rgba(255, 77, 77, 0.3); }
+
+/* 下拉菜单暗黑美化 */
+.status-select {
+    background: var(--bg-main); 
+    color: var(--text-main); 
+    border: 1px solid var(--border-color);
+    padding: 6px; 
+    border-radius: 4px; 
+    font-family: 'Inter', sans-serif; 
+    cursor: pointer;
 }

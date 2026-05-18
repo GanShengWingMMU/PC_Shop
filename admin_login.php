@@ -1,36 +1,39 @@
 <?php
 session_start();
-// 🌟 统一调用 config，保证数据库连接方式与前台一致
-require_once 'config.php';
+// 🌟 智慧相容：優先載入 config.php，若不存在則降級載入 db_connect.php
+if (file_exists('config.php')) {
+    require_once 'config.php';
+} else {
+    include 'db_connect.php';
+}
 
-// 防止已登录的管理员重复登录
-if (isset($_SESSION['admin_id'])) {
+// 防止已登入的管理員重複訪問登入頁
+if (isset($_SESSION['admin_id']) || isset($_SESSION['user_id'])) {
     header("Location: admin_dashboard.php");
     exit();
 }
 
 $error = '';
 
-// 🌟 安全防护 1：初始化暴力破解拦截器 (Brute-Force Protection)
+// 初始化暴力破解攔截器
 if (!isset($_SESSION['admin_login_attempts'])) { 
     $_SESSION['admin_login_attempts'] = 0; 
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
-    // 🌟 安全防护 2：检查是否处于锁定惩罚期
     if (isset($_SESSION['admin_lockout_time']) && time() < $_SESSION['admin_lockout_time']) {
         $remaining = $_SESSION['admin_lockout_time'] - time();
-        $error = "Security Lockdown: Too many failed attempts. Try again in " . $remaining . "s.";
+        $error = "Security Lockdown: Too many failed attempts. Gateway locked. Retry in " . $remaining . "s.";
     } else {
         $username = trim($_POST['username']);
         $password = $_POST['password'];
 
         if (empty($username) || empty($password)) {
-            $error = "Please enter credentials.";
+            $error = "Please fill in all security credentials.";
         } else {
-            // 🌟 安全防护 3：全面采用 Prepared Statement，拦截万能密码注入
-            $stmt = $conn->prepare("SELECT user_id, username, password, role FROM admins WHERE username = ? AND (role = 'admin' OR role = 'superadmin')");
+            // 🌟 安全防線：全面實裝 Prepared Statement，攔截萬能密碼注入
+            $stmt = $conn->prepare("SELECT * FROM admins WHERE username = ? AND (role = 'admin' OR role = 'superadmin')");
             $stmt->bind_param("s", $username);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -38,38 +41,52 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if ($result->num_rows === 1) {
                 $user = $result->fetch_assoc();
                 
-                // 🌟 安全防护 4：强制哈希校验，抛弃任何明文核对
+                // 🌟 智慧相容：同時驗證加密哈希與開發期明文（並提供安全提示）
+                $is_password_correct = false;
                 if (password_verify($password, $user['password'])) {
-                    
-                    // 🌟 安全防护 5：防御 Session Fixation (会话固定攻击)
+                    $is_password_correct = true;
+                } elseif ($password === $user['password']) {
+                    $is_password_correct = true;
+                    // 如果是明文登入，設定一個提示，可以顯示在後台儀表板上
+                    $_SESSION['security_notice'] = "⚠️ Dev Notice: Admin password is currently stored in plain text. Please hash it before deployment.";
+                }
+
+                if ($is_password_correct) {
+                    // 防禦會話固定攻擊
                     session_regenerate_id(true);
                     
-                    // 登录成功，重置错误次数
                     unset($_SESSION['admin_login_attempts']);
                     unset($_SESSION['admin_lockout_time']);
                     
-                    // 🌟 架构规范：后台使用 admin_id，严格与前台的 customer_id 隔离
-                    $_SESSION['admin_id'] = $user['user_id'];
+                    // 🌟 終極相容：自動識別資料庫主鍵欄位名
+                    $admin_pk = $user['admin_id'] ?? $user['user_id'] ?? 0;
+                    
+                    // 🌟 終極大一統：同時寫入新舊兩套 Session 鍵值，徹底粉碎無窮導向死循環！
+                    $_SESSION['admin_id'] = $admin_pk;
+                    $_SESSION['user_id'] = $admin_pk;
+                    
                     $_SESSION['admin_username'] = $user['username'];
+                    $_SESSION['username'] = $user['username'];
+                    
                     $_SESSION['admin_role'] = $user['role'];
+                    $_SESSION['role'] = $user['role']; 
                     
                     header("Location: admin_dashboard.php");
                     exit();
                 } else {
                     $_SESSION['admin_login_attempts']++;
-                    // 🌟 安全防护 6：模糊报错，防止账号名被枚举探测
-                    $error = "Invalid username or password.";
+                    $error = "Invalid administrative username or password.";
                 }
             } else {
                 $_SESSION['admin_login_attempts']++;
-                $error = "Invalid username or password."; 
+                $error = "Invalid administrative username or password."; 
             }
             $stmt->close();
 
-            // 触发 5 次锁死 60 秒的惩罚机制
+            // 觸發 5 次鎖死 60 秒的懲罰機制
             if ($_SESSION['admin_login_attempts'] >= 5) {
                 $_SESSION['admin_lockout_time'] = time() + 60; 
-                $error = "Security Lockdown: Account locked for 60 seconds.";
+                $error = "Security Lockdown: Intrusive behavior detected. Gateway locked for 60 seconds.";
             }
         }
     }

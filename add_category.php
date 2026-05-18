@@ -1,127 +1,106 @@
 <?php
 session_start();
-include 'db_connect.php';
 
+// 🌟 智慧相容：優先載入 config.php
+if (file_exists('config.php')) { require_once 'config.php'; } 
+else { include 'db_connect.php'; }
 
-
-if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'superadmin')) {
+// 🌟 統一安全准入
+$current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
+if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
 
-// 2. Handle Form Submission
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $name = mysqli_real_escape_string($conn, $_POST['name']);
-    $description = mysqli_real_escape_string($conn, $_POST['description']);
+$message = "";
 
-    // SQL Insert
-    $sql = "INSERT INTO categories (name, description) VALUES ('$name', '$description')";
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $name = trim($_POST['name']);
+    $description = trim($_POST['description']);
     
-    if (mysqli_query($conn, $sql)) {
-        header("Location: manage_categories.php?msg=created");
-        exit();
+    if (empty($name)) {
+        $message = "<div class='alert-error'><i class='fas fa-exclamation-triangle'></i> Category name cannot be empty.</div>";
     } else {
-        $error = "Error: " . mysqli_error($conn);
+        // 🌟 防呆：檢查是否已經有同名的分類 (精準對齊 category_name)
+        $check_stmt = $conn->prepare("SELECT category_id FROM categories WHERE category_name = ?");
+        $check_stmt->bind_param("s", $name);
+        $check_stmt->execute();
+        
+        if ($check_stmt->get_result()->num_rows > 0) {
+            $message = "<div class='alert-warning'><i class='fas fa-radiation'></i> Warning: The category '{$name}' already exists in the registry!</div>";
+        } else {
+            $insert_stmt = $conn->prepare("INSERT INTO categories (category_name, description) VALUES (?, ?)");
+            $insert_stmt->bind_param("ss", $name, $description);
+            
+            if ($insert_stmt->execute()) {
+                // 新增成功，跳轉回管理頁面並帶上成功訊息
+                header("Location: manage_categories.php?msg=created");
+                exit();
+            } else {
+                $message = "<div class='alert-error'><i class='fas fa-bug'></i> System Error: Could not create category.</div>";
+            }
+            $insert_stmt->close();
+        }
+        $check_stmt->close();
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Add Category - GridCity PC Admin</title>
-    <link href="style.css" rel="stylesheet">
-    <link href="css/admin_style.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    
+    <title>Define Category - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        .form-card {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        .form-group { margin-bottom: 20px; }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #333;
-            font-family: 'Inter', serif;
-        }
-        .form-group input, .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-family: 'Inter', serif;
-            box-sizing: border-box; 
-        }
-        .form-group input:focus, .form-group textarea:focus {
-            border-color: var(--gold-accent);
-            outline: none;
-        }
+        .alert-error { color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3); }
+        .alert-warning { color: #facc15; background: rgba(250,204,21,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(250,204,21,0.3); }
     </style>
 </head>
 <body>
+    <div class="admin-container">
+        <nav class="admin-sidebar">
+            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
+            <ul class="sidebar-menu">
+                <li><a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="manage_orders.php"><i class="fas fa-shopping-cart"></i> Manage Orders</a></li>
+                <li><a href="manage_products.php"><i class="fas fa-box"></i> Manage Products</a></li>
+                <li><a href="manage_categories.php" class="active"><i class="fas fa-tags"></i> Manage Categories</a></li>
+                <li><a href="manage_packages.php"><i class="fas fa-layer-group"></i> Manage Packages</a></li>
+                <?php if (strtolower($current_role) === 'superadmin') : ?>
+                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                    <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                <?php endif; ?>
+                <li><a href="admin_logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Log out</a></li> 
+            </ul>
+        </nav>
 
-<div class="admin-wrapper">
-    <nav class="admin-sidebar">
-        <div class="sidebar-header">
-            <h2 class="logo" style="float:none; color:#fff;">LAOBEIJING</h2>
-            <p>Administration</p>
-        </div>
-       <ul>
-            <li><a href="admin_dashboard.php">Dashboard</a></li>
-            <li><a href="manage_products.php">Products</a></li> 
-            
-           <li><a href="manage_packages.php">Packages</a></li>
-            
-            <li><a href="manage_categories.php">Categories</a></li>
-            <li><a href="manage_orders.php">Orders</a></li>
-            <li><a href="admin_builder.php">Build System</a></li>
-            
-            <?php if (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'superadmin'): ?>
-                <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                <li><a href="manage_users.php">Manage Customers</a></li>
-            <?php endif; ?>
-            
-            <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-        </ul>
-    </nav>
+        <div class="admin-content" style="padding: 30px;">
+            <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 style="color: #00f2fe; margin: 0;"><i class="fas fa-network-wired"></i> Define New Node Category</h2>
+                <a href="manage_categories.php" class="btn-action" style="color: #888; border-color: #555; text-decoration:none;">&larr; Back to Ontology</a>
+            </header>
 
-    <main class="admin-content">
-        <header class="admin-header">
-            <h2>Add New Category</h2>
-            <a href="manage_categories.php" class="btn btn-ghost-edit" style="text-decoration:none;">&larr; Back</a>
-        </header>
+            <?php echo $message; ?>
 
-        <div class="form-card">
-            <?php if(isset($error)) echo "<p style='color:red; background:#fee; padding:10px; border-radius:5px;'>$error</p>"; ?>
-
-            <form method="POST">
-                <div class="form-group">
-                    <label>Category Name</label>
-                    <input type="text" name="name" required placeholder="e.g., Classic Beds">
+            <form method="POST" style="background: rgba(0,0,0,0.5); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); max-width: 600px;">
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display:block; margin-bottom:8px; color:#888; font-size:13px; text-transform:uppercase;">Category Name</label>
+                    <input type="text" name="name" class="form-control" required placeholder="e.g., Motherboard" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.6); border: 1px solid #333; color: #fff; border-radius: 6px;">
                 </div>
                 
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea name="description" rows="4" placeholder="Short description..."></textarea>
+                <div class="form-group" style="margin-bottom: 30px;">
+                    <label style="display:block; margin-bottom:8px; color:#888; font-size:13px; text-transform:uppercase;">Technical Description</label>
+                    <textarea name="description" class="form-control" rows="4" placeholder="Brief description of the component type..." style="width: 100%; padding: 12px; background: rgba(0,0,0,0.6); border: 1px solid #333; color: #fff; border-radius: 6px;"></textarea>
                 </div>
 
-                <div style="margin-top: 30px;">
-                    <button type="submit" class="btn btn-add" style="width:100%; padding:12px; font-size:1rem; cursor:pointer;">
-                        Create Category
-                    </button>
-                </div>
+                <button type="submit" style="width: 100%; background: linear-gradient(135deg, #a855f7, #00f2fe); color: #fff; border: none; padding: 15px; border-radius: 8px; font-weight: 900; font-size: 16px; cursor: pointer; transition: 0.3s;">
+                    <i class="fas fa-plus-circle"></i> Initialize Category
+                </button>
             </form>
         </div>
-    </main>
-</div>
-
+    </div>
 </body>
 </html>

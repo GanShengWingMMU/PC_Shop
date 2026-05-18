@@ -1,144 +1,106 @@
 <?php
 session_start();
-require_once 'config.php'; 
+if (file_exists('config.php')) { require_once 'config.php'; } 
+else { include 'db_connect.php'; }
 
-if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'superadmin') {
-    header("Location: admin_dashboard.php");
-    exit();
+$current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
+// 🌟 絕對隔離：只有 Superadmin 老闆可以管理其他員工！
+if (empty($current_role) || strtolower($current_role) !== 'superadmin') {
+    die("<div style='background:#000; color:#ff4d4d; padding:50px; text-align:center; font-family:monospace; font-size:20px;'>ACCESS DENIED: CLEARANCE LEVEL ALPHA REQUIRED.</div>");
 }
 
 $message = "";
-
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
-    
-    // 保护机制：不允许删除 ID=1 或是自己
-    if ($delete_id == 1 || (isset($_SESSION['admin_id']) && $delete_id == $_SESSION['admin_id'])) {
-        $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Action Denied: You cannot delete the primary SuperAdmin or yourself!</div>";
+    // 防呆：絕對不能刪除自己！
+    if ($delete_id == ($_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? 0)) {
+        $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'><i class='fas fa-exclamation-triangle'></i> Override Denied: You cannot delete your own Superadmin account!</div>";
     } else {
         $stmt_del = $conn->prepare("DELETE FROM admins WHERE admin_id = ?");
         $stmt_del->bind_param("i", $delete_id);
         if ($stmt_del->execute()) {
             header("Location: manage_staff.php?deleted=1");
             exit();
-        } else {
-            $message = "<div class='error-msg'>⚠️ Failed to delete staff.</div>";
         }
         $stmt_del->close();
     }
 }
-
-if (isset($_GET['deleted'])) {
-    $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'>✅ Staff removed successfully.</div>";
-}
+if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'>✅ Staff access revoked.</div>";
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Staff - GridCity PC Admin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="css/admin_style.css?v=<?php echo time(); ?>">
+    <title>Manage Staff - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/admin_style.css">
 </head>
 <body>
+    <div class="admin-container">
+        <nav class="admin-sidebar">
+            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
+            <ul class="sidebar-menu">
+                <li><a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="manage_orders.php"><i class="fas fa-shopping-cart"></i> Manage Orders</a></li>
+                <li><a href="manage_products.php"><i class="fas fa-box"></i> Manage Products</a></li>
+                <li><a href="manage_categories.php"><i class="fas fa-tags"></i> Manage Categories</a></li>
+                <li><a href="manage_packages.php"><i class="fas fa-layer-group"></i> Manage Packages</a></li>
+                <li><a href="manage_staff.php" class="active"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                <li><a href="admin_logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Log out</a></li> 
+            </ul>
+        </nav>
 
-    <div class="sidebar">
-        <h2>
-            <img src="image/Admin_dashboard_logo.jpg" alt="GridCity PC Logo" class="sidebar-logo">
-            <span>GridCity PC</span>
-        </h2>
-        <ul>
-            <li><a href="admin_dashboard.php">Dashboard</a></li>
-            <li><a href="manage_products.php">Products</a></li> 
-           <li><a href="manage_packages.php">Packages</a></li>
-            <li><a href="manage_categories.php">Categories</a></li>
-            <li><a href="manage_orders.php">Orders</a></li>
-            <li><a href="admin_builder.php">Build System</a></li>
-            
-            <li><a href="manage_staff.php" class="active" style="color: var(--accent-warning); border-left-color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-            <li><a href="manage_users.php">Manage Customers</a></li>
-            
-            <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-        </ul>
-    </div>
+        <div class="admin-content" style="padding: 30px;">
+            <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <div>
+                    <h2 style="color: #ff4d4d; margin:0;"><i class="fas fa-user-shield"></i> Security & Staff Roster</h2>
+                </div>
+                <a href="add_staff.php" class="btn-action" style="background: rgba(255,77,77,0.1); color:#ff4d4d; border:1px solid #ff4d4d; font-weight:bold; padding:10px 20px; border-radius:6px; text-decoration:none;"><i class="fas fa-plus"></i> Appoint New Staff</a>
+            </header>
 
-    <div class="main-content">
-        
-        <div class="header-top" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-            <div>
-                <h1 style="margin: 0; font-size: 28px; color: var(--accent-warning);">Staff Management</h1>
-                <p style="color: var(--text-muted); margin-top: 5px;">Superadmin Access: Manage store admins and staff accounts.</p>
-            </div>
-            <a href="add_staff.php" class="quick-action-btn" style="background: linear-gradient(135deg, #f39c12, #e67e22); font-size: 15px; border: none; padding: 12px 20px;">
-                <i class="fas fa-user-plus"></i> Add New Staff
-            </a>
-        </div>
+            <?php echo $message; ?>
 
-        <?php 
-        if(!empty($message)) echo $message;
-        if(isset($_GET['deleted']) && $_GET['deleted'] == 1) {
-            echo "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>🗑️ Staff account removed successfully!</div>";
-        }
-        if(isset($_GET['success']) && $_GET['success'] == 1) {
-            echo "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'>✅ New staff account created successfully!</div>";
-        }
-        ?>
-
-        <div class="content-card">
-            <table>
-                <thead>
-                    <tr>
-                        <th width="10%">Admin ID</th>
-                        <th width="25%">Username</th> 
-                        <th width="30%">Email</th>
-                        <th width="15%">Role</th>
-                        <th width="20%">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    // ✅ 核心修复：用 admin_id 来排序！
-                    $sql_staff = "SELECT * FROM admins ORDER BY admin_id ASC"; 
-                    $res_staff = mysqli_query($conn, $sql_staff);
-
-                    if ($res_staff && mysqli_num_rows($res_staff) > 0) {
-                        while($row = mysqli_fetch_assoc($res_staff)) {
-                            echo "<tr>";
-                            // ✅ 核心修复：输出 admin_id
-                            echo "<td><strong>#" . $row['admin_id'] . "</strong></td>";
-                            
-                            echo "<td><i class='fas fa-user-shield' style='color: var(--text-muted); margin-right: 8px;'></i> " . htmlspecialchars($row['username']) . "</td>";
-                            
-                            $email = !empty($row['email']) ? htmlspecialchars($row['email']) : '<span style="color:#666; font-style:italic;">No email</span>';
-                            echo "<td>" . $email . "</td>";
-                            
-                            $role = $row['role'];
-                            $role_color = (strtolower($role) == 'superadmin') ? 'color: var(--accent-warning); font-weight: bold;' : 'color: var(--accent-blue);';
-                            echo "<td style='$role_color'>" . strtoupper($role) . "</td>";
-                            
-                            echo "<td>
-                                    <div style='display:flex; gap:8px;'>";
-                            
-                            // 保护机制：如果是老板本人（ID=1），不允许删除按钮
-                            if ($row['admin_id'] == 1) {
-                                echo "<span style='color: var(--text-muted); font-size: 12px; font-style: italic;'>Primary Owner</span>";
-                            } else {
-                                echo "<a href='manage_staff.php?delete_id=" . $row['admin_id'] . "' class='btn-action' style='color: var(--accent-danger); border-color: var(--accent-danger);' onclick='return confirm(\"⚠️ DANGER: Are you sure you want to delete this staff member? They will lose all access!\");'>Remove</a>";
+            <div class="table-container" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                <table style="width:100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid rgba(255,77,77,0.2); text-align: left;">
+                            <th style="padding:15px; color:#ff4d4d;">Clearance ID</th>
+                            <th style="padding:15px; color:#ff4d4d;">Username & Email</th>
+                            <th style="padding:15px; color:#ff4d4d;">Access Role</th>
+                            <th style="padding:15px; color:#ff4d4d; text-align:right;">Operations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $sql = "SELECT * FROM admins ORDER BY admin_id ASC";
+                        $res = $conn->query($sql);
+                        if ($res && $res->num_rows > 0) {
+                            while ($row = $res->fetch_assoc()) {
+                                $aid = $row['admin_id'] ?? $row['user_id'];
+                                $role = strtoupper($row['role']);
+                                $role_color = ($role == 'SUPERADMIN') ? '#ff007f' : '#00f2fe';
+                                
+                                echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
+                                echo "<td style='padding:15px; font-family:\"JetBrains Mono\"; color:#888;'>STAFF-$aid</td>";
+                                echo "<td style='padding:15px;'><strong>".htmlspecialchars($row['username'])."</strong><br><span style='color:#64748b; font-size:12px;'>".htmlspecialchars($row['email'])."</span></td>";
+                                echo "<td style='padding:15px;'><span style='border: 1px solid $role_color; color:$role_color; padding:4px 10px; border-radius:4px; font-family:\"JetBrains Mono\"; font-size:12px; font-weight:bold;'>$role</span></td>";
+                                
+                                echo "<td style='padding:15px; text-align:right;'>";
+                                if ($aid != ($_SESSION['admin_id'] ?? $_SESSION['user_id'] ?? 0)) {
+                                    echo "<a href='manage_staff.php?delete_id=$aid' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Revoke access for this staff member?\");'>Revoke</a>";
+                                } else {
+                                    echo "<span style='color:#64748b; font-size:12px;'><i class='fas fa-shield-alt'></i> You (Active)</span>";
+                                }
+                                echo "</td></tr>";
                             }
-                                        
-                            echo "  </div>
-                                  </td>";
-                            echo "</tr>";
                         }
-                    } else {
-                        echo "<tr><td colspan='5' style='text-align:center; padding: 30px; color: var(--text-muted);'>No staff found.</td></tr>";
-                    }
-                    ?>
-                </tbody>
-            </table>
+                        ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
-
     </div>
 </body>
 </html>

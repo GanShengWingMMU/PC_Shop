@@ -1,17 +1,16 @@
 <?php
 session_start();
-require_once 'config.php'; // 统一使用 config.php
+if (file_exists('config.php')) { require_once 'config.php'; } 
+else { include 'db_connect.php'; }
 
-// 权限拦截：必须是 admin 或 superadmin
-if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && strtolower($_SESSION['role']) !== 'superadmin')) {
-    header("Location: admin_login.php");
-    exit();
+$current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
+if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
+    header("Location: admin_login.php"); exit();
 }
 
 $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
-    
     $name = trim($_POST['product_name']);
     $category_id = intval($_POST['category']); 
     $price = floatval($_POST['price']);
@@ -19,10 +18,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
     $specs = trim($_POST['specs']);
     $description = trim($_POST['description'] ?? '');
 
+    // AI 裝機台參數
+    $tdp_wattage = intval($_POST['tdp_wattage'] ?? 0);
+    $socket_type = trim($_POST['socket_type'] ?? '');
+    $ram_type = trim($_POST['ram_type'] ?? '');
+    $performance_tier = intval($_POST['performance_tier'] ?? 1);
+
     $image_url = 'image/placeholder_pc.png'; 
     $upload_ok = true;
     
-    // 🌟 企业级防木马上传引擎
+    // 🛡️ 企業級防木馬上傳引擎
     if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] === UPLOAD_ERR_OK) {
         $file_tmp = $_FILES['product_image']['tmp_name'];
         $file_size = $_FILES['product_image']['size'];
@@ -33,209 +38,138 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
         
         $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
         
-        if (!in_array($mime_type, $allowed_mimes)) {
-            $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Upload Denied: Only JPG, PNG, WEBP allowed!</div>";
-            $upload_ok = false;
-        } elseif ($file_size > 5 * 1024 * 1024) { 
-            $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Upload Denied: Max 5MB allowed.</div>";
+        if (!in_array($mime_type, $allowed_mimes) || $file_size > 5 * 1024 * 1024) {
+            $message = "<div class='alert-error'>⚠️ Upload Denied: Invalid format or exceeds 5MB.</div>";
             $upload_ok = false;
         } else {
             $ext = strtolower(pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION));
-            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) $ext = 'jpg'; 
-            
             $new_filename = uniqid('prod_') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-            $target_dir = "uploads/";
+            $target_dir = "image/";
             if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
             $target_file = $target_dir . $new_filename;
 
             if (move_uploaded_file($file_tmp, $target_file)) {
                 $image_url = $target_file;
             } else {
-                $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ System Error: Failed to save image.</div>";
                 $upload_ok = false;
             }
         }
     }
 
     if ($upload_ok) {
-        $stmt = $conn->prepare("INSERT INTO products (product_name, category_id, price, stock_quantity, specifications, description, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sidisss", $name, $category_id, $price, $stock_quantity, $specs, $description, $image_url);
-        
+        $sql = "INSERT INTO products (product_name, category_id, price, stock_quantity, specifications, description, image_url, tdp_wattage, socket_type, ram_type, performance_tier) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("sidisssissi", $name, $category_id, $price, $stock_quantity, $specs, $description, $image_url, $tdp_wattage, $socket_type, $ram_type, $performance_tier);
         if ($stmt->execute()) {
-            $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'>✅ Product added successfully!</div>";
+            $message = "<div class='alert-success'>✅ Product added to the quantum registry successfully!</div>";
         } else {
-            $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Database Error.</div>";
+            $message = "<div class='alert-error'>⚠️ Database Error: " . htmlspecialchars($stmt->error) . "</div>";
         }
         $stmt->close();
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Products - GridCity PC Admin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
+    <title>Add Product - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
-        
+    <style>
+        .alert-success { color:#00e676; background:rgba(0,230,118,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(0,230,118,0.3); }
+        .alert-error { color:#ff4d4d; background:rgba(255,77,77,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(255,77,77,0.3); }
+    </style>
 </head>
 <body>
+    <div class="admin-container">
+        <nav class="admin-sidebar">
+            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
+            <ul class="sidebar-menu">
+                <li><a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="manage_orders.php"><i class="fas fa-shopping-cart"></i> Manage Orders</a></li>
+                <li><a href="manage_products.php" class="active"><i class="fas fa-box"></i> Manage Products</a></li>
+                <li><a href="manage_categories.php"><i class="fas fa-tags"></i> Manage Categories</a></li>
+                <li><a href="manage_packages.php"><i class="fas fa-layer-group"></i> Manage Packages</a></li>
+                <li><a href="admin_logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Log out</a></li> 
+            </ul>
+        </nav>
 
-    <div class="sidebar">
-        <h2>
-            <img src="image/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
-            <span>GridCity PC</span>
-        </h2>
-        <ul>
-            <li><a href="admin_dashboard.php">Dashboard</a></li>
-            <li><a href="manage_products.php">Products</a></li> 
-            
-            <li><a href="manage_packages.php">Packages</a></li>
-            
-            <li><a href="manage_categories.php">Categories</a></li>
-            <li><a href="manage_orders.php">Orders</a></li>
-            <li><a href="admin_builder.php">Build System</a></li>
-            
-            <?php if (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'superadmin'): ?>
-                <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                <li><a href="manage_users.php">Manage Customers</a></li>
-            <?php endif; ?>
-            
-            <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-        </ul>
-    </div>
+        <div class="admin-content" style="padding: 30px;">
+            <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 style="color: #00f2fe; margin: 0;"><i class="fas fa-plus-circle"></i> Inject New Hardware</h2>
+                <a href="manage_products.php" class="btn-action" style="color: #888; border-color: #555; text-decoration:none;">&larr; Back to Registry</a>
+            </header>
 
-    <div class="main-content">
-        
-        <div class="header-top">
-            <h1>Add New Product</h1>
-            <a href="manage_products.php" class="btn-back">&larr; Back to Products List</a>
-        </div>
+            <?php echo $message; ?>
 
-        <?php echo $message; ?>
-
-        <div class="content-card">
-            <h3>+ Product Details</h3>
-            <form method="POST" action="" enctype="multipart/form-data">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Product Name</label>
-                        <input type="text" name="product_name" class="form-control" required placeholder="e.g. ASUS ROG Strix RTX 4090">
+            <form method="POST" enctype="multipart/form-data" style="background: rgba(0,0,0,0.5); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group full-width" style="grid-column: 1 / -1;">
+                        <label>Product Name *</label>
+                        <input type="text" name="product_name" class="form-control" required style="width: 100%;">
                     </div>
                     
                     <div class="form-group">
-                        <label>Category</label>
-                        <select name="category" class="form-control" required>
-                            <option value="">Select Category...</option>
-                            <option value="1">Processors</option>
-                            <option value="2">Graphics Cards</option>
-                            <option value="3">Motherboards</option>
-                            <option value="4">RAM</option>
-                            <option value="5">Storage</option>
-                            <option value="6">Power Supply</option>
-                            <option value="7">Case</option>
-                        </select>
+                        <label>Category ID (e.g., 1=CPU, 4=GPU) *</label>
+                        <input type="number" name="category" class="form-control" required style="width: 100%;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Price (RM) *</label>
+                        <input type="number" step="0.01" name="price" class="form-control" required style="width: 100%;">
                     </div>
 
                     <div class="form-group">
-                        <label>Price (RM)</label>
-                        <input type="number" step="0.01" name="price" class="form-control" required placeholder="0.00">
+                        <label>Stock Quantity *</label>
+                        <input type="number" name="stock" class="form-control" required style="width: 100%;">
                     </div>
 
                     <div class="form-group">
-                        <label>Stock Quantity</label>
-                        <input type="number" name="stock" class="form-control" required placeholder="0">
+                        <label>Product Image (Max 5MB) *</label>
+                        <input type="file" name="product_image" class="form-control" accept=".jpg,.jpeg,.png,.webp" style="width: 100%; padding: 10px;">
                     </div>
 
-                    <div class="form-group full-width">
-                        <label>Product Image <span style="font-weight: normal; color: #888; font-size: 13px;">(Format: JPG, PNG)</span></label>
-                        <div class="file-input-wrapper">
-                            <input type="file" name="product_image" accept="image/*" style="cursor: pointer;">
-                        </div>
+                    <div class="form-group full-width" style="grid-column: 1 / -1;">
+                        <label>Specifications (Key-Value) *</label>
+                        <textarea name="specs" class="form-control" rows="2" required style="width: 100%;" placeholder="e.g. Core: 14 | Boost: 5.1GHz"></textarea>
                     </div>
 
-                    <div class="form-group full-width">
-                        <label>Specifications <span style="color: red;">*</span></label>
-                        <textarea name="specs" class="form-control" rows="3" required placeholder="e.g. Intel Core i9, 32GB DDR5 RAM, 1TB NVMe SSD..."></textarea>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Description <span style="font-weight: normal; color: #888; font-size: 13px;">(Optional)</span></label>
-                        <textarea name="description" class="form-control" rows="3" placeholder="Enter extra product details, warranty info, or marketing text here..."></textarea>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <button type="submit" name="add_product" class="btn-submit">Upload & Add Product</button>
+                    <div class="form-group full-width" style="grid-column: 1 / -1;">
+                        <label>Marketing Description</label>
+                        <textarea name="description" class="form-control" rows="2" style="width: 100%;"></textarea>
                     </div>
                 </div>
+
+                <div style="background: rgba(138, 43, 226, 0.1); padding: 20px; border-radius: 8px; border: 1px solid rgba(138, 43, 226, 0.3); margin-top: 30px; margin-bottom: 20px;">
+                    <h3 style="color: #a855f7; margin-top: 0; margin-bottom: 10px;"><i class="fas fa-robot"></i> AI Builder Attributes</h3>
+                    <p style="color: #888; font-size: 13px; margin-bottom: 20px;">Crucial for bottleneck detection. Leave blank/0 if not a core component.</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label style="font-size: 13px; color: var(--text-muted);">TDP Wattage (W)</label>
+                            <input type="number" name="tdp_wattage" class="form-control" value="0" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-size: 13px; color: var(--text-muted);">Socket Type (e.g. AM5)</label>
+                            <input type="text" name="socket_type" class="form-control" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-size: 13px; color: var(--text-muted);">RAM Type (e.g. DDR5)</label>
+                            <input type="text" name="ram_type" class="form-control" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-size: 13px; color: var(--text-muted);">Performance Tier (1-10)</label>
+                            <input type="number" min="1" max="10" name="performance_tier" class="form-control" value="1" style="width: 100%;">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" name="add_product" style="width: 100%; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: 900; font-size: 16px; cursor: pointer; transition: 0.3s;">
+                    <i class="fas fa-upload"></i> Upload Node to Matrix
+                </button>
             </form>
         </div>
-
-        <div class="content-card">
-            <h3>Product Inventory Details</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th width="5%">ID</th>
-                        <th width="45%">Product Details</th> <th width="15%">Category ID</th>
-                        <th width="15%">Price</th>
-                        <th width="10%">Stock</th>
-                        <th width="10%">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    try {
-                        $sql_products = "SELECT * FROM products ORDER BY product_id DESC LIMIT 10"; 
-                        $res_products = mysqli_query($conn, $sql_products);
-
-                        if ($res_products && mysqli_num_rows($res_products) > 0) {
-                            while($row = mysqli_fetch_assoc($res_products)) {
-                                echo "<tr>";
-                                echo "<td>#" . (isset($row['product_id']) ? $row['product_id'] : '') . "</td>";
-                                
-                                // 🌟 重点：在这里组合显示图片 + 名字 + 简介
-                                $img_src = !empty($row['image_url']) ? $row['image_url'] : 'https://via.placeholder.com/70x70?text=No+Image';
-                                $desc_text = !empty($row['description']) ? $row['description'] : 'No description available for this product.';
-                                
-                                echo "<td>
-                                        <div class='product-info-cell'>
-                                            <img src='{$img_src}' class='product-thumb' alt='Product Image'>
-                                            <div>
-                                                <h4 class='product-title'>" . htmlspecialchars($row['name']) . "</h4>
-                                                <p class='product-desc'>" . htmlspecialchars($desc_text) . "</p>
-                                            </div>
-                                        </div>
-                                      </td>";
-
-                                echo "<td>Cat: " . (isset($row['category_id']) ? $row['category_id'] : 'N/A') . "</td>";
-                                echo "<td><strong style='color:#8a2be2;'>RM " . (isset($row['price']) ? number_format($row['price'], 2) : '0.00') . "</strong></td>";
-                                
-                                // 库存警告颜色
-                                $stock = isset($row['stock_quantity']) ? $row['stock_quantity'] : 0;
-                                $stock_color = ($stock <= 2) ? "color: red; font-weight: bold;" : "color: green;";
-                                echo "<td style='{$stock_color}'>" . $stock . "</td>";
-                                
-                                echo "<td>
-                                        <div style='display:flex; gap:5px;'>
-                                            <a href='#' class='btn-edit'>Edit</a>
-                                            <a href='#' class='btn-delete'>Del</a>
-                                        </div>
-                                      </td>";
-                                echo "</tr>";
-                            }
-                        } else {
-                            echo "<tr><td colspan='6' style='text-align:center; padding: 30px; color:#888;'>No products added yet. Add your first product with photo above!</td></tr>";
-                        }
-                    } catch (Exception $e) {
-                        echo "<tr><td colspan='6' style='color:red;'>Database Error: {$e->getMessage()}</td></tr>";
-                    }
-                    ?>
-                </tbody>
-            </table>
-        </div>
-
     </div>
 </body>
 </html>

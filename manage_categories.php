@@ -1,215 +1,120 @@
 <?php
 session_start();
-include 'db_connect.php'; 
+if (file_exists('config.php')) { require_once 'config.php'; } 
+else { include 'db_connect.php'; }
 
-
-if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && strtolower($_SESSION['role']) !== 'superadmin')) {
+$current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
+if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
 
-$selected_cat_ids = isset($_GET['category_ids']) ? $_GET['category_ids'] : [];
-$safe_cat_ids = array_filter(array_map('intval', $selected_cat_ids)); 
+$message = "";
 
-// 🌟 核心更改：现在只有一个 filter_price (最高预算)，默认是 50000
-$filter_price = (isset($_GET['filter_price']) && is_numeric($_GET['filter_price'])) ? floatval($_GET['filter_price']) : 50000;
+// 🌟 安全防呆刪除邏輯
+if (isset($_GET['delete_id'])) {
+    $delete_id = intval($_GET['delete_id']);
+    
+    // 檢查這個分類底下是不是還有商品
+    $check_stmt = $conn->prepare("SELECT product_id FROM products WHERE category_id = ? LIMIT 1");
+    $check_stmt->bind_param("i", $delete_id);
+    $check_stmt->execute();
+    if ($check_stmt->get_result()->num_rows > 0) {
+        $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'><i class='fas fa-lock'></i> Deletion Blocked! There are still hardware components linked to this category. Please reassign or delete them first.</div>";
+    } else {
+        $stmt_del = $conn->prepare("DELETE FROM categories WHERE category_id = ?");
+        $stmt_del->bind_param("i", $delete_id);
+        if ($stmt_del->execute()) {
+            header("Location: manage_categories.php?deleted=1");
+            exit();
+        } else {
+            $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'>⚠️ System Error: Failed to purge category.</div>";
+        }
+        $stmt_del->close();
+    }
+    $check_stmt->close();
+}
+
+if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'><i class='fas fa-trash'></i> Category successfully purged from the matrix.</div>";
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Categories - GridCity PC Admin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lora:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="css/admin_style.css?v=<?php echo time(); ?>">
+    <title>Manage Categories - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/admin_style.css">
 </head>
 <body>
-
-    <div class="sidebar">
-        <h2>
-            <img src="image/Admin_dashboard_logo.jpg" alt="ROG Logo" class="sidebar-logo">
-            <span>GridCity PC</span>
-        </h2>
-       <ul>
-            <li><a href="admin_dashboard.php">Dashboard</a></li>
-            <li><a href="manage_products.php">Products</a></li> 
-            
-            <li><a href="manage_packages.php">Packages</a></li>
-            
-            <li><a href="manage_categories.php">Categories</a></li>
-            <li><a href="manage_orders.php">Orders</a></li>
-            <li><a href="admin_builder.php">Build System</a></li>
-            
-            <?php if (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'superadmin'): ?>
-                <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                <li><a href="manage_users.php">Manage Customers</a></li>
-            <?php endif; ?>
-            
-            <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-        </ul>
-    </div>
-
-    <div class="main-content">
-
-        <?php if (empty($safe_cat_ids)): ?>
-            <div class="header-top">
-                <div>
-                    <h1>Select Categories</h1>
-                    <p>Select categories and drag the slider to set your maximum budget.</p>
-                </div>
+    <div class="admin-container">
+        <nav class="admin-sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3>
             </div>
+            <ul class="sidebar-menu">
+                <li><a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="manage_orders.php"><i class="fas fa-shopping-cart"></i> Manage Orders</a></li>
+                <li><a href="manage_products.php"><i class="fas fa-box"></i> Manage Products</a></li>
+                <li><a href="manage_categories.php" class="active"><i class="fas fa-tags"></i> Manage Categories</a></li>
+                <li><a href="manage_packages.php"><i class="fas fa-layer-group"></i> Manage Packages</a></li>
+                <?php if (strtolower($current_role) === 'superadmin') : ?>
+                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                    <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                <?php endif; ?>
+                <li><a href="admin_logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Log out</a></li> 
+            </ul>
+        </nav>
 
-            <form action="manage_categories.php" method="GET">
-                <div class="category-grid">
-                    <?php
-                    $sql_cats = "SELECT * FROM categories ORDER BY category_id ASC";
-                    $res_cats = mysqli_query($conn, $sql_cats);
-
-                    if ($res_cats && mysqli_num_rows($res_cats) > 0) {
-                        while($cat = mysqli_fetch_assoc($res_cats)) {
-                            $cid = $cat['category_id'];
-                            echo "<div>
-                                    <input type='checkbox' name='category_ids[]' value='{$cid}' id='cat_{$cid}' class='cat-checkbox'>
-                                    <label for='cat_{$cid}' class='cat-card'>
-                                        <h3>{$cid}. " . htmlspecialchars($cat['category_name']) . "</h3>
-                                        <p>" . htmlspecialchars($cat['description']) . "</p>
-                                    </label>
-                                  </div>";
-                        }
-                    } else {
-                        echo "<p style='color:red;'>No categories found in database!</p>";
-                    }
-                    ?>
-                </div>
-                
-                <div class="price-slider-wrapper">
-                    <label>Max Price Filter</label>
-                    
-                    <div class="slider-container">
-                        <div class="slider-track"></div>
-                        <div class="slider-fill" id="slider-fill"></div>
-                        <input type="range" name="filter_price" id="price-slider" min="0" max="50000" value="<?php echo $filter_price; ?>" step="100">
-                    </div>
-                    
-                    <div class="price-display" style="justify-content: center; font-size: 16px;">
-                        <div>Up to: <span>RM <span id="price-val"><?php echo number_format($filter_price); ?></span></span></div>
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn-continue" style="margin-top: 30px;">Continue &rarr;</button>
-            </form>
-
-            <script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    const priceSlider = document.getElementById("price-slider");
-                    const priceVal = document.getElementById("price-val");
-                    const sliderFill = document.getElementById("slider-fill");
-                    const maxLimit = 50000;
-
-                    function updateSlider() {
-                        let currentPrice = parseInt(priceSlider.value);
-                        
-                        // 更新显示的文字 (加上千位逗号)
-                        priceVal.textContent = currentPrice.toLocaleString();
-
-                        // 更新发光进度条的宽度
-                        const percent = (currentPrice / maxLimit) * 100;
-                        sliderFill.style.left = "0%";
-                        sliderFill.style.width = percent + "%";
-                    }
-
-                    // 监听滑动事件
-                    priceSlider.addEventListener("input", updateSlider);
-                    // 页面加载时执行一次初始化
-                    updateSlider();
-                });
-            </script>
-
-        <?php else: ?>
-            <?php
-            $ids_string = implode(',', $safe_cat_ids);
-            
-            $cat_names = [];
-            $cat_name_sql = "SELECT category_name FROM categories WHERE category_id IN ($ids_string)";
-            $cat_name_res = mysqli_query($conn, $cat_name_sql);
-            while($row = mysqli_fetch_assoc($cat_name_res)) {
-                $cat_names[] = $row['category_name'];
-            }
-            $display_title = implode(' & ', $cat_names); 
-            ?>
-
-            <div class="header-top">
+        <div class="admin-content" style="padding: 30px;">
+            <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
                 <div>
-                    <h1 style="font-size: 24px;">
-                        Products in: <span style="color: var(--accent-blue);"><?php echo htmlspecialchars($display_title); ?></span>
-                    </h1>
-                    <p style="color: var(--text-muted); font-weight: bold; margin-top: 5px;">
-                        Filter: Up to RM <?php echo number_format($filter_price); ?>
-                    </p>
+                    <h2 style="color: #00f2fe; margin:0;"><i class="fas fa-network-wired"></i> Ontology & Categories</h2>
                 </div>
-                <a href="manage_categories.php" class="btn-back">&larr; Back to Selection</a>
-            </div>
+                <a href="add_category.php" class="btn-action" style="background: linear-gradient(135deg, #a855f7, #00f2fe); color:#fff; font-weight:bold; border:none; padding:10px 20px; border-radius:6px; text-decoration:none;"><i class="fas fa-plus"></i> Define New Category</a>
+            </header>
 
-            <div class="content-card">
-                <table>
+            <?php echo $message; ?>
+
+            <div class="table-container" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                <table style="width:100%; border-collapse: collapse;">
                     <thead>
-                        <tr>
-                            <th width="10%">ID</th>
-                            <th width="45%">Product Name</th> 
-                            <th width="15%">Category</th>
-                            <th width="15%">Price</th>
-                            <th width="10%">Stock</th>
-                            <th width="5%">Action</th>
+                        <tr style="border-bottom: 2px solid rgba(0,242,254,0.2); text-align: left;">
+                            <th style="padding:15px; color:#00f2fe;">ID</th>
+                            <th style="padding:15px; color:#00f2fe;">Category Name</th>
+                            <th style="padding:15px; color:#00f2fe;">Description</th>
+                            <th style="padding:15px; color:#00f2fe; text-align:center;">Active Components</th>
+                            <th style="padding:15px; color:#00f2fe; text-align:right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
-                        // 🌟 核心更改：SQL 查询只过滤 <= 设定好的最高价
-                        $sql_products = "SELECT p.*, c.category_name 
-                                         FROM products p 
-                                         LEFT JOIN categories c ON p.category_id = c.category_id 
-                                         WHERE p.category_id IN ($ids_string) 
-                                         AND p.price <= $filter_price 
-                                         ORDER BY p.category_id ASC, p.price ASC"; 
-                        
-                        $res_products = mysqli_query($conn, $sql_products);
-
-                        if ($res_products && mysqli_num_rows($res_products) > 0) {
-                            while($prod = mysqli_fetch_assoc($res_products)) {
-                                $img_src = !empty($prod['image_url']) ? $prod['image_url'] : 'https://via.placeholder.com/60?text=No+Img';
+                        // 🌟 連動點：智慧計算該分類底下有幾個商品
+                        $sql = "SELECT c.*, COUNT(p.product_id) as item_count FROM categories c LEFT JOIN products p ON c.category_id = p.category_id GROUP BY c.category_id";
+                        $res = $conn->query($sql);
+                        if ($res && $res->num_rows > 0) {
+                            while ($row = $res->fetch_assoc()) {
+                                $cid = $row['category_id'];
+                                $count = $row['item_count'];
                                 
-                                echo "<tr>";
-                                echo "<td>#" . $prod['product_id'] . "</td>";
-                                
-                                echo "<td>
-                                        <div class='product-info-cell'>
-                                            <img src='{$img_src}' class='product-thumb'>
-                                            <div>
-                                                <h4 class='product-title'>" . htmlspecialchars($prod['product_name']) . "</h4>
-                                            </div>
-                                        </div>
+                                echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
+                                echo "<td style='padding:15px; font-family:\"JetBrains Mono\"; color:#888;'>#$cid</td>";
+                                echo "<td style='padding:15px; font-weight:bold; color:#fff;'>".htmlspecialchars($row['category_name'])."</td>";
+                                echo "<td style='padding:15px; color:#94a3b8; font-size:13px;'>".htmlspecialchars($row['description'])."</td>";
+                                echo "<td style='padding:15px; text-align:center;'><span style='background:rgba(0,242,254,0.1); color:#00f2fe; padding:4px 12px; border-radius:20px; font-family:\"JetBrains Mono\"; font-size:12px;'>$count linked</span></td>";
+                                echo "<td style='padding:15px; text-align:right;'>
+                                        <a href='manage_categories.php?delete_id=$cid' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Are you sure?\");'>Delete</a>
                                       </td>";
-
-                                echo "<td><span class='cat-badge'>" . htmlspecialchars($prod['category_name']) . "</span></td>";
-                                echo "<td><strong style='color: var(--accent-blue);'>RM " . number_format($prod['price'], 2) . "</strong></td>";
-                                
-                                $stock = $prod['stock_quantity'];
-                                $stock_color = ($stock <= 2) ? "color: var(--accent-danger); font-weight: bold;" : "color: #00e676;";
-                                echo "<td style='{$stock_color}'>" . $stock . "</td>";
-                                
-                                echo "<td><a href='edit_product.php?id=" . $prod['product_id'] . "' class='btn-edit'>Edit</a></td>";
                                 echo "</tr>";
                             }
                         } else {
-                            echo "<tr><td colspan='6' style='text-align:center; padding: 30px; color: var(--text-muted);'>No products match your selected categories under RM " . number_format($filter_price) . ".</td></tr>";
+                            echo "<tr><td colspan='5' style='text-align:center; padding:30px; color:#888;'>No categories defined.</td></tr>";
                         }
                         ?>
                     </tbody>
                 </table>
             </div>
-        <?php endif; ?>
-
+        </div>
     </div>
 </body>
 </html>

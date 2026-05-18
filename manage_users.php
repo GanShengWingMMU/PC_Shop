@@ -1,147 +1,97 @@
 <?php
 session_start();
-include 'db_connect.php'; 
+if (file_exists('config.php')) { require_once 'config.php'; } 
+else { include 'db_connect.php'; }
 
-// ✅ 聪明的超级保安：只有 superadmin 才能看顾客隐私！
-if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'superadmin') {
-    header("Location: admin_dashboard.php");
-    exit();
+$current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
+// 🌟 嚴格保安：只有 Superadmin 才能看顧客個資！
+if (empty($current_role) || strtolower($current_role) !== 'superadmin') {
+    die("<div style='background:#000; color:#ff4d4d; padding:50px; text-align:center; font-family:monospace; font-size:20px;'>ACCESS DENIED: CLEARANCE LEVEL ALPHA REQUIRED.</div>");
 }
 
 $message = "";
-
-// 处理删除顾客逻辑
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
-    
-    // 执行删除 SQL
-    $sql_delete = "DELETE FROM customers WHERE customer_id = $delete_id";
-    if (mysqli_query($conn, $sql_delete)) {
-        // ✅ 跳回 manage_users.php
+    $stmt_del = $conn->prepare("DELETE FROM customers WHERE customer_id = ?");
+    $stmt_del->bind_param("i", $delete_id);
+    if ($stmt_del->execute()) {
         header("Location: manage_users.php?deleted=1");
         exit();
-    } else {
-        $message = "<div class='error-msg'>⚠️ Failed to delete customer.</div>";
     }
+    $stmt_del->close();
 }
+if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'>✅ Customer profile neutralized.</div>";
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Customers - GridCity PC Admin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="css/admin_style.css?v=<?php echo time(); ?>">
-    <style>
-        .badge-vip { background: rgba(243, 156, 18, 0.1); color: var(--accent-warning); border: 1px solid rgba(243, 156, 18, 0.3); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; letter-spacing: 1px; }
-        .badge-standard { background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.1); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; letter-spacing: 1px; }
-        .wallet-text { color: #00e676; font-weight: bold; font-size: 14px; }
-        .coins-text { color: var(--accent-warning); font-size: 13px; margin-top: 3px; }
-    </style>
+    <title>Manage Customers - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/admin_style.css">
 </head>
 <body>
+    <div class="admin-container">
+        <nav class="admin-sidebar">
+            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
+            <ul class="sidebar-menu">
+                <li><a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="manage_orders.php"><i class="fas fa-shopping-cart"></i> Manage Orders</a></li>
+                <li><a href="manage_products.php"><i class="fas fa-box"></i> Manage Products</a></li>
+                <li><a href="manage_categories.php"><i class="fas fa-tags"></i> Manage Categories</a></li>
+                <li><a href="manage_packages.php"><i class="fas fa-layer-group"></i> Manage Packages</a></li>
+                <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                <li><a href="manage_users.php" class="active"><i class="fas fa-users"></i> Manage Customers</a></li>
+                <li><a href="admin_logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Log out</a></li> 
+            </ul>
+        </nav>
 
-    <div class="sidebar">
-        <h2>
-            <img src="image/Admin_dashboard_logo.jpg" alt="GridCity PC Logo" class="sidebar-logo">
-            <span>GridCity PC</span>
-        </h2>
-        <ul>
-            <li><a href="admin_dashboard.php">Dashboard</a></li>
-            <li><a href="manage_products.php">Products</a></li> 
-            <li><a href="manage_packages.php">Packages</a></li>
-            <li><a href="manage_categories.php">Categories</a></li>
-            <li><a href="manage_orders.php">Orders</a></li>
-            <li><a href="admin_builder.php">Build System</a></li>
-            
-            <?php if (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'superadmin'): ?>
-                <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                <li><a href="manage_users.php" class="active" style="color: var(--accent-blue); border-left-color: var(--accent-blue);">Manage Customers</a></li>
-            <?php endif; ?>
-            
-            <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-        </ul>
-    </div>
+        <div class="admin-content" style="padding: 30px;">
+            <header class="admin-header" style="margin-bottom: 30px;">
+                <h2 style="color: #ffd700; margin:0;"><i class="fas fa-users-cog"></i> Citizen Database (CRM)</h2>
+                <p style="color: #888; font-size:13px; margin-top:5px;">Superadmin clearance confirmed. Monitoring user telemetry.</p>
+            </header>
 
-    <div class="main-content">
-        
-        <div class="header-top" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-            <div>
-                <h1 style="margin: 0; font-size: 28px; color: var(--accent-blue);">Customer Management</h1>
-                <p style="color: var(--text-muted); margin-top: 5px;">Superadmin Access: View registered customers, VIP status, and wallet balances.</p>
+            <?php echo $message; ?>
+
+            <div class="table-container" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                <table style="width:100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid rgba(255,215,0,0.2); text-align: left;">
+                            <th style="padding:15px; color:#ffd700;">ID</th>
+                            <th style="padding:15px; color:#ffd700;">Username & Email</th>
+                            <th style="padding:15px; color:#ffd700;">Orders Placed</th>
+                            <th style="padding:15px; color:#ffd700;">Registration Date</th>
+                            <th style="padding:15px; color:#ffd700; text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        // 🌟 連動訂單表，計算忠誠度
+                        $sql = "SELECT c.*, (SELECT COUNT(*) FROM orders WHERE customer_id = c.customer_id) as total_orders FROM customers c ORDER BY c.customer_id DESC";
+                        $res = $conn->query($sql);
+                        if ($res && $res->num_rows > 0) {
+                            while ($row = $res->fetch_assoc()) {
+                                $uid = $row['customer_id'];
+                                echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
+                                echo "<td style='padding:15px; font-family:\"JetBrains Mono\"; color:#888;'>USR-$uid</td>";
+                                echo "<td style='padding:15px;'><strong>".htmlspecialchars($row['username'])."</strong><br><span style='color:#64748b; font-size:12px;'>".htmlspecialchars($row['email'])."</span></td>";
+                                echo "<td style='padding:15px;'><span style='background:rgba(255,215,0,0.1); color:#ffd700; padding:4px 10px; border-radius:4px; font-family:\"JetBrains Mono\"; font-size:12px; font-weight:bold;'>{$row['total_orders']} Orders</span></td>";
+                                echo "<td style='padding:15px; color:#94a3b8; font-size:13px;'>".date('d M Y', strtotime($row['created_at']))."</td>";
+                                echo "<td style='padding:15px; text-align:right;'>
+                                        <a href='manage_users.php?delete_id=$uid' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Permanently ban and delete this user? This cannot be undone.\");'>Ban / Delete</a>
+                                      </td>";
+                                echo "</tr>";
+                            }
+                        } else {
+                            echo "<tr><td colspan='5' style='text-align:center; padding:30px; color:#888;'>No citizens found.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
             </div>
         </div>
-
-        <?php 
-        if(!empty($message)) echo $message;
-        if(isset($_GET['deleted']) && $_GET['deleted'] == 1) {
-            echo "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>🗑️ Customer account deleted permanently!</div>";
-        }
-        ?>
-
-        <div class="content-card">
-            <table>
-                <thead>
-                    <tr>
-                        <th width="8%">ID</th>
-                        <th width="25%">Customer Info</th> 
-                        <th width="15%">Membership</th>
-                        <th width="20%">Wallet & Coins</th>
-                        <th width="17%">Joined Date</th>
-                        <th width="15%">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $sql_customers = "SELECT * FROM customers ORDER BY customer_id DESC"; 
-                    $res_customers = mysqli_query($conn, $sql_customers);
-
-                    if ($res_customers && mysqli_num_rows($res_customers) > 0) {
-                        while($row = mysqli_fetch_assoc($res_customers)) {
-                            echo "<tr>";
-                            
-                            echo "<td><strong>#" . $row['customer_id'] . "</strong></td>";
-                            
-                            $username = !empty($row['username']) ? htmlspecialchars($row['username']) : 'No Name';
-                            $email = htmlspecialchars($row['email']);
-                            echo "<td>
-                                    <div style='color: var(--text-main); font-weight: 600; font-size: 15px; margin-bottom: 3px;'>
-                                        <i class='fas fa-user-circle' style='color: var(--text-muted); margin-right: 5px;'></i> {$username}
-                                    </div>
-                                    <div style='color: var(--text-muted); font-size: 12px;'>{$email}</div>
-                                  </td>";
-                            
-                            $tier = isset($row['membership_tier']) ? $row['membership_tier'] : 'Standard';
-                            $badge_class = (strtoupper($tier) == 'VIP') ? 'badge-vip' : 'badge-standard';
-                            $vip_icon = (strtoupper($tier) == 'VIP') ? '<i class="fas fa-crown"></i> ' : '';
-                            echo "<td><span class='{$badge_class}'>{$vip_icon}" . strtoupper($tier) . "</span></td>";
-                            
-                            $balance = number_format($row['wallet_balance'], 2);
-                            $coins = number_format($row['reward_coins']);
-                            echo "<td>
-                                    <div class='wallet-text'>RM {$balance}</div>
-                                    <div class='coins-text'><i class='fas fa-coins'></i> {$coins} Coins</div>
-                                  </td>";
-                            
-                            $date = date('Y-m-d', strtotime($row['created_at']));
-                            echo "<td style='color: var(--text-muted); font-size: 13px;'>{$date}</td>";
-                            
-                            // ✅ 这里的删除按钮也改成 manage_users.php
-                            echo "<td>
-                                    <a href='manage_users.php?delete_id=" . $row['customer_id'] . "' class='btn-action' style='color: var(--accent-danger); border-color: var(--accent-danger);' onclick='return confirm(\"⚠️ DANGER: Are you sure you want to delete this customer? They will lose all data, wallet balance, and order history!\");'>Delete</a>
-                                  </td>";
-                            
-                            echo "</tr>";
-                        }
-                    } else {
-                        echo "<tr><td colspan='6' style='text-align:center; padding: 40px; color: var(--text-muted);'>No customers registered yet.</td></tr>";
-                    }
-                    ?>
-                </tbody>
-            </table>
-        </div>
-
     </div>
 </body>
 </html>

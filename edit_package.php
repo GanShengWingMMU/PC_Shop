@@ -1,86 +1,93 @@
 <?php
 session_start();
-include 'db_connect.php'; 
+if (file_exists('config.php')) { require_once 'config.php'; } 
+else { include 'db_connect.php'; }
 
-// 聪明的保安
-if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && strtolower($_SESSION['role']) !== 'superadmin')) {
+$current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
+if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
 
 $error = "";
+$package_id = isset($_GET['package_id']) ? intval($_GET['package_id']) : 0;
 
-// 1. 检查传进来的 ID
-if (!isset($_GET['id'])) {
+if ($package_id <= 0) {
     header("Location: manage_packages.php");
     exit();
 }
-$package_id = intval($_GET['id']);
 
-// 2. 抓取旧数据
-$sql_fetch = "SELECT * FROM packages WHERE package_id = $package_id";
-$res_fetch = mysqli_query($conn, $sql_fetch);
+// 🌟 1. 抓取套餐原本的資料
+$stmt = $conn->prepare("SELECT * FROM packages WHERE package_id = ?");
+$stmt->bind_param("i", $package_id);
+$stmt->execute();
+$pkg = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+if (!$pkg) { header("Location: manage_packages.php"); exit(); }
 
-if (!$res_fetch || mysqli_num_rows($res_fetch) == 0) {
-    header("Location: manage_packages.php");
-    exit();
+// 🌟 2. 抓取這個套餐「目前包含」了哪些零件 (為了在下拉選單自動標記 selected)
+$current_components = [];
+$stmt_items = $conn->prepare("SELECT product_id FROM package_items WHERE package_id = ?");
+$stmt_items->bind_param("i", $package_id);
+$stmt_items->execute();
+$res_items = $stmt_items->get_result();
+while($row = $res_items->fetch_assoc()){
+    $current_components[] = $row['product_id'];
 }
-$package = mysqli_fetch_assoc($res_fetch);
+$stmt_items->close();
 
-// 3. 处理表单提交
+// 🌟 3. 抓取全庫零件字典 (按照分類分組)
+$components_by_category = [];
+$sql_prod = "SELECT p.product_id, p.product_name, p.price, c.category_name 
+             FROM products p JOIN categories c ON p.category_id = c.category_id 
+             ORDER BY c.category_id ASC, p.price DESC";
+$res_prod = $conn->query($sql_prod);
+while($row = $res_prod->fetch_assoc()){
+    $components_by_category[$row['category_name']][] = $row;
+}
+
+// 🌟 4. 處理更新邏輯 (ACID Transaction)
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $package_name = mysqli_real_escape_string($conn, $_POST['package_name']);
-    $description = mysqli_real_escape_string($conn, $_POST['description']);
-    $price = floatval($_POST['price']);
-    $target_persona = mysqli_real_escape_string($conn, $_POST['target_persona']);
-    $stock_status = mysqli_real_escape_string($conn, $_POST['stock_status']);
+    $package_name = trim($_POST['package_name']);
+    $description = trim($_POST['description']);
+    $image_url = trim($_POST['image_url']);
+    $target_persona = trim($_POST['target_persona']);
+    $stock_status = trim($_POST['stock_status']);
     
-    // 🌟 默认保留数据库里原本的图片路径
-    $image_url = $package['image_url'];
-    
-    // 🌟 处理电脑本地文件上传 (如果选了新图片，就覆盖)
-    if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] == UPLOAD_ERR_OK) {
-        $upload_dir = 'uploads/';
-        if (!is_dir($upload_dir)) {
-            mkdir($upload_dir, 0777, true);
-        }
-        
-        $file_name = time() . '_' . preg_replace("/[^a-zA-Z0-9.]/", "", basename($_FILES['image_file']['name']));
-        $target_path = $upload_dir . $file_name;
-        
-        if (move_uploaded_file($_FILES['image_file']['tmp_name'], $target_path)) {
-            $image_url = $target_path; // 成功上传，替换成新图片的路径
-        } else {
-            $error = "Failed to move uploaded file.";
-        }
-    }
-
     $score_gamer = intval($_POST['score_gamer']);
     $score_creator = intval($_POST['score_creator']);
     $score_student = intval($_POST['score_student']);
     $score_enthusiast = intval($_POST['score_enthusiast']);
 
-    if (empty($error)) {
-        // 更新数据库 SQL
-        $update_sql = "UPDATE packages SET 
-                       package_name = '$package_name', 
-                       description = '$description', 
-                       price = $price, 
-                       image_url = '$image_url', 
-                       target_persona = '$target_persona', 
-                       stock_status = '$stock_status', 
-                       score_gamer = $score_gamer, 
-                       score_creator = $score_creator, 
-                       score_student = $score_student, 
-                       score_enthusiast = $score_enthusiast 
-                       WHERE package_id = $package_id";
-                       
-        if (mysqli_query($conn, $update_sql)) {
-            header("Location: manage_packages.php?success=2");
-            exit();
-        } else {
-            $error = "Update Failed: " . mysqli_error($conn);
+    $conn->begin_transaction();
+    try {
+        // 更新主表 (不再更新 price，交給動態計算)
+        $update_pkg = $conn->prepare("UPDATE packages SET package_name=?, description=?, image_url=?, target_persona=?, stock_status=?, score_gamer=?, score_creator=?, score_student=?, score_enthusiast=? WHERE package_id=?");
+        $update_pkg->bind_param("sssssiiiii", $package_name, $description, $image_url, $target_persona, $stock_status, $score_gamer, $score_creator, $score_student, $score_enthusiast, $package_id);
+        $update_pkg->execute();
+        $update_pkg->close();
+
+        // 更新關聯表：先無情刪除舊配置，再寫入新配置！
+        $conn->query("DELETE FROM package_items WHERE package_id = $package_id");
+        
+        if (isset($_POST['components']) && is_array($_POST['components'])) {
+            $insert_item = $conn->prepare("INSERT INTO package_items (package_id, product_id, quantity) VALUES (?, ?, 1)");
+            foreach ($_POST['components'] as $prod_id) {
+                if (!empty($prod_id)) { 
+                    $pid = intval($prod_id);
+                    $insert_item->bind_param("ii", $package_id, $pid);
+                    $insert_item->execute();
+                }
+            }
+            $insert_item->close();
         }
+
+        $conn->commit();
+        header("Location: manage_packages.php?msg=updated");
+        exit();
+    } catch (Exception $e) {
+        $conn->rollback();
+        $error = "Transaction Failed: " . $e->getMessage();
     }
 }
 ?>
@@ -88,138 +95,123 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Edit Package - GridCity PC Admin</title>
+    <title>Configure Blueprint - Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="css/admin_style.css?v=<?php echo time(); ?>">
-    <style>
-        .form-card {
-            background: var(--bg-surface); padding: 40px; border-radius: 12px;
-            border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            max-width: 800px; margin: 0 auto; position: relative; overflow: hidden;
-        }
-        .form-card::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: linear-gradient(to right, #00f2fe, #8a2be2);
-        }
-        .form-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
-        }
-        .full-width { grid-column: span 2; }
-    </style>
+    <link rel="stylesheet" href="css/admin_style.css">
 </head>
 <body>
+    <div class="admin-container">
+        <nav class="admin-sidebar">
+            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
+            <ul class="sidebar-menu">
+                <li><a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="manage_orders.php"><i class="fas fa-shopping-cart"></i> Manage Orders</a></li>
+                <li><a href="manage_products.php"><i class="fas fa-box"></i> Manage Products</a></li>
+                <li><a href="manage_categories.php"><i class="fas fa-tags"></i> Manage Categories</a></li>
+                <li><a href="manage_packages.php" class="active"><i class="fas fa-layer-group"></i> Manage Packages</a></li>
+                <li><a href="admin_logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Log out</a></li> 
+            </ul>
+        </nav>
 
-    <div class="sidebar">
-        <h2>
-            <img src="image/Admin_dashboard_logo.jpg" alt="GridCity PC Logo" class="sidebar-logo">
-            <span>GridCity PC</span>
-        </h2>
-        <ul>
-            <li><a href="admin_dashboard.php">Dashboard</a></li>
-            <li><a href="manage_products.php">Products</a></li> 
-            <li><a href="manage_packages.php" class="active">Packages</a></li>
-            <li><a href="manage_categories.php">Categories</a></li>
-            <li><a href="manage_orders.php">Orders</a></li>
-            <li><a href="admin_builder.php">Build System</a></li>
-            
-            <?php if (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'superadmin'): ?>
-                <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                <li><a href="manage_users.php">Manage Customers</a></li>
+        <div class="admin-content" style="padding: 30px;">
+            <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 style="color: #a855f7; margin: 0;"><i class="fas fa-wrench"></i> Configure Blueprint: #<?php echo $package_id; ?></h2>
+                <a href="manage_packages.php" class="btn-action" style="color: #888; border-color: #555;">&larr; Abort</a>
+            </header>
+
+            <?php if ($error): ?>
+                <div style="background: rgba(255,77,77,0.1); color: #ff4d4d; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><i class="fas fa-exclamation-triangle"></i> <?php echo $error; ?></div>
             <?php endif; ?>
-            
-            <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-        </ul>
-    </div>
 
-    <div class="main-content">
-        
-        <div class="header-top" style="margin-bottom: 30px;">
-            <a href="manage_packages.php" class="btn-action" style="display: inline-block; margin-bottom: 15px; border:none; color: var(--text-muted); text-decoration: none;">&larr; Back to Packages</a>
-            <h1 style="margin: 0; font-size: 28px; color: var(--text-main);">Edit PC Package</h1>
-            <p style="color: var(--text-muted); margin-top: 5px;">Modifying details for Package #<?php echo $package_id; ?></p>
-        </div>
-
-        <div class="form-card">
-            <?php 
-            if(!empty($error)) {
-                echo "<div class='error-msg' style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,77,77,0.3); margin-bottom: 20px; font-weight: bold;'>⚠️ $error</div>";
-            }
-            ?>
-
-            <form action="" method="POST" enctype="multipart/form-data">
-                <div class="form-grid">
+            <form method="POST" style="background: rgba(0,0,0,0.5); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                
+                <div style="background: rgba(168,85,247,0.05); padding: 20px; border-radius: 8px; border: 1px solid rgba(168,85,247,0.2); margin-bottom: 30px;">
+                    <h3 style="color: #a855f7; margin-top: 0; margin-bottom: 10px;"><i class="fas fa-microchip"></i> Package Configuration Matrix</h3>
+                    <p style="color: #888; font-size: 13px; margin-bottom: 20px;">Swap components to adjust the build. The final price updates dynamically on the storefront.</p>
                     
-                    <div class="form-group full-width">
-                        <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Package Name *</label>
-                        <input type="text" name="package_name" class="form-control" required value="<?php echo htmlspecialchars($package['package_name']); ?>">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <?php foreach ($components_by_category as $cat_name => $products): ?>
+                            <div>
+                                <label style="display: block; color: #a855f7; font-size: 12px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">
+                                    <?php echo htmlspecialchars($cat_name); ?>
+                                </label>
+                                <select name="components[]" class="form-control" style="width: 100%; padding: 10px; font-size: 13px; background: rgba(0,0,0,0.6);">
+                                    <option value="">-- Skip / Remove --</option>
+                                    <?php foreach ($products as $p): 
+                                        // 🌟 智慧記憶：如果這個零件本來就在套餐裡，就幫它加上 selected!
+                                        $is_selected = in_array($p['product_id'], $current_components) ? "selected" : "";
+                                    ?>
+                                        <option value="<?php echo $p['product_id']; ?>" <?php echo $is_selected; ?>>
+                                            <?php echo htmlspecialchars($p['product_name']); ?> (+RM <?php echo number_format($p['price'], 2); ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
+                </div>
 
-                    <div class="form-group full-width">
-                        <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Description</label>
-                        <textarea name="description" class="form-control" rows="3"><?php echo htmlspecialchars($package['description']); ?></textarea>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group full-width" style="grid-column: 1 / -1;">
+                        <label>Package Name</label>
+                        <input type="text" name="package_name" class="form-control" value="<?php echo htmlspecialchars($pkg['package_name']); ?>" required style="width: 100%;">
+                    </div>
+                    
+                    <div class="form-group full-width" style="grid-column: 1 / -1;">
+                        <label>Description & Marketing Pitch</label>
+                        <textarea name="description" class="form-control" rows="3" required style="width: 100%;"><?php echo htmlspecialchars($pkg['description']); ?></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Price (RM) *</label>
-                        <input type="number" step="0.01" name="price" class="form-control" required value="<?php echo $package['price']; ?>">
+                        <label>Target Persona</label>
+                        <input type="text" name="target_persona" class="form-control" value="<?php echo htmlspecialchars($pkg['target_persona']); ?>" style="width: 100%;">
                     </div>
-
+                    
                     <div class="form-group">
-                        <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Target Persona</label>
-                        <select name="target_persona" class="form-control">
-                            <option value="Gamer" <?php echo ($package['target_persona'] == 'Gamer') ? 'selected' : ''; ?>>Gamer</option>
-                            <option value="Creator" <?php echo ($package['target_persona'] == 'Creator') ? 'selected' : ''; ?>>Creator</option>
-                            <option value="Student" <?php echo ($package['target_persona'] == 'Student') ? 'selected' : ''; ?>>Student</option>
-                            <option value="Enthusiast" <?php echo ($package['target_persona'] == 'Enthusiast') ? 'selected' : ''; ?>>Enthusiast</option>
+                        <label>Stock Status</label>
+                        <select name="stock_status" class="form-control" style="width: 100%;">
+                            <option value="Available" <?php if($pkg['stock_status']=='Available') echo 'selected';?>>Available</option>
+                            <option value="Pre-order" <?php if($pkg['stock_status']=='Pre-order') echo 'selected';?>>Pre-order</option>
+                            <option value="Out of Stock" <?php if($pkg['stock_status']=='Out of Stock') echo 'selected';?>>Out of Stock</option>
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label style="color: var(--accent-purple); font-weight: bold; margin-bottom: 8px; display:block;"><i class="fas fa-upload"></i> Upload Image (From PC)</label>
-                        <input type="file" name="image_file" class="form-control" accept="image/*" style="padding: 6px;">
-                        <small style="color: var(--text-muted); display: block; margin-top: 5px;">Leave empty to keep current image.</small>
+                    <div class="form-group full-width" style="grid-column: 1 / -1;">
+                        <label>Image URL</label>
+                        <input type="text" name="image_url" class="form-control" value="<?php echo htmlspecialchars($pkg['image_url']); ?>" style="width: 100%;">
                     </div>
 
-                    <div class="form-group">
-                        <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Stock Status</label>
-                        <select name="stock_status" class="form-control">
-                            <option value="Available" <?php echo ($package['stock_status'] == 'Available') ? 'selected' : ''; ?>>Available</option>
-                            <option value="Out of Stock" <?php echo ($package['stock_status'] == 'Out of Stock') ? 'selected' : ''; ?>>Out of Stock</option>
-                        </select>
-                    </div>
-
-                    <div class="full-width" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                        <h4 style="color: var(--accent-purple); margin-bottom: 15px; margin-top: 0;"><i class="fas fa-chart-line"></i> Persona Suitability Scores (0-10)</h4>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                    <div class="form-group full-width" style="grid-column: 1 / -1; margin-top: 10px;">
+                        <label style="color: #a855f7;"><i class="fas fa-brain"></i> AI Recommendation Radar (Scores 0-10)</label>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
                             <div>
                                 <label style="font-size: 12px; color: var(--text-muted);">Gamer Score</label>
-                                <input type="number" min="0" max="10" name="score_gamer" class="form-control" value="<?php echo $package['score_gamer']; ?>">
+                                <input type="number" min="0" max="10" name="score_gamer" class="form-control" value="<?php echo $pkg['score_gamer']; ?>" style="width: 100%;">
                             </div>
                             <div>
                                 <label style="font-size: 12px; color: var(--text-muted);">Creator Score</label>
-                                <input type="number" min="0" max="10" name="score_creator" class="form-control" value="<?php echo $package['score_creator']; ?>">
+                                <input type="number" min="0" max="10" name="score_creator" class="form-control" value="<?php echo $pkg['score_creator']; ?>" style="width: 100%;">
                             </div>
                             <div>
                                 <label style="font-size: 12px; color: var(--text-muted);">Student Score</label>
-                                <input type="number" min="0" max="10" name="score_student" class="form-control" value="<?php echo $package['score_student']; ?>">
+                                <input type="number" min="0" max="10" name="score_student" class="form-control" value="<?php echo $pkg['score_student']; ?>" style="width: 100%;">
                             </div>
                             <div>
                                 <label style="font-size: 12px; color: var(--text-muted);">Enthusiast Score</label>
-                                <input type="number" min="0" max="10" name="score_enthusiast" class="form-control" value="<?php echo $package['score_enthusiast']; ?>">
+                                <input type="number" min="0" max="10" name="score_enthusiast" class="form-control" value="<?php echo $pkg['score_enthusiast']; ?>" style="width: 100%;">
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="form-group full-width" style="margin-top: 20px;">
-                        <button type="submit" class="quick-action-btn" style="width: 100%; background: linear-gradient(135deg, #00f2fe, #8a2be2); font-size: 16px; border:none;">
-                            <i class="fas fa-save"></i> Update Package Details
-                        </button>
-                    </div>
+                <div class="form-group full-width" style="margin-top: 30px;">
+                    <button type="submit" style="width: 100%; background: linear-gradient(135deg, #a855f7, #00f2fe); color: #fff; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s;">
+                        <i class="fas fa-sync-alt"></i> Update Blueprint & Real-time Price
+                    </button>
                 </div>
             </form>
         </div>
-
     </div>
 </body>
 </html>
