@@ -11,7 +11,7 @@ $customer_id = $_SESSION['customer_id'];
 $order_id = intval($_GET['id']);
 
 // 抓取訂單主檔與顧客資料
-$query = "SELECT o.*, c.first_name, c.last_name, c.email 
+$query = "SELECT o.*, c.username, c.email 
           FROM orders o 
           JOIN customers c ON o.customer_id = c.customer_id 
           WHERE o.order_id = ? AND o.customer_id = ?";
