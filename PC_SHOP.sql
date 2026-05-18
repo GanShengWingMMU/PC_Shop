@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主机： 127.0.0.1
--- 生成日期： 2026-05-12 19:45:40
+-- 生成日期： 2026-05-18 03:34:49
 -- 服务器版本： 10.4.32-MariaDB
 -- PHP 版本： 8.2.12
 
@@ -66,7 +66,8 @@ CREATE TABLE `bank` (
 
 INSERT INTO `bank` (`id`, `bank_name`, `cardholder_name`, `card_number`, `cvc`, `fpx_username`, `fpx_password`, `balance`) VALUES
 (1, 'Maybank', 'Ali Bin Abu', '1111222233334444', '123', NULL, NULL, 8303.00),
-(2, 'Maybank', 'Gan Sheng Wing', '9999888877776666', '999', NULL, NULL, 99999.00);
+(2, 'Maybank', 'Gan Sheng Wing', '9999888877776666', '999', NULL, NULL, 78600.00),
+(3, 'Maybank', 'FPX User 1', '0000', '000', 'ganshengwing', '123456', 76601.00);
 
 -- --------------------------------------------------------
 
@@ -324,28 +325,17 @@ INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`
 (249, 29, 21, 1),
 (250, 29, 23, 1),
 (251, 29, 25, 1),
-(252, 30, 31, 1),
-(253, 30, 4, 1),
-(254, 30, 12, 1),
-(255, 30, 15, 1),
-(256, 30, 8, 1),
-(257, 30, 49, 1),
-(258, 30, 20, 1),
-(259, 30, 57, 1),
-(260, 30, 22, 1),
-(261, 30, 24, 1),
-(262, 30, 25, 1),
-(263, 31, 2, 1),
-(264, 31, 4, 1),
-(265, 31, 12, 1),
-(266, 31, 54, 1),
-(267, 31, 8, 1),
-(268, 31, 16, 1),
-(269, 31, 19, 1),
-(270, 31, 18, 1),
-(271, 31, 25, 1),
-(272, 31, 23, 1),
-(273, 31, 21, 1);
+(373, 41, 22, 1),
+(374, 41, 23, 1),
+(375, 41, 25, 1),
+(376, 41, 32, 1),
+(377, 41, 34, 1),
+(378, 41, 41, 1),
+(379, 41, 45, 1),
+(380, 41, 51, 1),
+(381, 41, 55, 1),
+(382, 41, 56, 1),
+(383, 41, 60, 1);
 
 -- --------------------------------------------------------
 
@@ -409,7 +399,8 @@ CREATE TABLE `community_likes` (
 
 INSERT INTO `community_likes` (`like_id`, `post_id`, `customer_id`, `created_at`) VALUES
 (2, 2, 5, '2026-05-02 22:31:33'),
-(3, 1, 5, '2026-05-02 22:32:28');
+(3, 1, 5, '2026-05-02 22:32:28'),
+(5, 2, 6, '2026-05-18 01:55:38');
 
 -- --------------------------------------------------------
 
@@ -434,7 +425,8 @@ CREATE TABLE `community_posts` (
 
 INSERT INTO `community_posts` (`post_id`, `customer_id`, `pc_build_id`, `title`, `content`, `post_type`, `views`, `created_at`) VALUES
 (1, 5, NULL, 'test', 'hello', 'Discussion', 0, '2026-05-01 22:36:47'),
-(2, 5, 28, 'god', '。。。', 'Showcase', 0, '2026-05-02 22:31:12');
+(2, 5, 28, 'god', '。。。', 'Showcase', 0, '2026-05-02 22:31:12'),
+(3, 6, NULL, 'hi dear suhaimi', 'i just wanna say ur build is godlike ahahhaha', 'Discussion', 0, '2026-05-18 01:56:15');
 
 -- --------------------------------------------------------
 
@@ -491,7 +483,7 @@ INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `
 (2, 'Sheng Gan', NULL, NULL, 'ganshengwing11226@gmail.com', '$2y$10$vW1.TGCWwWQMw8qP57pjjuoePphWACuonBYU6YnK6u/Kkvhd7bJ4a', NULL, NULL, 0.00, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
 (3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
 (5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 100455.00, 10000, 'VIP', '2026-06-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14'),
-(6, 'kyy', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', NULL, NULL, 0.00, 500, 'VIP', '2026-06-08 15:33:29', 0, NULL, 'Active', NULL, NULL, 5, 1, 0, 0, '2026-05-09 21:32:45');
+(6, 'kskbl', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', '+60122222620', '2025-11-17', 1000.00, 50, 'VIP', '2026-06-08 15:33:29', 0, NULL, 'Active', NULL, NULL, 27, 44, 13, 0, '2026-05-09 21:32:45');
 
 -- --------------------------------------------------------
 
@@ -523,7 +515,8 @@ INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `recipient_name`,
 (1, 1, '', '', '', NULL, '', '', '', 'Malaysia', 'No 123, Jalan Multimedia, 63100 Cyberjaya, Selangor', 0, '2026-04-09 13:23:19'),
 (2, 1, '', '', '', NULL, '', '', '', 'Malaysia', 'Sheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', 1, '2026-04-09 17:17:21'),
 (4, 5, 'YEOH XUAN MING', '0122222620', '68,JALAN UTAMA28 TAMAN MUTIARA RINI', '', 'Johor Bahru', 'Johor', '81300', 'Malaysia', '68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', 0, '2026-05-01 21:35:32'),
-(5, 5, 'YYEYY', '0123456789', '58,Jalan Udara 22,Taman Universiti', '', 'perak', 'sembilan', '81365', 'Malaysia', '58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', 1, '2026-05-01 21:39:12');
+(5, 5, 'YYEYY', '0123456789', '58,Jalan Udara 22,Taman Universiti', '', 'perak', 'sembilan', '81365', 'Malaysia', '58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', 1, '2026-05-01 21:39:12'),
+(8, 6, 'YEOH XUAN MING', '+60122222620', '68,JALAN UTAMA28 TAMAN MUTIARA RINI', '', 'Johor Bahru', 'Johor', '81300', 'Malaysia', '68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', 0, '2026-05-18 02:03:47');
 
 -- --------------------------------------------------------
 
@@ -563,7 +556,7 @@ CREATE TABLE `orders` (
   `coins_used` int(11) NOT NULL DEFAULT 0,
   `discount_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
   `shipping_address` text NOT NULL,
-  `contact_number` varchar(20) NOT NULL,
+  `contact_number` varchar(20) DEFAULT NULL,
   `order_status` varchar(20) DEFAULT 'Pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -584,7 +577,11 @@ INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `to
 (16, 'My Custom Order', 5, '2026-05-02 22:30:30', 74860.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending'),
 (17, 'My Custom Order', 5, '2026-05-02 22:31:55', 6427.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending'),
 (18, 'My Custom Order', 5, '2026-05-09 16:55:10', 10204.00, 550, 55.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending'),
-(19, 'My Custom Order', 5, '2026-05-09 21:03:11', 45.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending');
+(19, 'My Custom Order', 5, '2026-05-09 21:03:11', 45.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending'),
+(20, 'My Custom Order', 6, '2026-05-17 23:43:50', 10727.00, 0, 0.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
+(21, 'My Custom Order', 6, '2026-05-18 00:13:55', 10727.00, 0, 0.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
+(22, 'My Custom Order', 6, '2026-05-18 00:28:23', 10672.00, 550, 55.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
+(23, 'My Custom Order', 6, '2026-05-18 00:31:22', 11787.00, 0, 0.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending');
 
 -- --------------------------------------------------------
 
@@ -628,7 +625,11 @@ INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_bu
 (18, 16, NULL, 29, NULL, NULL, 1, 6427.00),
 (19, 17, NULL, 28, NULL, NULL, 1, 6427.00),
 (20, 18, NULL, NULL, 15, NULL, 1, 10259.00),
-(21, 19, 24, NULL, NULL, NULL, 1, 45.00);
+(21, 19, 24, NULL, NULL, NULL, 1, 45.00),
+(22, 20, NULL, NULL, NULL, NULL, 1, 10727.00),
+(23, 21, NULL, NULL, NULL, NULL, 1, 10727.00),
+(24, 22, NULL, NULL, NULL, NULL, 1, 10727.00),
+(25, 23, NULL, NULL, NULL, NULL, 1, 11787.00);
 
 -- --------------------------------------------------------
 
@@ -680,136 +681,137 @@ INSERT INTO `packages` (`package_id`, `package_name`, `description`, `price`, `i
 CREATE TABLE `package_items` (
   `id` int(11) NOT NULL,
   `package_id` int(11) NOT NULL,
-  `product_id` int(11) NOT NULL
+  `product_id` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- 转存表中的数据 `package_items`
 --
 
-INSERT INTO `package_items` (`id`, `package_id`, `product_id`) VALUES
-(1, 1, 1),
-(2, 1, 5),
-(3, 1, 7),
-(4, 1, 11),
-(5, 1, 17),
-(6, 1, 13),
-(7, 1, 18),
-(8, 1, 19),
-(9, 2, 3),
-(10, 2, 6),
-(11, 2, 8),
-(12, 2, 12),
-(13, 2, 16),
-(14, 2, 14),
-(15, 2, 18),
-(16, 2, 20),
-(17, 3, 1),
-(18, 3, 5),
-(19, 3, 7),
-(20, 3, 10),
-(21, 3, 17),
-(22, 3, 13),
-(23, 3, 18),
-(24, 3, 19),
-(25, 4, 2),
-(26, 4, 4),
-(27, 4, 9),
-(28, 4, 12),
-(29, 4, 16),
-(30, 4, 15),
-(31, 4, 18),
-(32, 4, 20),
-(33, 7, 27),
-(34, 7, 33),
-(35, 7, 38),
-(36, 7, 44),
-(37, 7, 49),
-(38, 7, 52),
-(39, 7, 57),
-(40, 7, 59),
-(41, 7, 21),
-(42, 8, 28),
-(43, 8, 34),
-(44, 8, 38),
-(45, 8, 45),
-(46, 8, 49),
-(47, 8, 53),
-(48, 8, 56),
-(49, 8, 60),
-(50, 8, 22),
-(51, 9, 28),
-(52, 9, 36),
-(53, 9, 39),
-(54, 9, 43),
-(55, 9, 49),
-(56, 9, 52),
-(57, 9, 57),
-(58, 9, 60),
-(59, 9, 22),
-(60, 10, 29),
-(61, 10, 33),
-(62, 10, 38),
-(63, 10, 48),
-(64, 10, 50),
-(65, 10, 54),
-(66, 10, 58),
-(67, 10, 59),
-(68, 10, 21),
-(69, 11, 30),
-(70, 11, 36),
-(71, 11, 40),
-(72, 11, 43),
-(73, 11, 50),
-(74, 11, 54),
-(75, 11, 58),
-(76, 11, 61),
-(77, 11, 21),
-(78, 12, 27),
-(79, 12, 37),
-(80, 12, 38),
-(81, 12, 46),
-(82, 12, 49),
-(83, 12, 53),
-(84, 12, 56),
-(85, 12, 60),
-(86, 12, 22),
-(87, 13, 30),
-(88, 13, 36),
-(89, 13, 40),
-(90, 13, 48),
-(91, 13, 50),
-(92, 13, 54),
-(93, 13, 58),
-(94, 13, 59),
-(95, 13, 21),
-(96, 14, 31),
-(97, 14, 37),
-(98, 14, 39),
-(99, 14, 47),
-(100, 14, 49),
-(101, 14, 53),
-(102, 14, 57),
-(103, 14, 60),
-(104, 14, 22),
-(105, 15, 27),
-(106, 15, 33),
-(107, 15, 38),
-(108, 15, 47),
-(109, 15, 49),
-(110, 15, 52),
-(111, 15, 57),
-(112, 15, 61),
-(113, 15, 21),
-(114, 16, 32),
-(115, 16, 34),
-(116, 16, 41),
-(117, 16, 45),
-(118, 16, 51),
-(119, 16, 55),
-(120, 16, 56),
-(121, 16, 60),
-(122, 16, 22);
+INSERT INTO `package_items` (`id`, `package_id`, `product_id`, `quantity`) VALUES
+(1, 1, 1, 1),
+(2, 1, 5, 1),
+(3, 1, 7, 1),
+(4, 1, 11, 1),
+(5, 1, 17, 1),
+(6, 1, 13, 1),
+(7, 1, 18, 1),
+(8, 1, 19, 1),
+(9, 2, 3, 1),
+(10, 2, 6, 1),
+(11, 2, 8, 1),
+(12, 2, 12, 1),
+(13, 2, 16, 1),
+(14, 2, 14, 1),
+(15, 2, 18, 1),
+(16, 2, 20, 1),
+(17, 3, 1, 1),
+(18, 3, 5, 1),
+(19, 3, 7, 1),
+(20, 3, 10, 1),
+(21, 3, 17, 1),
+(22, 3, 13, 1),
+(23, 3, 18, 1),
+(24, 3, 19, 1),
+(25, 4, 2, 1),
+(26, 4, 4, 1),
+(27, 4, 9, 1),
+(28, 4, 12, 1),
+(29, 4, 16, 1),
+(30, 4, 15, 1),
+(31, 4, 18, 1),
+(32, 4, 20, 1),
+(33, 7, 27, 1),
+(34, 7, 33, 1),
+(35, 7, 38, 1),
+(36, 7, 44, 1),
+(37, 7, 49, 1),
+(38, 7, 52, 1),
+(39, 7, 57, 1),
+(40, 7, 59, 1),
+(41, 7, 21, 1),
+(42, 8, 28, 1),
+(43, 8, 34, 1),
+(44, 8, 38, 1),
+(45, 8, 45, 1),
+(46, 8, 49, 1),
+(47, 8, 53, 1),
+(48, 8, 56, 1),
+(49, 8, 60, 1),
+(50, 8, 22, 1),
+(51, 9, 28, 1),
+(52, 9, 36, 1),
+(53, 9, 39, 1),
+(54, 9, 43, 1),
+(55, 9, 49, 1),
+(56, 9, 52, 1),
+(57, 9, 57, 1),
+(58, 9, 60, 1),
+(59, 9, 22, 1),
+(60, 10, 29, 1),
+(61, 10, 33, 1),
+(62, 10, 38, 1),
+(63, 10, 48, 1),
+(64, 10, 50, 1),
+(65, 10, 54, 1),
+(66, 10, 58, 1),
+(67, 10, 59, 1),
+(68, 10, 21, 1),
+(69, 11, 30, 1),
+(70, 11, 36, 1),
+(71, 11, 40, 1),
+(72, 11, 43, 1),
+(73, 11, 50, 1),
+(74, 11, 54, 1),
+(75, 11, 58, 1),
+(76, 11, 61, 1),
+(77, 11, 21, 1),
+(78, 12, 27, 1),
+(79, 12, 37, 1),
+(80, 12, 38, 1),
+(81, 12, 46, 1),
+(82, 12, 49, 1),
+(83, 12, 53, 1),
+(84, 12, 56, 1),
+(85, 12, 60, 1),
+(86, 12, 22, 1),
+(87, 13, 30, 1),
+(88, 13, 36, 1),
+(89, 13, 40, 1),
+(90, 13, 48, 1),
+(91, 13, 50, 1),
+(92, 13, 54, 1),
+(93, 13, 58, 1),
+(94, 13, 59, 1),
+(95, 13, 21, 1),
+(96, 14, 31, 1),
+(97, 14, 37, 1),
+(98, 14, 39, 1),
+(99, 14, 47, 1),
+(100, 14, 49, 1),
+(101, 14, 53, 1),
+(102, 14, 57, 1),
+(103, 14, 60, 1),
+(104, 14, 22, 1),
+(105, 15, 27, 1),
+(106, 15, 33, 1),
+(107, 15, 38, 1),
+(108, 15, 47, 1),
+(109, 15, 49, 1),
+(110, 15, 52, 1),
+(111, 15, 57, 1),
+(112, 15, 61, 1),
+(113, 15, 21, 1),
+(114, 16, 32, 1),
+(115, 16, 34, 1),
+(116, 16, 41, 1),
+(117, 16, 45, 1),
+(118, 16, 51, 1),
+(119, 16, 55, 1),
+(120, 16, 56, 1),
+(121, 16, 60, 1),
+(122, 16, 22, 1);
 
 -- --------------------------------------------------------
 
@@ -842,7 +844,11 @@ INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `reference_n
 (9, 16, 'FPX - RHB Now', NULL, 'Paid', '2026-05-02 22:30:30'),
 (10, 17, 'FPX - Maybank2U', NULL, 'Paid', '2026-05-02 22:31:55'),
 (11, 18, 'Cash on Delivery', NULL, 'Pending', '2026-05-09 16:55:10'),
-(12, 19, 'E-Wallet', NULL, 'Paid', '2026-05-09 21:03:11');
+(12, 19, 'E-Wallet', NULL, 'Paid', '2026-05-09 21:03:11'),
+(13, 20, 'Cash on Delivery', NULL, 'Pending', '2026-05-17 23:43:50'),
+(14, 21, 'Visa ending in 6666', NULL, 'Paid', '2026-05-18 00:13:55'),
+(15, 22, 'Credit Card ending in 6666', NULL, 'Paid', '2026-05-18 00:28:23'),
+(16, 23, 'FPX - Maybank2U', NULL, 'Paid', '2026-05-18 00:31:22');
 
 -- --------------------------------------------------------
 
@@ -873,42 +879,42 @@ CREATE TABLE `products` (
 INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `description`, `price`, `stock_quantity`, `image_url`, `status`, `tdp_wattage`, `is_package`, `socket_type`, `ram_type`, `performance_tier`) VALUES
 (1, 1, 'Intel Core i5-13400F', 'Mainstream Intel Processor. Keyword: LGA1700', 950.00, 10, NULL, 'Available', 65, 0, 'LGA1700', NULL, 5),
 (2, 1, 'Intel Core i9-14900K', 'Enthusiast Intel Processor (High TDP). Keyword: LGA1700', 2800.00, 5, NULL, 'Available', 253, 0, 'LGA1700', NULL, 10),
-(3, 1, 'AMD Ryzen 5 7600X', 'Solid AMD Ryzen Processor. Keyword: AM5', 1100.00, 10, NULL, 'Available', 105, 0, 'AM5', NULL, 6),
+(3, 1, 'AMD Ryzen 5 7600X', 'Solid AMD Ryzen Processor. Keyword: AM5', 1100.00, 7, NULL, 'Available', 105, 0, 'AM5', NULL, 6),
 (4, 2, 'ASUS ROG STRIX Z790-F LGA1700 DDR5', 'High-end Intel board, supports DDR5 memory only.', 1450.00, 8, NULL, 'Available', 30, 0, 'LGA1700', 'DDR5', 0),
 (5, 2, 'MSI PRO H610M-G LGA1700 DDR4', 'Budget Intel board, supports DDR4 memory only.', 450.00, 15, NULL, 'Available', 20, 0, 'LGA1700', 'DDR4', 0),
 (6, 2, 'Gigabyte B650 AORUS ELITE AX AM5 DDR5', 'Premium AMD board, supports DDR5 memory only.', 1350.00, 5, NULL, 'Available', 30, 0, 'AM5', 'DDR5', 0),
 (7, 3, 'Kingston Fury Beast 16GB DDR4 3200MHz', 'Reliable standard DDR4 memory module.', 200.00, 30, NULL, 'Available', 8, 0, NULL, 'DDR4', 0),
-(8, 3, 'Corsair Vengeance 32GB DDR5 6000MHz', 'High-speed DDR5 memory module for gaming.', 650.00, 20, NULL, 'Available', 10, 0, NULL, 'DDR5', 0),
+(8, 3, 'Corsair Vengeance 32GB DDR5 6000MHz', 'High-speed DDR5 memory module for gaming.', 650.00, 17, NULL, 'Available', 10, 0, NULL, 'DDR5', 0),
 (9, 3, 'G.Skill Trident Z5 RGB 64GB DDR5', 'Enthusiast DDR5 memory kit for heavy workloads.', 1200.00, 10, NULL, 'Available', 15, 0, NULL, 'DDR5', 0),
 (10, 4, 'NVIDIA GeForce GT 730 2GB', 'Basic display output only (Will cause severe bottleneck with high-end CPUs).', 250.00, 20, NULL, 'Available', 30, 0, NULL, NULL, 1),
-(11, 4, 'NVIDIA RTX 4070 SUPER 12GB', 'Sweet spot for 1440p gaming and rendering.', 3100.00, 10, NULL, 'Available', 220, 0, NULL, NULL, 7),
+(11, 4, 'NVIDIA RTX 4070 SUPER 12GB', 'Sweet spot for 1440p gaming and rendering.', 3100.00, 7, NULL, 'Available', 220, 0, NULL, NULL, 7),
 (12, 4, 'NVIDIA RTX 4090 24GB', 'Ultimate flagship GPU (Requires massive power supply).', 8500.00, 2, NULL, 'Available', 450, 0, NULL, NULL, 10),
 (13, 6, 'Corsair CV550 550W', 'Entry-level power supply (550W).', 220.00, 15, NULL, 'Available', 550, 0, NULL, NULL, 0),
 (14, 6, 'FSP Hydro G Pro 850W', 'High-end gold certified power supply (850W).', 600.00, 10, NULL, 'Available', 850, 0, NULL, NULL, 0),
 (15, 6, 'ASUS ROG Thor 1200W', 'Platinum overkill power supply (1200W).', 1500.00, 3, NULL, 'Available', 1200, 0, NULL, NULL, 0),
 (16, 5, 'Samsung 990 PRO 1TB NVMe', 'Top-tier M.2 NVMe SSD.', 550.00, 15, NULL, 'Available', 5, 0, NULL, NULL, 0),
 (17, 5, 'WD Blue SN570 500GB NVMe', 'Budget-friendly fast storage.', 200.00, 25, NULL, 'Available', 5, 0, NULL, NULL, 0),
-(18, 7, 'NZXT H5 Flow Black', 'High airflow premium chassis.', 400.00, 10, NULL, 'Available', 0, 0, NULL, NULL, 0),
+(18, 7, 'NZXT H5 Flow Black', 'High airflow premium chassis.', 400.00, 7, NULL, 'Available', 0, 0, NULL, NULL, 0),
 (19, 8, 'Deepcool AK400 Air Cooler', 'Efficient standard air cooler.', 150.00, 20, NULL, 'Available', 0, 0, NULL, NULL, 0),
 (20, 8, 'NZXT Kraken 360 RGB AIO', 'Premium liquid cooler with LCD.', 850.00, 8, NULL, 'Available', 15, 0, NULL, NULL, 0),
-(21, 9, 'Microsoft Windows 11 Home 64-bit', 'Standard edition for gamers and home users. USB Flash Drive included.', 549.00, 10, 'https://via.placeholder.com/280x180/0078D4/FFF?text=Windows+11+Home', 'Available', 0, 0, NULL, NULL, 0),
+(21, 9, 'Microsoft Windows 11 Home 64-bit', 'Standard edition for gamers and home users. USB Flash Drive included.', 549.00, 6, 'https://via.placeholder.com/280x180/0078D4/FFF?text=Windows+11+Home', 'Available', 0, 0, NULL, NULL, 0),
 (22, 9, 'Microsoft Windows 11 Pro 64-bit', 'Advanced features for professionals and developers. BitLocker included.', 899.00, 8, 'https://via.placeholder.com/280x180/111/FFF?text=Windows+11+Pro', 'Available', 0, 0, NULL, NULL, 0),
-(23, 10, 'Corsair iCUE AR120 RGB 120mm (3-Pack)', 'High performance cooling fans with customizable RGB lighting sync.', 229.00, 10, 'https://via.placeholder.com/280x180/FF007F/FFF?text=Corsair+RGB+Fans', 'Available', 5, 0, NULL, NULL, 0),
+(23, 10, 'Corsair iCUE AR120 RGB 120mm (3-Pack)', 'High performance cooling fans with customizable RGB lighting sync.', 229.00, 6, 'https://via.placeholder.com/280x180/FF007F/FFF?text=Corsair+RGB+Fans', 'Available', 5, 0, NULL, NULL, 0),
 (24, 10, 'ARCTIC P12 PWM PST 120mm', 'Pressure-optimized quiet fan for excellent airflow and low noise.', 45.00, 9, 'https://via.placeholder.com/280x180/333/FFF?text=Arctic+P12', 'Available', 2, 0, NULL, NULL, 0),
-(25, 11, 'ASUS TUF Gaming VG27AQ 27\" 165Hz', '27-inch WQHD (2560x1440) IPS gaming monitor with ultrafast 165Hz refresh rate.', 1299.00, 12, 'https://via.placeholder.com/280x180/000/FFF?text=ASUS+TUF+27', 'Available', 0, 0, NULL, NULL, 0),
+(25, 11, 'ASUS TUF Gaming VG27AQ 27\" 165Hz', '27-inch WQHD (2560x1440) IPS gaming monitor with ultrafast 165Hz refresh rate.', 1299.00, 8, 'https://via.placeholder.com/280x180/000/FFF?text=ASUS+TUF+27', 'Available', 0, 0, NULL, NULL, 0),
 (26, 11, 'AOC 24G2SP 24\" 165Hz IPS', '24-inch Full HD (1920x1080) gaming monitor, perfect for esports.', 649.00, 10, 'https://via.placeholder.com/280x180/ff0000/FFF?text=AOC+24G2', 'Available', 0, 0, NULL, NULL, 0),
-(27, 1, 'AMD Ryzen 7 7800X3D', 'The undisputed king of gaming CPUs. 3D V-Cache technology. Keyword: AM5', 1850.00, 25, 'https://via.placeholder.com/280x200/ef4444/FFF?text=R7+7800X3D', 'Available', 120, 0, 'AM5', NULL, 9),
+(27, 1, 'AMD Ryzen 7 7800X3D', 'The undisputed king of gaming CPUs. 3D V-Cache technology. Keyword: AM5', 1850.00, 24, 'https://via.placeholder.com/280x200/ef4444/FFF?text=R7+7800X3D', 'Available', 120, 0, 'AM5', NULL, 9),
 (28, 1, 'Intel Core i7-14700K', '20-core powerhouse for rendering and intense gaming. Keyword: LGA1700', 1980.00, 15, 'https://via.placeholder.com/280x200/0078D4/FFF?text=i7-14700K', 'Available', 253, 0, 'LGA1700', NULL, 9),
 (29, 1, 'AMD Ryzen 5 7600', 'Incredible value for AM5 platform, excellent 1080p/1440p performer. Keyword: AM5', 1050.00, 40, 'https://via.placeholder.com/280x200/ef4444/FFF?text=R5+7600', 'Available', 65, 0, 'AM5', NULL, 6),
 (30, 1, 'Intel Core i5-12400F', 'The ultimate budget 6-core processor. Keyword: LGA1700', 580.00, 50, 'https://via.placeholder.com/280x200/0078D4/FFF?text=i5-12400F', 'Available', 65, 0, 'LGA1700', NULL, 5),
 (31, 1, 'AMD Ryzen 9 7950X', '16-core rendering monster for ultimate creators. Keyword: AM5', 2850.00, 10, 'https://via.placeholder.com/280x200/ef4444/FFF?text=R9+7950X', 'Available', 170, 0, 'AM5', NULL, 10),
 (32, 1, 'Intel Core i9-13900K', 'Previous gen flagship, still an absolute beast. Keyword: LGA1700', 2650.00, 12, 'https://via.placeholder.com/280x200/0078D4/FFF?text=i9-13900K', 'Available', 253, 0, 'LGA1700', NULL, 9),
-(33, 2, 'MSI MAG B650 TOMAHAWK WIFI', 'Premium AM5 board with heavy VRM heatsinks. DDR5 only.', 1150.00, 20, 'https://via.placeholder.com/280x200/111/FFF?text=B650+TOMAHAWK', 'Available', 25, 0, 'AM5', 'DDR5', 0),
+(33, 2, 'MSI MAG B650 TOMAHAWK WIFI', 'Premium AM5 board with heavy VRM heatsinks. DDR5 only.', 1150.00, 16, 'https://via.placeholder.com/280x200/111/FFF?text=B650+TOMAHAWK', 'Available', 25, 0, 'AM5', 'DDR5', 0),
 (34, 2, 'ASUS ROG STRIX B760-A GAMING WIFI', 'High-end Intel B760 DDR5 motherboard with supreme aesthetics.', 1100.00, 18, 'https://via.placeholder.com/280x200/222/FFF?text=ROG+B760-A', 'Available', 25, 0, 'LGA1700', 'DDR5', 0),
 (35, 2, 'Gigabyte B550M DS3H', 'Budget king for older AM4 DDR4 builds.', 420.00, 30, 'https://via.placeholder.com/280x200/333/FFF?text=B550M+DS3H', 'Available', 15, 0, 'AM4', 'DDR4', 0),
 (36, 2, 'ASRock B760M PRO RS/D4', 'Solid budget board for Intel 12th/13th/14th gen. DDR4 only.', 650.00, 25, 'https://via.placeholder.com/280x200/444/FFF?text=B760M+PRO+RS', 'Available', 20, 0, 'LGA1700', 'DDR4', 0),
 (37, 2, 'ASUS ROG CROSSHAIR X670E HERO', 'Flagship AM5 board for extreme overclocking.', 3200.00, 5, 'https://via.placeholder.com/280x200/000/FFF?text=ROG+X670E', 'Available', 35, 0, 'AM5', 'DDR5', 0),
-(38, 3, 'Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz CL30', 'The sweet spot speed and latency for Ryzen 7000 series.', 580.00, 40, 'https://via.placeholder.com/280x200/222/FFF?text=Vengeance+32GB+DDR5', 'Available', 10, 0, NULL, 'DDR5', 0),
+(38, 3, 'Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz CL30', 'The sweet spot speed and latency for Ryzen 7000 series.', 580.00, 39, 'https://via.placeholder.com/280x200/222/FFF?text=Vengeance+32GB+DDR5', 'Available', 10, 0, NULL, 'DDR5', 0),
 (39, 3, 'G.Skill Trident Z5 Neo RGB 64GB (2x32GB) DDR5 6000MHz', 'High-capacity, high-speed RAM for video editing.', 1150.00, 15, 'https://via.placeholder.com/280x200/111/FFF?text=Trident+Z5+64GB', 'Available', 12, 0, NULL, 'DDR5', 0),
 (40, 3, 'Kingston FURY Beast 16GB (2x8GB) DDR4 3200MHz', 'Reliable budget DDR4 kit.', 190.00, 60, 'https://via.placeholder.com/280x200/000/FFF?text=FURY+16GB+DDR4', 'Available', 5, 0, NULL, 'DDR4', 0),
 (41, 3, 'Corsair Dominator Titanium 32GB DDR5 7200MHz', 'Ultra-premium high-frequency memory for Intel builds.', 850.00, 10, 'https://via.placeholder.com/280x200/FFF/000?text=Dominator+Titanium', 'Available', 12, 0, NULL, 'DDR5', 0),
@@ -917,21 +923,21 @@ INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `descriptio
 (44, 4, 'AMD Radeon RX 7800 XT 16GB', 'Unbeatable 1440p value, massive VRAM for textures.', 2550.00, 18, 'https://via.placeholder.com/280x200/ef4444/FFF?text=RX+7800+XT', 'Available', 263, 0, NULL, NULL, 7),
 (45, 4, 'NVIDIA RTX 4080 SUPER 16GB', 'Incredible 4K performance and ray tracing capabilities.', 4950.00, 10, 'https://via.placeholder.com/280x200/00e676/000?text=RTX+4080+SUPER', 'Available', 320, 0, NULL, NULL, 9),
 (46, 4, 'AMD Radeon RX 7900 XTX 24GB', 'Raw rasterization monster, destroys 4K without breaking a sweat.', 4800.00, 8, 'https://via.placeholder.com/280x200/ef4444/FFF?text=RX+7900+XTX', 'Available', 355, 0, NULL, NULL, 9),
-(47, 4, 'NVIDIA RTX 4070 Ti SUPER 16GB', 'Perfect 1440p high-refresh rate card.', 4100.00, 15, 'https://via.placeholder.com/280x200/00e676/000?text=RTX+4070+Ti+S', 'Available', 285, 0, NULL, NULL, 8),
+(47, 4, 'NVIDIA RTX 4070 Ti SUPER 16GB', 'Perfect 1440p high-refresh rate card.', 4100.00, 14, 'https://via.placeholder.com/280x200/00e676/000?text=RTX+4070+Ti+S', 'Available', 285, 0, NULL, NULL, 8),
 (48, 4, 'AMD Radeon RX 7600 8GB', 'Budget king for entry-level 1080p gaming.', 1350.00, 25, 'https://via.placeholder.com/280x200/ef4444/FFF?text=RX+7600', 'Available', 165, 0, NULL, NULL, 4),
-(49, 5, 'WD Black SN850X 2TB Gen4 NVMe', 'Top-tier speeds up to 7300MB/s.', 780.00, 25, 'https://via.placeholder.com/280x200/000/FFF?text=WD+Black+2TB', 'Available', 8, 0, NULL, NULL, 0),
+(49, 5, 'WD Black SN850X 2TB Gen4 NVMe', 'Top-tier speeds up to 7300MB/s.', 780.00, 21, 'https://via.placeholder.com/280x200/000/FFF?text=WD+Black+2TB', 'Available', 8, 0, NULL, NULL, 0),
 (50, 5, 'Crucial P3 Plus 1TB Gen4 NVMe', 'Great balance of speed and affordability.', 280.00, 45, 'https://via.placeholder.com/280x200/111/FFF?text=Crucial+1TB', 'Available', 5, 0, NULL, NULL, 0),
 (51, 5, 'Samsung 990 PRO 4TB NVMe', 'Massive fast storage for heavy video editors.', 1550.00, 8, 'https://via.placeholder.com/280x200/222/FFF?text=Samsung+4TB', 'Available', 10, 0, NULL, NULL, 0),
-(52, 6, 'Corsair RM850e 850W 80+ Gold', 'Fully modular, ATX 3.0 ready.', 550.00, 20, 'https://via.placeholder.com/280x200/111/FFF?text=RM850e', 'Available', 850, 0, NULL, NULL, 0),
+(52, 6, 'Corsair RM850e 850W 80+ Gold', 'Fully modular, ATX 3.0 ready.', 550.00, 19, 'https://via.placeholder.com/280x200/111/FFF?text=RM850e', 'Available', 850, 0, NULL, NULL, 0),
 (53, 6, 'Seasonic Focus GX-1000 1000W Gold', 'Legendary reliability for high-end builds.', 850.00, 12, 'https://via.placeholder.com/280x200/000/FFF?text=Focus+1000W', 'Available', 1000, 0, NULL, NULL, 0),
 (54, 6, 'MSI MAG A650BN 650W 80+ Bronze', 'Solid budget power supply.', 260.00, 30, 'https://via.placeholder.com/280x200/333/FFF?text=MAG+650W', 'Available', 650, 0, NULL, NULL, 0),
-(55, 6, 'FSP Hydro Ti PRO 1000W Titanium', 'Ultra-premium titanium efficiency.', 1150.00, 5, 'https://via.placeholder.com/280x200/222/FFF?text=FSP+1000W', 'Available', 1000, 0, NULL, NULL, 0),
+(55, 6, 'FSP Hydro Ti PRO 1000W Titanium', 'Ultra-premium titanium efficiency.', 1150.00, 2, 'https://via.placeholder.com/280x200/222/FFF?text=FSP+1000W', 'Available', 1000, 0, NULL, NULL, 0),
 (56, 7, 'Lian Li O11 Dynamic EVO Black', 'The iconic showcase dual-chamber case.', 750.00, 15, 'https://via.placeholder.com/280x200/000/FFF?text=O11+EVO', 'Available', 0, 0, NULL, NULL, 0),
-(57, 7, 'Corsair 4000D Airflow Black', 'Classic high-airflow mid-tower.', 380.00, 25, 'https://via.placeholder.com/280x200/111/FFF?text=4000D', 'Available', 0, 0, NULL, NULL, 0),
+(57, 7, 'Corsair 4000D Airflow Black', 'Classic high-airflow mid-tower.', 380.00, 24, 'https://via.placeholder.com/280x200/111/FFF?text=4000D', 'Available', 0, 0, NULL, NULL, 0),
 (58, 7, 'Montech X3 Mesh Black', 'Insane budget value, includes 6 RGB fans.', 220.00, 35, 'https://via.placeholder.com/280x200/222/FFF?text=Montech+X3', 'Available', 0, 0, NULL, NULL, 0),
 (59, 8, 'Thermalright Peerless Assassin 120 SE', 'The dual-tower air cooler that beats 240mm AIOs.', 160.00, 40, 'https://via.placeholder.com/280x200/333/FFF?text=Peerless+Assassin', 'Available', 0, 0, NULL, NULL, 0),
 (60, 8, 'Arctic Liquid Freezer III 360 AIO', 'Thick radiator, ultimate liquid cooling performance.', 520.00, 15, 'https://via.placeholder.com/280x200/000/FFF?text=Arctic+360', 'Available', 15, 0, NULL, NULL, 0),
-(61, 8, 'Deepcool AK620 Digital', 'Premium air cooling with a digital temp display.', 320.00, 20, 'https://via.placeholder.com/280x200/111/FFF?text=AK620+Digital', 'Available', 0, 0, NULL, NULL, 0);
+(61, 8, 'Deepcool AK620 Digital', 'Premium air cooling with a digital temp display.', 320.00, 16, 'https://via.placeholder.com/280x200/111/FFF?text=AK620+Digital', 'Available', 0, 0, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -970,13 +976,13 @@ CREATE TABLE `promo_codes` (
 --
 
 INSERT INTO `promo_codes` (`promo_id`, `code_name`, `target_category`, `is_vip_only`, `status`, `created_at`, `discount_value`, `discount_type`, `min_spend`, `max_cap`) VALUES
-(1, 'VIPCOMP15', 'Components', 1, 'Active', '2026-05-07 12:15:57', 0.00, 'Percentage', 0.00, 0.00),
-(2, 'VIPPC20', 'Packages', 1, 'Active', '2026-05-07 12:15:57', 0.00, 'Percentage', 0.00, 0.00),
-(3, 'WELCOME10', 'All', 0, 'Active', '2026-05-07 12:15:57', 0.00, 'Percentage', 0.00, 0.00),
-(4, 'SUMMER26', 'All', 0, 'Active', '2026-05-07 13:37:15', 0.00, 'Percentage', 0.00, 0.00),
-(5, 'ELITEGAMER', 'Packages', 1, 'Active', '2026-05-07 13:37:15', 0.00, 'Percentage', 0.00, 0.00),
-(6, 'UPGRADE5', 'Components', 0, 'Active', '2026-05-07 13:37:15', 0.00, 'Percentage', 0.00, 0.00),
-(7, 'VIPPARTS12', 'Components', 1, 'Active', '2026-05-07 13:37:15', 0.00, 'Percentage', 0.00, 0.00),
+(1, 'VIPCOMP15', 'Components', 1, 'Active', '2026-05-07 12:15:57', 15.00, 'Percentage', 100.00, 50.00),
+(2, 'VIPPC20', 'Packages', 1, 'Active', '2026-05-07 12:15:57', 20.00, 'Percentage', 2000.00, 200.00),
+(3, 'WELCOME10', 'All', 0, 'Active', '2026-05-07 12:15:57', 10.00, 'Percentage', 0.00, 15.00),
+(4, 'SUMMER26', 'All', 0, 'Active', '2026-05-07 13:37:15', 26.00, 'Percentage', 50.00, 30.00),
+(5, 'ELITEGAMER', 'Packages', 1, 'Active', '2026-05-07 13:37:15', 150.00, 'Fixed', 3000.00, 0.00),
+(6, 'UPGRADE5', 'Components', 0, 'Active', '2026-05-07 13:37:15', 5.00, 'Percentage', 50.00, 20.00),
+(7, 'VIPPARTS12', 'Components', 1, 'Active', '2026-05-07 13:37:15', 12.00, 'Percentage', 200.00, 100.00),
 (8, 'EXPIRED50', 'All', 0, 'Inactive', '2026-05-07 13:37:15', 0.00, 'Percentage', 0.00, 0.00);
 
 -- --------------------------------------------------------
@@ -1048,8 +1054,7 @@ INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_pric
 (27, 5, 'kkkk', 10259.00, '2026-05-01 22:00:25'),
 (28, 5, 'kkkk', 6427.00, '2026-05-02 22:28:17'),
 (29, 5, 'ttt', 6427.00, '2026-05-02 22:28:32'),
-(30, 6, 'godlike', 19203.00, '2026-05-11 01:04:45'),
-(31, 6, 'error', 16837.00, '2026-05-11 01:10:28');
+(41, 6, 'Custom Rig (May 17, 2026)', 15947.00, '2026-05-18 01:01:17');
 
 -- --------------------------------------------------------
 
@@ -1075,7 +1080,8 @@ CREATE TABLE `saved_cards` (
 
 INSERT INTO `saved_cards` (`card_id`, `customer_id`, `bank_id`, `cardholder_name`, `last_four_digits`, `expiry_date`, `card_brand`, `is_default`, `created_at`) VALUES
 (1, 1, NULL, '22', '5353', '11/24', 'Credit Card', 0, '2026-04-09 23:11:21'),
-(2, 1, NULL, '日人人日r', '2331', '22/11', 'Credit Card', 1, '2026-04-11 17:06:45');
+(2, 1, NULL, '日人人日r', '2331', '22/11', 'Credit Card', 1, '2026-04-11 17:06:45'),
+(4, 6, 2, 'Ali Bin Abu', '6666', '12/30', 'Credit Card', 1, '2026-05-18 00:13:55');
 
 -- --------------------------------------------------------
 
@@ -1103,7 +1109,8 @@ INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`,
 (19, 1, 4, NULL, NULL, NULL, 1, '2026-04-29 23:38:35'),
 (20, 1, NULL, NULL, 4, NULL, 2, '2026-04-30 00:06:55'),
 (39, 5, 26, NULL, NULL, NULL, 1, '2026-05-09 21:11:22'),
-(40, 6, NULL, 31, NULL, NULL, 1, '2026-05-11 01:10:28');
+(49, 6, NULL, 41, NULL, NULL, 1, '2026-05-18 01:01:17'),
+(50, 6, NULL, 28, NULL, 5, 1, '2026-05-18 01:56:27');
 
 -- --------------------------------------------------------
 
@@ -1148,7 +1155,9 @@ INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amo
 (7, 1, 'Payment', -6692.00, 0, '2026-04-09 19:35:48'),
 (8, 5, 'Top-up', 500.00, 50, '2026-05-09 16:54:06'),
 (9, 5, 'Payment', -45.00, 0, '2026-05-09 21:03:11'),
-(10, 5, 'Top-up', 100000.00, 10000, '2026-05-09 21:04:18');
+(10, 5, 'Top-up', 100000.00, 10000, '2026-05-09 21:04:18'),
+(11, 6, 'Top-up', 500.00, 50, '2026-05-17 10:58:30'),
+(12, 6, 'Top-up', 500.00, 50, '2026-05-18 00:32:41');
 
 --
 -- 转储表的索引
@@ -1358,13 +1367,13 @@ ALTER TABLE `admins`
 -- 使用表AUTO_INCREMENT `bank`
 --
 ALTER TABLE `bank`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- 使用表AUTO_INCREMENT `build_items`
 --
 ALTER TABLE `build_items`
-  MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=274;
+  MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=384;
 
 --
 -- 使用表AUTO_INCREMENT `categories`
@@ -1382,13 +1391,13 @@ ALTER TABLE `community_comments`
 -- 使用表AUTO_INCREMENT `community_likes`
 --
 ALTER TABLE `community_likes`
-  MODIFY `like_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `like_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- 使用表AUTO_INCREMENT `community_posts`
 --
 ALTER TABLE `community_posts`
-  MODIFY `post_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `post_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- 使用表AUTO_INCREMENT `consultations`
@@ -1406,7 +1415,7 @@ ALTER TABLE `customers`
 -- 使用表AUTO_INCREMENT `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
-  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- 使用表AUTO_INCREMENT `fpx_accounts`
@@ -1418,13 +1427,13 @@ ALTER TABLE `fpx_accounts`
 -- 使用表AUTO_INCREMENT `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- 使用表AUTO_INCREMENT `order_details`
 --
 ALTER TABLE `order_details`
-  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- 使用表AUTO_INCREMENT `packages`
@@ -1442,7 +1451,7 @@ ALTER TABLE `package_items`
 -- 使用表AUTO_INCREMENT `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- 使用表AUTO_INCREMENT `products`
@@ -1472,19 +1481,19 @@ ALTER TABLE `reviews`
 -- 使用表AUTO_INCREMENT `saved_builds`
 --
 ALTER TABLE `saved_builds`
-  MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- 使用表AUTO_INCREMENT `saved_cards`
 --
 ALTER TABLE `saved_cards`
-  MODIFY `card_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `card_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- 使用表AUTO_INCREMENT `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
-  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
 
 --
 -- 使用表AUTO_INCREMENT `used_vouchers`
@@ -1496,7 +1505,7 @@ ALTER TABLE `used_vouchers`
 -- 使用表AUTO_INCREMENT `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- 限制导出的表
