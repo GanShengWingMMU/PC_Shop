@@ -1,8 +1,6 @@
 <?php
 session_start();
-include 'db_connect.php'; 
-
-
+require_once 'config.php'; 
 
 if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && strtolower($_SESSION['role']) !== 'superadmin')) {
     header("Location: admin_login.php");
@@ -12,54 +10,71 @@ if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && s
 $message = "";
 $product_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-// 获取当前商品原本的数据
-$sql_get = "SELECT * FROM products WHERE product_id = $product_id";
-$res_get = mysqli_query($conn, $sql_get);
-$product = mysqli_fetch_assoc($res_get);
+$sql_get = "SELECT * FROM products WHERE product_id = ?";
+$stmt_get = $conn->prepare($sql_get);
+$stmt_get->bind_param("i", $product_id);
+$stmt_get->execute();
+$product = $stmt_get->get_result()->fetch_assoc();
+$stmt_get->close();
 
-if (!$product) {
-    echo "Product not found!";
-    exit();
-}
+if (!$product) { die("Product not found!"); }
 
-// 处理表单提交
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     
-    $name = mysqli_real_escape_string($conn, $_POST['product_name']);
+    $name = trim($_POST['product_name']);
     $category_id = intval($_POST['category']); 
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
-    $specs = mysqli_real_escape_string($conn, $_POST['specs']);
-    $description = isset($_POST['description']) ? mysqli_real_escape_string($conn, $_POST['description']) : '';
+    $specs = trim($_POST['specs']);
+    $description = trim($_POST['description'] ?? '');
 
     $image_url = $_POST['existing_image']; 
+    $upload_ok = true;
     
-    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] == 0) {
-        $target_dir = "photo/"; // 💡确保存放在你新建的 photo 文件夹
-        if (!is_dir($target_dir)) { mkdir($target_dir, 0777, true); }
-        $file_name = time() . "_" . basename($_FILES["product_image"]["name"]);
-        $target_file = $target_dir . $file_name;
+    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] === UPLOAD_ERR_OK) {
+        $file_tmp = $_FILES['product_image']['tmp_name'];
+        $file_size = $_FILES['product_image']['size'];
+        
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime_type = finfo_file($finfo, $file_tmp);
+        finfo_close($finfo);
+        $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
+        
+        if (!in_array($mime_type, $allowed_mimes)) {
+            $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Upload Denied: Invalid image format!</div>";
+            $upload_ok = false;
+        } elseif ($file_size > 5 * 1024 * 1024) { 
+            $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Upload Denied: Max 5MB allowed.</div>";
+            $upload_ok = false;
+        } else {
+            $ext = strtolower(pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION));
+            if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) $ext = 'jpg'; 
+            $new_filename = uniqid('prod_') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+            $target_dir = "uploads/";
+            if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
+            $target_file = $target_dir . $new_filename;
 
-        if (move_uploaded_file($_FILES["product_image"]["tmp_name"], $target_file)) {
-            $image_url = $target_file; 
+            if (move_uploaded_file($file_tmp, $target_file)) {
+                $image_url = $target_file; 
+            } else {
+                $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ System Error: Failed to save image.</div>";
+                $upload_ok = false;
+            }
         }
     }
 
-    try {
-        $sql_update = "UPDATE products SET 
-                        product_name = '$name', category_id = '$category_id', price = '$price', 
-                        stock_quantity = '$stock_quantity', specifications = '$specs', 
-                        description = '$description', image_url = '$image_url' 
-                       WHERE product_id = $product_id";
-                       
-        if (mysqli_query($conn, $sql_update)) {
-            header("Location: manage_products.php?updated=1");
+    if ($upload_ok) {
+        $stmt = $conn->prepare("UPDATE products SET product_name=?, category_id=?, price=?, stock_quantity=?, specifications=?, description=?, image_url=? WHERE product_id=?");
+        $stmt->bind_param("sidisssi", $name, $category_id, $price, $stock_quantity, $specs, $description, $image_url, $product_id);
+        
+        if ($stmt->execute()) {
+            $_SESSION['success_msg'] = "Product updated successfully!";
+            header("Location: manage_products.php");
             exit();
         } else {
-            throw new Exception("Error updating data.");
+            $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Database Error.</div>";
         }
-    } catch (Exception $e) {
-        $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Database Error: " . $e->getMessage() . "</div>";
+        $stmt->close();
     }
 }
 ?>

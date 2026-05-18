@@ -1,29 +1,77 @@
 <?php
 session_start();
-include 'db_connect.php';
+// 🌟 统一调用 config，保证数据库连接方式与前台一致
+require_once 'config.php';
+
+// 防止已登录的管理员重复登录
+if (isset($_SESSION['admin_id'])) {
+    header("Location: admin_dashboard.php");
+    exit();
+}
 
 $error = '';
 
+// 🌟 安全防护 1：初始化暴力破解拦截器 (Brute-Force Protection)
+if (!isset($_SESSION['admin_login_attempts'])) { 
+    $_SESSION['admin_login_attempts'] = 0; 
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = $_POST['password'];
-
-  $sql = "SELECT * FROM admins WHERE username = '$username' AND (role = 'admin' OR role = 'superadmin')";
-    $result = mysqli_query($conn, $sql);
-
-    if (mysqli_num_rows($result) === 1) {
-        $user = mysqli_fetch_assoc($result);
-        if (password_verify($password, $user['password']) || $password == $user['password']) {
-            $_SESSION['user_id'] = $user['user_id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
-            header("Location: admin_dashboard.php");
-            exit();
-        } else {
-            $error = "Invalid password.";
-        }
+    
+    // 🌟 安全防护 2：检查是否处于锁定惩罚期
+    if (isset($_SESSION['admin_lockout_time']) && time() < $_SESSION['admin_lockout_time']) {
+        $remaining = $_SESSION['admin_lockout_time'] - time();
+        $error = "Security Lockdown: Too many failed attempts. Try again in " . $remaining . "s.";
     } else {
-        $error = "Admin not found.";
+        $username = trim($_POST['username']);
+        $password = $_POST['password'];
+
+        if (empty($username) || empty($password)) {
+            $error = "Please enter credentials.";
+        } else {
+            // 🌟 安全防护 3：全面采用 Prepared Statement，拦截万能密码注入
+            $stmt = $conn->prepare("SELECT user_id, username, password, role FROM admins WHERE username = ? AND (role = 'admin' OR role = 'superadmin')");
+            $stmt->bind_param("s", $username);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($result->num_rows === 1) {
+                $user = $result->fetch_assoc();
+                
+                // 🌟 安全防护 4：强制哈希校验，抛弃任何明文核对
+                if (password_verify($password, $user['password'])) {
+                    
+                    // 🌟 安全防护 5：防御 Session Fixation (会话固定攻击)
+                    session_regenerate_id(true);
+                    
+                    // 登录成功，重置错误次数
+                    unset($_SESSION['admin_login_attempts']);
+                    unset($_SESSION['admin_lockout_time']);
+                    
+                    // 🌟 架构规范：后台使用 admin_id，严格与前台的 customer_id 隔离
+                    $_SESSION['admin_id'] = $user['user_id'];
+                    $_SESSION['admin_username'] = $user['username'];
+                    $_SESSION['admin_role'] = $user['role'];
+                    
+                    header("Location: admin_dashboard.php");
+                    exit();
+                } else {
+                    $_SESSION['admin_login_attempts']++;
+                    // 🌟 安全防护 6：模糊报错，防止账号名被枚举探测
+                    $error = "Invalid username or password.";
+                }
+            } else {
+                $_SESSION['admin_login_attempts']++;
+                $error = "Invalid username or password."; 
+            }
+            $stmt->close();
+
+            // 触发 5 次锁死 60 秒的惩罚机制
+            if ($_SESSION['admin_login_attempts'] >= 5) {
+                $_SESSION['admin_lockout_time'] = time() + 60; 
+                $error = "Security Lockdown: Account locked for 60 seconds.";
+            }
+        }
     }
 }
 ?>

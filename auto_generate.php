@@ -16,7 +16,7 @@ $persona = $_POST['target_persona'] ?? 'Gamer';
 $_SESSION['pc_build'] = [];
 
 // ==========================================
-// 🧠 核心机制 1：十一槽位动态全量分配 (11-Slot Weights)
+// 核心机制 1：十一槽位动态全量分配 (11-Slot Weights)
 // 包含外设与软件，总和必须等于 1.0
 // ==========================================
 if ($persona == 'Gamer') {
@@ -57,7 +57,7 @@ $socket_req = "";
 $ram_req = "";
 
 // ==========================================
-// 🧠 核心机制 2：十一重拓扑装机队列 (Topological Order)
+// 核心机制 2：十一重拓扑装机队列 (Topological Order)
 // 必须按此逻辑顺序挑选，确保所有兼容性条件生效
 // ==========================================
 $execution_order = [1, 8, 2, 3, 4, 5, 7, 10, 11, 9, 6]; // 最后选电源
@@ -83,7 +83,7 @@ foreach ($execution_order as $cat_id) {
         $target_budget = max($target_budget, 150); // 强制电源底线
     }
 
-    // 🎯 尝试 1：预算内找最强的 (🌟 规范化：替换为 Prepared Statement)
+    //  尝试 1：预算内找最强的 (🌟 规范化：替换为 Prepared Statement)
     $sql = "SELECT * FROM products WHERE category_id = ? AND stock_quantity > 0 AND price <= ? $extra_sql ORDER BY price DESC LIMIT 1";
     $stmt_find = $conn->prepare($sql);
     $stmt_find->bind_param("id", $cat_id, $target_budget);
@@ -93,7 +93,7 @@ foreach ($execution_order as $cat_id) {
     if ($res && $res->num_rows > 0) {
         $part = $res->fetch_assoc();
     } else {
-        // ⚠️ 尝试 2：保底生存模式 (拿兼容的最便宜货)
+        //  尝试 2：保底生存模式 (拿兼容的最便宜货)
         $sql_fb = "SELECT * FROM products WHERE category_id = ? AND stock_quantity > 0 $extra_sql ORDER BY price ASC LIMIT 1";
         $stmt_fb = $conn->prepare($sql_fb);
         $stmt_fb->bind_param("i", $cat_id);
@@ -148,12 +148,8 @@ foreach ($ai_build as $p) { $actual_total += $p['price']; }
 // 写入 Session
 $_SESSION['pc_build'] = [];
 foreach ($ai_build as $cat_id => $part) {
-    $_SESSION['pc_build'][$cat_id] = [
-        'product_id' => $part['id'],
-        'name'       => $part['name'],
-        'price'      => $part['price'],
-        'wattage'    => $part['wattage']
-    ];
+    // 🌟 终极修复：只存整数 ID！完美对接 Builder 水合引擎，绝不塞多维数组！
+    $_SESSION['pc_build'][$cat_id] = (int)$part['id'];
 }
 
 // 🌟 预警与预期管理反馈机制
@@ -174,7 +170,7 @@ if ($actual_total > $budget) {
 if (!empty($error_messages)) {
     $_SESSION['error_msg'] = implode("<br><br>", $error_messages);
 } else {
-    $_SESSION['success_msg'] = "✅ AI Blueprint Fully Deployed: All 11 slots optimally filled for " . strtoupper($persona) . ". Target Budget: RM " . number_format($budget, 2) . " | Actual Cost: RM " . number_format($actual_total, 2) . ".";
+    $_SESSION['success_msg'] = "AI Blueprint Fully Deployed: All 11 slots optimally filled for " . strtoupper($persona) . ". Target Budget: RM " . number_format($budget, 2) . " | Actual Cost: RM " . number_format($actual_total, 2) . ".";
 }
 
 header("Location: builder.php");

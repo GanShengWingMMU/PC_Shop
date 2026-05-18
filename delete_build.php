@@ -16,23 +16,36 @@ $check_stmt = $conn->prepare("SELECT pc_build FROM saved_builds WHERE pc_build =
 $check_stmt->bind_param("ii", $build_id, $customer_id);
 $check_stmt->execute();
 $result = $check_stmt->get_result();
-
-if ($result->num_rows > 0) {
-    // 权限确认无误，执行销毁协议
-    // 注意：如果你的数据库没有设置 ON DELETE CASCADE (级联删除)，我们需要先删子表，再删主表
-    $delete_items = $conn->prepare("DELETE FROM build_items WHERE pc_build = ?");
-    $delete_items->bind_param("i", $build_id);
-    $delete_items->execute();
-    $delete_items->close();
-
-    $delete_build = $conn->prepare("DELETE FROM saved_builds WHERE pc_build = ?");
-    $delete_build->bind_param("i", $build_id);
-    $delete_build->execute();
-    $delete_build->close();
-}
 $check_stmt->close();
 
-// 3. 销毁完成，无缝跳回指挥中心
+if ($result->num_rows > 0) {
+    // 🌟 核心升级：开启 ACID 事务，确保子表和主表同生共死
+    $conn->begin_transaction();
+    try {
+        // 第一步：清空子表零件
+        $delete_items = $conn->prepare("DELETE FROM build_items WHERE pc_build = ?");
+        $delete_items->bind_param("i", $build_id);
+        $delete_items->execute();
+        $delete_items->close();
+
+        // 第二步：销毁主表蓝图
+        $delete_build = $conn->prepare("DELETE FROM saved_builds WHERE pc_build = ?");
+        $delete_build->bind_param("i", $build_id);
+        $delete_build->execute();
+        $delete_build->close();
+
+        // 完美执行，提交事务
+        $conn->commit();
+        $_SESSION['success_msg'] = "Blueprint successfully wiped from the database.";
+    } catch (Exception $e) {
+        // 发生意外，回滚撤销
+        $conn->rollback();
+        $_SESSION['error_msg'] = "System Error: Failed to delete blueprint cleanly.";
+    }
+} else {
+    $_SESSION['error_msg'] = "Security Alert: Unauthorized deletion attempt intercepted.";
+}
+
 header("Location: profile.php");
 exit();
 ?>

@@ -8,6 +8,12 @@ $client_secret = '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';
 $redirect_uri = 'http://localhost/projects/google_callback.php';
 
 if (isset($_GET['code'])) {
+    
+    // 🌟 核心防线：CSRF State Token 校验 (防止恶意的钓鱼绑定)
+    if (!isset($_GET['state']) || !isset($_SESSION['oauth_state']) || $_GET['state'] !== $_SESSION['oauth_state']) {
+        die("Security Alert: Invalid OAuth state parameter. Possible CSRF attack intercepted.");
+    }
+    
     $code = $_GET['code'];
 
     // 1. 获取 Access Token
@@ -53,6 +59,10 @@ if (isset($_GET['code'])) {
             if ($result->num_rows > 0) {
                 // 已存在用户，直接登录
                 $row = $result->fetch_assoc();
+                
+                // 🛡️ A+ 级修复：防止 Session Fixation 攻击
+                session_regenerate_id(true);
+                
                 $_SESSION['customer_id'] = $row['customer_id'];
                 $_SESSION['username'] = $row['username'];
             } else {
@@ -64,6 +74,7 @@ if (isset($_GET['code'])) {
                 $insert_stmt->bind_param("sssss", $first_name, $last_name, $full_username, $email, $random_secure_pass);
                 
                 if ($insert_stmt->execute()) {
+                    session_regenerate_id(true);
                     $_SESSION['customer_id'] = $insert_stmt->insert_id; 
                     $_SESSION['username'] = $full_username;
                 }

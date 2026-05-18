@@ -42,10 +42,10 @@ $highest_score = -1;
 
 if (array_sum($user_dna) > 0) {
     $ai_sql = "SELECT pk.*, 
-                (SELECT COALESCE(SUM(p.price), pk.price) 
-                 FROM package_items pi JOIN products p ON pi.product_id = p.product_id 
-                 WHERE pi.package_id = pk.package_id) AS real_price
-                FROM packages pk WHERE pk.stock_status = 'Available'";
+            (SELECT COALESCE(SUM(p.price * pi.quantity), pk.price) 
+             FROM package_items pi JOIN products p ON pi.product_id = p.product_id 
+             WHERE pi.package_id = pk.package_id) AS real_price
+            FROM packages pk WHERE pk.stock_status = 'Available'";
     $ai_res = mysqli_query($conn, $ai_sql);
     while ($pkg = mysqli_fetch_assoc($ai_res)) {
         $pkg_dna = ['g' => $pkg['score_gamer'], 'c' => $pkg['score_creator'], 's' => $pkg['score_student'], 'e' => $pkg['score_enthusiast']];
@@ -110,12 +110,11 @@ elseif ($sort_by == 'price_desc') { $order_clause = "ORDER BY real_price DESC"; 
 
 $sql = "SELECT * FROM (
             SELECT pk.*, 
-            (SELECT COALESCE(SUM(p.price), pk.price) 
+            (SELECT COALESCE(SUM(p.price * pi.quantity), pk.price) 
              FROM package_items pi JOIN products p ON pi.product_id = p.product_id 
              WHERE pi.package_id = pk.package_id) AS real_price
             FROM packages pk WHERE pk.stock_status = 'Available'
         ) AS final_packages WHERE $where_clause $order_clause";
-
 $stmt = $conn->prepare($sql);
 if (!empty($params)) {
     $stmt->bind_param($types, ...$params);

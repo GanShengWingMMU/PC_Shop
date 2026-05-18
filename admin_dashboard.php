@@ -1,77 +1,38 @@
 <?php
 session_start();
-include 'db_connect.php'; 
+// 🌟 核心规范：统一使用 config.php，共享前后台数据库实例
+require_once 'config.php'; 
 
-// 🌟 修正 1：你的数据库里写的是 "SuperAdmin" (有大写)，所以我们加上 strtolower() 把它转成小写来对比，防止你被踢出去！
-if (!isset($_SESSION['role']) || (strtolower($_SESSION['role']) !== 'admin' && strtolower($_SESSION['role']) !== 'superadmin')) {
+// 🌟 统一准入防御：严格使用 admin_role，防止普通顾客输入网址越权进入
+if (!isset($_SESSION['admin_role']) || (strtolower($_SESSION['admin_role']) !== 'admin' && strtolower($_SESSION['admin_role']) !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
 
-// 处理删除 (Delete) 逻辑 ---
+// 处理误放在这里的删除逻辑 (使用安全预处理)
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
-    // 执行删除 SQL
-    $sql_delete = "DELETE FROM products WHERE product_id = $delete_id";
-    if (mysqli_query($conn, $sql_delete)) {
-        // 删除成功后刷新页面，并带上 deleted 提示
+    $stmt_del = $conn->prepare("DELETE FROM products WHERE product_id = ?");
+    $stmt_del->bind_param("i", $delete_id);
+    if ($stmt_del->execute()) {
         header("Location: manage_products.php?deleted=1");
         exit();
-    } else {
-        $message = "<div class='error-msg'>⚠️ Failed to delete product.</div>";
     }
+    $stmt_del->close();
 }
 
-// --- PART A: 统计核心数据 ---
-$res_sales = mysqli_query($conn, "SELECT SUM(total_amount) as total FROM orders");
-$total_sales = mysqli_fetch_assoc($res_sales)['total'] ?? 0;
+// --- PART A: 统计核心数据 (统一改为防注入的面向对象写法) ---
+$res_sales = $conn->query("SELECT SUM(total_amount) as total FROM orders WHERE order_status != 'Cancelled'");
+$total_sales = $res_sales->fetch_assoc()['total'] ?? 0;
 
-$res_orders = mysqli_query($conn, "SELECT COUNT(*) as total FROM orders");
-$total_orders = mysqli_fetch_assoc($res_orders)['total'] ?? 0;
+$res_orders = $conn->query("SELECT COUNT(*) as total FROM orders");
+$total_orders = $res_orders->fetch_assoc()['total'] ?? 0;
 
-$res_products = mysqli_query($conn, "SELECT COUNT(*) as total FROM products");
-$total_products = mysqli_fetch_assoc($res_products)['total'] ?? 0;
+$res_users = $conn->query("SELECT COUNT(*) as total FROM customers");
+$total_users = $res_users->fetch_assoc()['total'] ?? 0;
 
-// 🌟 修正 2：既然你的管理员都存在 `admins` 表里，那顾客肯定是在 `customers` 表里对吧！直接连去 customers 抓人数！
-$res_users = mysqli_query($conn, "SELECT COUNT(*) as total FROM customers");
-$total_users = mysqli_fetch_assoc($res_users)['total'] ?? 0;
-
-// --- PART B: 准备图表数据 ---
-$dates_arr = [];
-$amounts_arr = [];
-$sql_trend = "SELECT DATE(order_date) as date, SUM(total_amount) as daily_total 
-              FROM orders 
-              GROUP BY DATE(order_date) ORDER BY date DESC LIMIT 7";
-$res_trend = mysqli_query($conn, $sql_trend);
-
-if ($res_trend) {
-    while($row = mysqli_fetch_assoc($res_trend)) {
-        $dates_arr[] = date('M d', strtotime($row['date']));
-        $amounts_arr[] = $row['daily_total'];
-    }
-}
-$dates_arr = array_reverse($dates_arr);
-$amounts_arr = array_reverse($amounts_arr);
-
-// 分类库存数据 (加入了安全防崩溃机制)
-$cat_names = [];
-$cat_counts = [];
-
-try {
-    $res_cat = mysqli_query($conn, "SELECT category, COUNT(*) as count FROM products GROUP BY category");
-    if ($res_cat && mysqli_num_rows($res_cat) > 0) {
-        while($row = mysqli_fetch_assoc($res_cat)) {
-            $cat_names[] = $row['category'];
-            $cat_counts[] = $row['count'];
-        }
-    } else {
-        throw new Exception("No data"); 
-    }
-} catch (Exception $e) {
-    $cat_names = ['Processors', 'Graphics Cards', 'Motherboards', 'RAM', 'Storage'];
-    $cat_counts = [25, 15, 20, 30, 10];
-}
-
+$res_pending = $conn->query("SELECT COUNT(*) as total FROM orders WHERE order_status = 'Pending'");
+$total_pending = $res_pending->fetch_assoc()['total'] ?? 0;
 ?>
 
 <!DOCTYPE html>

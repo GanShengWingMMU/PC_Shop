@@ -3,6 +3,11 @@ ob_start();
 session_start();
 require_once 'config.php';
 
+// 🌟 终极强力洗消：如果 pc_build 脏了（变成了数字而不是数组），强行重置！彻底消灭 int on int 报错！
+if (!isset($_SESSION['pc_build']) || !is_array($_SESSION['pc_build'])) {
+    $_SESSION['pc_build'] = [];
+}
+
 $category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : 0;
 
 if ($category_id == 0) {
@@ -11,20 +16,24 @@ if ($category_id == 0) {
 }
 
 // ==========================================
-// 🚀 1. 严格模式 POST 处理 (配合 Builder 水合引擎)
+// 🚀 1. 严格模式 POST 处理 (完美对接 Builder 水合引擎)
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
     $product_id = intval($_POST['product_id']);
     
-    // 只存 ID，绝对不把价格固化在 Session 里
     $stmt = $conn->prepare("SELECT product_id FROM products WHERE product_id = ? AND category_id = ? AND stock_quantity > 0 AND status = 'Available'");
-    $stmt->execute([$product_id, $category_id]);
+    $stmt->bind_param("ii", $product_id, $category_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
     
-    if ($stmt->get_result()->num_rows > 0) {
-        $_SESSION['pc_build'][$category_id] = $product_id;
+    if ($res->num_rows > 0) {
+        $row = $res->fetch_assoc();
+        // 🌟 核心修复：只存整数 ID！与 builder.php 第 101 行完美契合
+        $_SESSION['pc_build'][$category_id] = (int)$row['product_id'];
     } else {
         $_SESSION['error_msg'] = "Sorry, this item just went out of stock or is invalid.";
     }
+    $stmt->close();
     
     header("Location: builder.php");
     exit();
@@ -39,38 +48,45 @@ $ram_type_req = isset($_GET['ram_type']) ? trim($_GET['ram_type']) : '';
 
 $cat_name = "Component";
 $stmt_cat = $conn->prepare("SELECT category_name FROM categories WHERE category_id = ?");
-$stmt_cat->execute([$category_id]);
+$stmt_cat->bind_param("i", $category_id);
+$stmt_cat->execute();
 if ($row_cat = $stmt_cat->get_result()->fetch_assoc()) {
     $cat_name = $row_cat['category_name']; 
 }
+$stmt_cat->close();
 
 // ==========================================
-// 🛡️ 3. 动态预处理 SQL 构建器 (完全废除 LIKE 模糊匹配)
+// 🛡️ 3. 动态预处理 SQL 构建器 (完全兼容旧版 PHP)
 // ==========================================
 $sql = "SELECT * FROM products WHERE category_id = ? AND stock_quantity > 0 AND status = 'Available'";
 $params = [$category_id]; 
+$types = "i"; 
 $filter_messages = []; 
 
 if (!empty($socket_filter)) {
     $sql .= " AND socket_type = ?";
     $params[] = $socket_filter;
+    $types .= "s"; 
     $filter_messages[] = "Socket locked to: <strong>" . htmlspecialchars($socket_filter) . "</strong>";
 }
 
 if (!empty($ram_type_req) && $category_id == 3) { 
     $sql .= " AND ram_type = ?";
     $params[] = $ram_type_req;
+    $types .= "s"; 
     $filter_messages[] = "Memory locked to: <strong>" . htmlspecialchars($ram_type_req) . "</strong>";
 }
 
 if ($min_wattage > 0 && $category_id == 6) { 
     $sql .= " AND tdp_wattage >= ?";
     $params[] = $min_wattage;
+    $types .= "i"; 
     $filter_messages[] = "Minimum Power: <strong>{$min_wattage}W</strong>";
 }
 
 $stmt_products = $conn->prepare($sql);
-$stmt_products->execute($params);
+$stmt_products->bind_param($types, ...$params);
+$stmt_products->execute();
 $result = $stmt_products->get_result();
 
 include 'includes/header.php';

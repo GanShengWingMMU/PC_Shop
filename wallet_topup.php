@@ -14,9 +14,10 @@ $error_msg = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $amount = 0;
     if (!empty($_POST['custom_amount']) && is_numeric($_POST['custom_amount'])) {
-        $amount = (float) $_POST['custom_amount'];
+        // 修复：限制金额为两位小数，防止浮点数篡改
+        $amount = round((float) $_POST['custom_amount'], 2);
     } elseif (!empty($_POST['topup_option']) && is_numeric($_POST['topup_option'])) {
-        $amount = (float) $_POST['topup_option'];
+        $amount = round((float) $_POST['topup_option'], 2);
     }
 
     $method = $_POST['payment_method'] ?? '';
@@ -25,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $auth_success = false;
         $bank_id = null;
 
-        // 🌟 1. 僅做身份驗證，不先扣款！
+        // 🌟 1. 仅做身份验证，不先扣款！
         if ($method === 'Online Banking (FPX)') {
             $fpx_user = trim($_POST['fpx_username'] ?? '');
             $fpx_pass = trim($_POST['fpx_password'] ?? '');
@@ -46,34 +47,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $error_msg = "FPX Authentication Failed: Invalid Username or Password.";
             }
             $stmt_bank->close();
+            
         } elseif ($method === 'Credit Card') {
-            $auth_success = true; 
+            // 🌟 核心修复：添加信用卡的真实验证与关联 bank_id
+            $selected_card = $_POST['selected_card'] ?? '';
+            if ($selected_card === 'new') {
+                $card_num = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
+                $card_cvc = trim($_POST['dummy_card_cvc']);
+                $stmt_bank = $conn->prepare("SELECT id, balance FROM bank WHERE card_number = ? AND cvc = ?");
+                $stmt_bank->bind_param("ss", $card_num, $card_cvc);
+            } else {
+                $card_id = intval($selected_card);
+                $stmt_bank = $conn->prepare("SELECT b.id, b.balance FROM bank b JOIN saved_cards s ON b.id = s.bank_id WHERE s.card_id = ? AND s.customer_id = ?");
+                $stmt_bank->bind_param("ii", $card_id, $customer_id);
+            }
+            
+            $stmt_bank->execute();
+            $bank_res = $stmt_bank->get_result();
+            if ($bank_row = $bank_res->fetch_assoc()) {
+                if ($bank_row['balance'] >= $amount) {
+                    $bank_id = $bank_row['id'];
+                    $auth_success = true;
+                } else {
+                    $error_msg = "Bank Declined: Insufficient funds in your Credit Card account.";
+                }
+            } else {
+                $error_msg = "Credit Card Authentication Failed: Invalid Card Details.";
+            }
+            $stmt_bank->close();
         } else {
             $error_msg = "Please select a payment method.";
         }
 
-        // 🌟 2. 驗證成功後，啟動「原子化事務 (Atomic Transaction)」
-        if ($auth_success) {
+        // 🌟 2. 验证成功后，启动「原子化事务 (Atomic Transaction)」
+        if ($auth_success && $bank_id !== null) {
             $coins_earned = floor($amount / 10);
-            $conn->begin_transaction(); // 開啟事務
+            $conn->begin_transaction();
 
             try {
-                // (1) 如果是 FPX，現在才在事務內扣除銀行存款
-                if ($method === 'Online Banking (FPX)') {
-                    $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ?");
-                    $deduct_stmt->bind_param("di", $amount, $bank_id);
-                    $deduct_stmt->execute();
-                    $deduct_stmt->close();
+                // 🌟 核心修复：无论是 FPX 还是 Credit Card，都要在事务内扣除真实银行资金
+                $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ? AND balance >= ?");
+                $deduct_stmt->bind_param("did", $amount, $bank_id, $amount);
+                $deduct_stmt->execute();
+                if ($deduct_stmt->affected_rows === 0) {
+                    throw new Exception("Bank Declined: Insufficient funds or account locked.");
                 }
+                $deduct_stmt->close();
 
-                // (2) 增加顧客錢包餘額與金幣
+                // (2) 增加顾客钱包余额与金币
                 $update_sql = "UPDATE customers SET wallet_balance = wallet_balance + ?, reward_coins = reward_coins + ? WHERE customer_id = ?";
                 $stmt_update = $conn->prepare($update_sql);
                 $stmt_update->bind_param("dii", $amount, $coins_earned, $customer_id);
                 $stmt_update->execute();
                 $stmt_update->close();
 
-                // (3) 記錄交易歷史
+                // (3) 记录交易历史
                 $type = 'Top-up';
                 $insert_sql = "INSERT INTO wallet_transactions (customer_id, type, amount, coins_earned) VALUES (?, ?, ?, ?)";
                 $stmt_insert = $conn->prepare($insert_sql);
@@ -81,24 +109,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_insert->execute();
                 $stmt_insert->close();
 
-                // 全部成功，提交事務
+                // 全部成功，提交事务
                 $conn->commit();
                 $success_msg = "Successfully topped up RM " . number_format($amount, 2) . "! You earned $coins_earned Coins. 🪙";
                 
             } catch (Exception $e) {
-                // 發生任何意外，立刻回滾 (銀行錢不會扣，錢包也不會加)
+                // 发生任何意外，立刻回滚
                 $conn->rollback();
                 $error_msg = "Transaction interrupted safely. No funds were lost. Error: " . $e->getMessage();
             }
         }
     } else {
-        $error_msg = "Minimum top-up amount is RM 10.";
+        if (empty($error_msg)) $error_msg = "Minimum top-up amount is RM 10.";
     }
 }
 
-// ==========================================
-// 3. 取得顧客最新的錢包餘額與金幣
-// ==========================================
+// 取得顾客最新的钱包余额与金币
 $query = "SELECT wallet_balance, reward_coins FROM customers WHERE customer_id = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $customer_id);
@@ -182,7 +208,7 @@ $stmt_cards->close();
                     <p id="custom_reward_preview" style="color: #ffd700; margin-top: 8px; font-size: 0.9rem; display: none;"></p>
                 </div>
 
- <div class="form-group" style="margin-bottom: 20px; text-align: left;">
+                <div class="form-group" style="margin-bottom: 20px; text-align: left;">
                     <label style="color: #00f2fe; font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; display: block;"><i class="fa-solid fa-money-check-dollar"></i> Payment Method</label>
                     <select id="payment_method" name="payment_method" class="form-control" required onchange="togglePaymentSections()" style="background-color: #000; color: #fff; border: 1px solid rgba(0, 243, 255, 0.4); font-size: 1.05rem; padding: 12px; border-radius: 8px; width: 100%;">
                         <option value="">-- Select Payment Method --</option>
@@ -222,12 +248,11 @@ $stmt_cards->close();
                     </div>
                 </div>
                 
-<div id="fpx_section" style="display: none; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(0, 243, 255, 0.2); padding: 20px; border-radius: 12px; margin-top: 15px;">
-    <h4 style="color: #00f2fe; margin-top: 0; margin-bottom: 15px; font-size: 1rem;">
-        <i class="fa-solid fa-building-columns"></i> Select Your Bank
-    </h4>
-                    
-<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                <div id="fpx_section" style="display: none; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(0, 243, 255, 0.2); padding: 20px; border-radius: 12px; margin-top: 15px;">
+                    <h4 style="color: #00f2fe; margin-top: 0; margin-bottom: 15px; font-size: 1rem;">
+                        <i class="fa-solid fa-building-columns"></i> Select Your Bank
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
                             <input type="radio" name="selected_bank" value="Maybank2U" style="margin-right: 10px;" onchange="toggleFPXForm()">
                             <img src="image/maybank.png" style="height: 30px; object-fit: contain;">
@@ -246,7 +271,7 @@ $stmt_cards->close();
                         </label>
                     </div>
                     
- <div id="fpx_login_form" style="display: none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                    <div id="fpx_login_form" style="display: none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
                         <p style="font-size: 0.85rem; color: #ffcc00; margin-bottom: 15px;">
                             <i class="fa-solid fa-shield-halved"></i> <strong>Secure Bank Login:</strong>
                         </p>
@@ -255,26 +280,25 @@ $stmt_cards->close();
                             <input type="password" name="fpx_password" placeholder="Password" class="form-control" style="flex: 1; background: #000; color: #fff; border: 1px solid #333; padding: 10px; border-radius: 5px;">
                         </div>
                     </div>
-                </div> <button type="submit" style="width: 100%; margin-top: 25px; background: #00f2fe; color: #000; padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 0 25px rgba(0, 242, 254, 0.6)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 15px rgba(0, 242, 254, 0.3)';">
+                </div> 
+
+                <button type="submit" style="width: 100%; margin-top: 25px; background: #00f2fe; color: #000; padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 900; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 0 25px rgba(0, 242, 254, 0.6)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 15px rgba(0, 242, 254, 0.3)';">
                     <i class="fa-solid fa-bolt"></i> Confirm & Top Up
                 </button>
 
-            </form> </div> </main>
+            </form> 
+        </div> 
     </main>
 
     <?php include 'includes/footer.php'; ?>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // ==========================================
-        // 1. 處理自定義金額與金幣預覽的邏輯
-        // ==========================================
         const radioBtns = document.querySelectorAll('input[name="topup_option"]');
         const customInput = document.getElementById('custom_amount');
         const rewardPreview = document.getElementById('custom_reward_preview');
 
         if (radioBtns.length > 0 && customInput) {
-            // 如果點擊了卡片選項，清空自定義輸入框
             radioBtns.forEach(btn => {
                 btn.addEventListener('change', () => {
                     customInput.value = '';
@@ -283,7 +307,6 @@ $stmt_cards->close();
                 });
             });
 
-            // 如果在自定義輸入框打字，取消卡片選項的勾選
             customInput.addEventListener('input', () => {
                 radioBtns.forEach(btn => {
                     btn.checked = false;
@@ -302,14 +325,9 @@ $stmt_cards->close();
                 }
             });
         }
-        
-        // 確保重新整理網頁時，支付區塊能顯示正確
         togglePaymentSections();
     });
 
-    // ==========================================
-    // 2. 切換付款大分類 (加入安全防呆機制)
-    // ==========================================
     function togglePaymentSections() {
         var method = document.getElementById('payment_method').value;
         var ccSection = document.getElementById('credit_card_section');
@@ -317,13 +335,11 @@ $stmt_cards->close();
         var newCardForm = document.getElementById('new_card_form');
         var fpxForm = document.getElementById('fpx_login_form');
         
-        // 安全隱藏所有區塊 (加上 if 判斷，確保就算 HTML 不小心被刪了也不會讓網頁當機)
         if (ccSection) ccSection.style.display = 'none';
         if (fpxSection) fpxSection.style.display = 'none';
         if (newCardForm) newCardForm.style.display = 'none';
         if (fpxForm) fpxForm.style.display = 'none';
 
-        // 根據選擇打開對應區塊
         if (method === 'Credit Card') {
             if (ccSection) ccSection.style.display = 'block';
             toggleNewCardForm(); 
@@ -333,13 +349,10 @@ $stmt_cards->close();
         }
     }
 
-    // ==========================================
-    // 3. 信用卡專屬邏輯
-    // ==========================================
     function toggleNewCardForm() {
         var radios = document.getElementsByName('selected_card');
         var newCardForm = document.getElementById('new_card_form');
-        if (!newCardForm) return; // 防呆
+        if (!newCardForm) return; 
 
         let isNew = false;
         for (var i = 0; i < radios.length; i++) {
@@ -351,13 +364,10 @@ $stmt_cards->close();
         newCardForm.style.display = isNew ? 'block' : 'none';
     }
 
-    // ==========================================
-    // 4. FPX 專屬邏輯
-    // ==========================================
     function toggleFPXForm() {
         const radios = document.getElementsByName('selected_bank');
         const fpxForm = document.getElementById('fpx_login_form');
-        if (!fpxForm) return; // 防呆
+        if (!fpxForm) return; 
 
         let isSelected = false;
         for (let r of radios) {

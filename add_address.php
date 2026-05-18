@@ -15,18 +15,19 @@ $error_msg = "";
 // 2. 處理新增地址請求 (POST Request)
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 接收所有拆分的小欄位
-    $recipient_name = trim(mysqli_real_escape_string($conn, $_POST['recipient_name']));
-    $phone_number   = trim(mysqli_real_escape_string($conn, $_POST['phone_number']));
-    $unit_number    = trim(mysqli_real_escape_string($conn, $_POST['unit_number']));
-    $street_name    = trim(mysqli_real_escape_string($conn, $_POST['street_name']));
-    $postcode       = trim(mysqli_real_escape_string($conn, $_POST['postcode']));
-    $city           = trim(mysqli_real_escape_string($conn, $_POST['city']));
-    $state          = trim(mysqli_real_escape_string($conn, $_POST['state']));
+    // 🌟 A+ 级安全修复：全面使用 htmlspecialchars 防御 XSS 注入！
+    // 既然下方已使用 Prepared Statement，无需再用 real_escape_string
+    $recipient_name = htmlspecialchars(trim($_POST['recipient_name']));
+    $phone_number   = htmlspecialchars(trim($_POST['phone_number']));
+    $unit_number    = htmlspecialchars(trim($_POST['unit_number']));
+    $street_name    = htmlspecialchars(trim($_POST['street_name']));
+    $postcode       = htmlspecialchars(trim($_POST['postcode']));
+    $city           = htmlspecialchars(trim($_POST['city']));
+    $state          = htmlspecialchars(trim($_POST['state']));
     
     $is_default = isset($_POST['is_default']) ? 1 : 0;
 
-    // 🌟 核心魔法：將所有欄位組合成一個完美排版的完整地址 (Shipping Label Format)
+    // 🌟 核心魔法：將所有欄位組合成一個完美排版的完整地址
     $full_address = "$recipient_name | $phone_number\n";
     if (!empty($unit_number)) {
         $full_address .= "$unit_number, ";

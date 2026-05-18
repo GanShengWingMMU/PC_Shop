@@ -7,10 +7,17 @@ if (isset($_SESSION['customer_id'])) { header("Location: index.php"); exit(); }
 $error_msg = "";
 require_once 'keys.php'; // 包含 OAuth 密钥
 
+// 🌟 安全升级：生成强随机的 OAuth State Token 以防御 CSRF
+if (empty($_SESSION['oauth_state'])) {
+    $_SESSION['oauth_state'] = bin2hex(random_bytes(32));
+}
+$oauth_state = $_SESSION['oauth_state'];
+
 $google_redirect_uri = 'http://localhost/projects/google_callback.php';
-$google_login_url = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=" . $google_client_id . "&redirect_uri=" . urlencode($google_redirect_uri) . "&scope=email%20profile";
+$google_login_url = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=" . $google_client_id . "&redirect_uri=" . urlencode($google_redirect_uri) . "&scope=email%20profile&state=" . $oauth_state;
+
 $discord_redirect_uri = 'http://localhost/projects/discord_callback.php';
-$discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=" . $discord_client_id . "&redirect_uri=" . urlencode($discord_redirect_uri) . "&response_type=code&scope=" . urlencode("identify email");
+$discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=" . $discord_client_id . "&redirect_uri=" . urlencode($discord_redirect_uri) . "&response_type=code&scope=" . urlencode("identify email") . "&state=" . $oauth_state;
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // 🛡️ 修复：增加 htmlspecialchars 防止 XSS 跨站脚本攻击写入数据库
@@ -24,7 +31,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (empty($username) || empty($email) || empty($password)) {
         $error_msg = "ERR: Core fields missing.";
     } elseif (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username)) {
-        // 🛡️ 修复：增加用户名格式限制，防止输入奇奇怪怪的符号搞崩前端 UI
         $error_msg = "ERR: Username must be 3-20 alphanumeric characters.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_msg = "ERR: Invalid email format.";
@@ -67,37 +73,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="css/style.css">
     <style>
         body { background-color: #030305; color: #fff; position: relative; overflow-x: hidden; }
-        .cyber-grid-bg {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-image: linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px);
-            background-size: 40px 40px; z-index: -2;
-        }
-        .cyber-glow-bg {
-            position: fixed; top: -10vh; right: -10vw; width: 60vw; height: 60vh;
-            background: radial-gradient(circle, rgba(0, 242, 254, 0.08) 0%, transparent 70%); filter: blur(80px); z-index: -1; pointer-events: none;
-        }
-        .tech-auth-card {
-            position: relative; background: rgba(10, 10, 15, 0.45); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            border: 1px solid rgba(0, 242, 254, 0.15); border-radius: 12px; padding: 45px 40px; width: 100%; max-width: 520px;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 242, 254, 0.05); overflow: hidden; margin: 40px auto;
-        }
+        .cyber-grid-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-image: linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px); background-size: 40px 40px; z-index: -2; }
+        .cyber-glow-bg { position: fixed; top: -10vh; right: -10vw; width: 60vw; height: 60vh; background: radial-gradient(circle, rgba(0, 242, 254, 0.08) 0%, transparent 70%); filter: blur(80px); z-index: -1; pointer-events: none; }
+        .tech-auth-card { position: relative; background: rgba(10, 10, 15, 0.45); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(0, 242, 254, 0.15); border-radius: 12px; padding: 45px 40px; width: 100%; max-width: 520px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(0, 242, 254, 0.05); overflow: hidden; margin: 40px auto; }
         .tech-auth-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 1px; background: linear-gradient(90deg, transparent, #00f2fe, transparent); animation: cyber-scan 3s linear infinite; }
         @keyframes cyber-scan { 0% { left: -100%; } 100% { left: 200%; } }
-        
         .tech-input-group { margin-bottom: 20px; position: relative; }
         .tech-label { font-family: 'Inter', sans-serif; color: #00f2fe; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
-        .tech-input {
-            width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 0.95rem; transition: all 0.3s ease;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); font-family: 'Inter', sans-serif;
-        }
+        .tech-input { width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 0.95rem; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); font-family: 'Inter', sans-serif; }
         .tech-input:focus { outline: none; border-color: #00f2fe; background: rgba(0, 242, 254, 0.03); box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
-        .tech-btn {
-            background: transparent; color: #00f2fe; border: 1px solid #00f2fe; font-family: 'Inter', sans-serif; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 2px; padding: 14px; width: 100%; border-radius: 6px; cursor: pointer; transition: 0.3s;
-        }
+        .tech-btn { background: transparent; color: #00f2fe; border: 1px solid #00f2fe; font-family: 'Inter', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; padding: 14px; width: 100%; border-radius: 6px; cursor: pointer; transition: 0.3s; }
         .tech-btn:hover { background: #00f2fe; color: #000; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
-        
         .oauth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
         .oauth-btn { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; padding: 12px; border-radius: 6px; text-align: center; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: 0.3s; }
         .oauth-btn:hover { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.2); }
