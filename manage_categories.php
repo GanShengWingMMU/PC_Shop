@@ -51,18 +51,22 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
         <nav class="admin-sidebar">
             <div class="sidebar-header">
                 <h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3>
+                <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                <li><a href="manage_orders.php"><i class="fas fa-shopping-cart"></i> Manage Orders</a></li>
-                <li><a href="manage_products.php"><i class="fas fa-box"></i> Manage Products</a></li>
-                <li><a href="manage_categories.php" class="active"><i class="fas fa-tags"></i> Manage Categories</a></li>
-                <li><a href="manage_packages.php"><i class="fas fa-layer-group"></i> Manage Packages</a></li>
-                <?php if (strtolower($current_role) === 'superadmin') : ?>
-                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
+                
+                <?php if (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'superadmin'): ?>
+                    <li><a href="manage_staff.php" style="color: var(--accent-warning);" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_staff.php') echo 'class="active"'; ?>><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                    <li><a href="manage_users.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_users.php') echo 'class="active"'; ?>>Manage Customers</a></li>
                 <?php endif; ?>
-                <li><a href="admin_logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Log out</a></li> 
+                
+                <li><a href="manage_categories.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_categories.php') echo 'class="active"'; ?>>Categories</a></li>
+                <li><a href="manage_products.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_products.php') echo 'class="active"'; ?>>Products</a></li> 
+                <li><a href="manage_packages.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_packages.php') echo 'class="active"'; ?>>Packages</a></li>
+                <li><a href="manage_orders.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_orders.php') echo 'class="active"'; ?>>Orders</a></li>
+                
+                <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
             </ul>
         </nav>
 
@@ -73,9 +77,7 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                 </div>
                 <a href="add_category.php" class="btn-action" style="background: linear-gradient(135deg, #a855f7, #00f2fe); color:#fff; font-weight:bold; border:none; padding:10px 20px; border-radius:6px; text-decoration:none;"><i class="fas fa-plus"></i> Define New Category</a>
             </header>
-
             <?php echo $message; ?>
-
             <div class="table-container" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                 <table style="width:100%; border-collapse: collapse;">
                     <thead>
@@ -89,14 +91,12 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                     </thead>
                     <tbody>
                         <?php
-                        // 🌟 連動點：智慧計算該分類底下有幾個商品
                         $sql = "SELECT c.*, COUNT(p.product_id) as item_count FROM categories c LEFT JOIN products p ON c.category_id = p.category_id GROUP BY c.category_id";
                         $res = $conn->query($sql);
                         if ($res && $res->num_rows > 0) {
                             while ($row = $res->fetch_assoc()) {
                                 $cid = $row['category_id'];
                                 $count = $row['item_count'];
-                                
                                 echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
                                 echo "<td style='padding:15px; font-family:\"JetBrains Mono\"; color:#888;'>#$cid</td>";
                                 echo "<td style='padding:15px; font-weight:bold; color:#fff;'>".htmlspecialchars($row['category_name'])."</td>";

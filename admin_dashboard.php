@@ -45,17 +45,21 @@ $total_pending = $res_pending->fetch_assoc()['total'] ?? 0;
                 <h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3>
                 <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
+            
             <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                <li><a href="manage_orders.php"><i class="fas fa-shopping-cart"></i> Manage Orders</a></li>
-                <li><a href="manage_products.php"><i class="fas fa-box"></i> Manage Products</a></li>
-                <li><a href="manage_categories.php"><i class="fas fa-tags"></i> Manage Categories</a></li>
-                <li><a href="manage_packages.php"><i class="fas fa-layer-group"></i> Manage Packages</a></li>
-                <?php if (strtolower($current_role) === 'superadmin') : ?>
-                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
+                
+                <?php if (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'superadmin'): ?>
+                    <li><a href="manage_staff.php" style="color: var(--accent-warning);" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_staff.php') echo 'class="active"'; ?>><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                    <li><a href="manage_users.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_users.php') echo 'class="active"'; ?>>Manage Customers</a></li>
                 <?php endif; ?>
-                <li><a href="admin_logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Log out</a></li> 
+                
+                <li><a href="manage_categories.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_categories.php') echo 'class="active"'; ?>>Categories</a></li>
+                <li><a href="manage_products.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_products.php') echo 'class="active"'; ?>>Products</a></li> 
+                <li><a href="manage_packages.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_packages.php') echo 'class="active"'; ?>>Packages</a></li>
+                <li><a href="manage_orders.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_orders.php') echo 'class="active"'; ?>>Orders</a></li>
+                
+                <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
             </ul>
         </nav>
 
@@ -96,7 +100,6 @@ $total_pending = $res_pending->fetch_assoc()['total'] ?? 0;
                     
                     <ul style="list-style:none; padding:0; margin:0;">
                         <?php
-                        // 🌟 連動 products 庫存，低於 3 件自動抓取
                         $stock_res = $conn->query("SELECT product_id, product_name, stock_quantity FROM products WHERE stock_quantity <= 3 ORDER BY stock_quantity ASC LIMIT 5");
                         if($stock_res && $stock_res->num_rows > 0) {
                             while($item = $stock_res->fetch_assoc()) {
