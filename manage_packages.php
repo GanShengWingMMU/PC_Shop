@@ -44,10 +44,14 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                 <h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3>
                 <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
-            <ul class="sidebar-menu">
+           <ul class="sidebar-menu">
                 <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
                 
-                <?php if (isset($_SESSION['role']) && strtolower($_SESSION['role']) === 'superadmin'): ?>
+                <?php 
+                // 🌟 终极双重识别：不管是 admin_role 还是 role，只要是 superadmin 就放行！
+                $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
+                if (strtolower($sidebar_role) === 'superadmin'): 
+                ?>
                     <li><a href="manage_staff.php" style="color: var(--accent-warning);" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_staff.php') echo 'class="active"'; ?>><i class="fas fa-user-tie"></i> Manage Staff</a></li>
                     <li><a href="manage_users.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_users.php') echo 'class="active"'; ?>>Manage Customers</a></li>
                 <?php endif; ?>
