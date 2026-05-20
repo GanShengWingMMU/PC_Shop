@@ -13,7 +13,7 @@ $product_id = isset($_GET['product_id']) ? intval($_GET['product_id']) : 0;
 
 if ($product_id <= 0) { header("Location: manage_products.php"); exit(); }
 
-// 🌟 獲取現有資料
+// 🌟 獲取現有資料 (存入 $prod)
 $stmt = $conn->prepare("SELECT * FROM products WHERE product_id = ?");
 $stmt->bind_param("i", $product_id);
 $stmt->execute();
@@ -23,7 +23,10 @@ if (!$prod) { header("Location: manage_products.php"); exit(); }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     $name = trim($_POST['product_name']);
-    $category_id = intval($_POST['category']); 
+    
+    // ✅ 修复 1：把 'category' 改成了 'category_id' 对应表单里的 name
+    $category_id = intval($_POST['category_id']); 
+    
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
     $specs = trim($_POST['specs']);
@@ -87,11 +90,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
         <nav class="admin-sidebar">
             <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
             <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                <li><a href="manage_orders.php"><i class="fas fa-shopping-cart"></i> Manage Orders</a></li>
-                <li><a href="manage_products.php" class="active"><i class="fas fa-box"></i> Manage Products</a></li>
-                <li><a href="manage_categories.php"><i class="fas fa-tags"></i> Manage Categories</a></li>
-                <li><a href="manage_packages.php"><i class="fas fa-layer-group"></i> Manage Packages</a></li>
+                <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                
+                <?php 
+                $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
+                if (strtolower($sidebar_role) === 'superadmin'): 
+                ?>
+                    <li><a href="manage_staff.php" style="color: var(--accent-warning);" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_staff.php') echo 'class="active"'; ?>><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                    <li><a href="manage_users.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_users.php') echo 'class="active"'; ?>><i class="fas fa-users"></i> Manage Customers</a></li>
+                <?php endif; ?>
+                
+                <li><a href="manage_categories.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_categories.php') echo 'class="active"'; ?>><i class="fas fa-tags"></i> Categories</a></li>
+                <li><a href="manage_products.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_products.php') echo 'class="active"'; ?>><i class="fas fa-box"></i> Products</a></li> 
+                <li><a href="manage_packages.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_packages.php') echo 'class="active"'; ?>><i class="fas fa-layer-group"></i> Packages</a></li>
+                <li><a href="manage_orders.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_orders.php') echo 'class="active"'; ?>><i class="fas fa-shopping-cart"></i> Orders</a></li>
+                
                 <li><a href="admin_logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Log out</a></li> 
             </ul>
         </nav>
@@ -112,8 +125,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
                     </div>
                     
                     <div class="form-group">
-                        <label>Category ID</label>
-                        <input type="number" name="category" class="form-control" value="<?php echo $prod['category_id']; ?>" required style="width: 100%;">
+                        <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Category *</label>
+                        <select name="category_id" class="form-control" required style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px;">
+                            <option value="" disabled>-- Select a Category --</option>
+                            <?php
+                            $cat_query = "SELECT category_id, category_name FROM categories ORDER BY category_name ASC";
+                            $cat_result = mysqli_query($conn, $cat_query);
+                            if ($cat_result && mysqli_num_rows($cat_result) > 0) {
+                                while ($cat_row = mysqli_fetch_assoc($cat_result)) {
+                                    // ✅ 修复 2：把 $product 改成 $prod，匹配上面查出来的变量名
+                                    $selected = (isset($prod['category_id']) && $prod['category_id'] == $cat_row['category_id']) ? 'selected' : '';
+                                    
+                                    echo "<option value='{$cat_row['category_id']}' {$selected}>" . htmlspecialchars($cat_row['category_name']) . "</option>";
+                                }
+                            }
+                            ?>
+                        </select>
                     </div>
                     
                     <div class="form-group">
@@ -138,7 +165,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
 
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
                         <label>Marketing Description</label>
-                        <textarea name="description" class="form-control" rows="2" style="width: 100%;"><?php echo htmlspecialchars($prod['description']); ?></textarea>
+                        <textarea name="description" class="form-control" rows="2" style="width: 100%;"><?php echo htmlspecialchars($prod['description'] ?? ''); ?></textarea>
                     </div>
                 </div>
 
@@ -151,11 +178,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
                         </div>
                         <div>
                             <label style="font-size: 13px; color: var(--text-muted);">Socket Type</label>
-                            <input type="text" name="socket_type" class="form-control" value="<?php echo htmlspecialchars($prod['socket_type']); ?>" style="width: 100%;">
+                            <input type="text" name="socket_type" class="form-control" value="<?php echo htmlspecialchars($prod['socket_type'] ?? ''); ?>" style="width: 100%;">
                         </div>
                         <div>
                             <label style="font-size: 13px; color: var(--text-muted);">RAM Type</label>
-                            <input type="text" name="ram_type" class="form-control" value="<?php echo htmlspecialchars($prod['ram_type']); ?>" style="width: 100%;">
+                            <input type="text" name="ram_type" class="form-control" value="<?php echo htmlspecialchars($prod['ram_type'] ?? ''); ?>" style="width: 100%;">
                         </div>
                         <div>
                             <label style="font-size: 13px; color: var(--text-muted);">Performance Tier (1-10)</label>

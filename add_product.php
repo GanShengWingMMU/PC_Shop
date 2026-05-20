@@ -123,9 +123,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
                     </div>
                     
                     <div class="form-group">
-                        <label>Category ID (e.g., 1=CPU, 4=GPU) *</label>
-                        <input type="number" name="category" class="form-control" required style="width: 100%;">
-                    </div>
+    <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Category *</label>
+    <select name="category_id" class="form-control" required style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px;">
+        <option value="" disabled selected>-- Select a Category --</option>
+        <?php
+        $cat_query = "SELECT category_id, category_name FROM categories ORDER BY category_name ASC";
+        $cat_result = mysqli_query($conn, $cat_query);
+        if ($cat_result && mysqli_num_rows($cat_result) > 0) {
+            while ($cat_row = mysqli_fetch_assoc($cat_result)) {
+                echo "<option value='{$cat_row['category_id']}'>" . htmlspecialchars($cat_row['category_name']) . "</option>";
+            }
+        }
+        ?>
+    </select>
+</div>
                     
                     <div class="form-group">
                         <label>Price (RM) *</label>

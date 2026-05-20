@@ -36,6 +36,7 @@ if (isset($_GET['delete_id'])) {
 }
 
 if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'><i class='fas fa-trash'></i> Category successfully purged from the matrix.</div>";
+if (isset($_GET['msg']) && $_GET['msg'] == 'updated') $message = "<div style='color: #00f2fe; background: rgba(0,242,254,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,242,254,0.3);'><i class='fas fa-check'></i> Category details updated successfully.</div>";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -106,7 +107,10 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                                 echo "<td style='padding:15px; font-weight:bold; color:#fff;'>".htmlspecialchars($row['category_name'])."</td>";
                                 echo "<td style='padding:15px; color:#94a3b8; font-size:13px;'>".htmlspecialchars($row['description'])."</td>";
                                 echo "<td style='padding:15px; text-align:center;'><span style='background:rgba(0,242,254,0.1); color:#00f2fe; padding:4px 12px; border-radius:20px; font-family:\"JetBrains Mono\"; font-size:12px;'>$count linked</span></td>";
+                                
+                                // 🌟 这里加上了 Modify 按钮！
                                 echo "<td style='padding:15px; text-align:right;'>
+                                        <a href='edit_category.php?id=$cid' class='btn-action' style='color:#00f2fe; border-color:#00f2fe; padding:6px 12px; font-size:12px; text-decoration:none; margin-right:8px;'>Modify</a>
                                         <a href='manage_categories.php?delete_id=$cid' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Are you sure?\");'>Delete</a>
                                       </td>";
                                 echo "</tr>";

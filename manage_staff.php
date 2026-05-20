@@ -12,7 +12,7 @@ $message = "";
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
     if ($delete_id == ($_SESSION['admin_id'] ?? 0)) {
-        $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px;'>⚠️ Cannot delete yourself!</div>";
+        $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Cannot revoke your own access!</div>";
     } else {
         $stmt_del = $conn->prepare("DELETE FROM admins WHERE admin_id = ?");
         $stmt_del->bind_param("i", $delete_id);
@@ -20,7 +20,10 @@ if (isset($_GET['delete_id'])) {
         $stmt_del->close();
     }
 }
-if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px;'>✅ Access revoked.</div>";
+// 各种成功提示信息
+if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'>✅ Access revoked successfully.</div>";
+if (isset($_GET['msg']) && $_GET['msg'] == 'updated') $message = "<div style='color: #00f2fe; background: rgba(0,242,254,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,242,254,0.3);'>✅ Staff profile updated.</div>";
+if (isset($_GET['msg']) && $_GET['msg'] == 'added') $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'>✅ New personnel authorized.</div>";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -42,7 +45,6 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                 <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
                 
                 <?php 
-                // 🌟 终极双重识别：不管是 admin_role 还是 role，只要是 superadmin 就放行！
                 $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
                 if (strtolower($sidebar_role) === 'superadmin'): 
                 ?>
@@ -70,7 +72,7 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                     <thead>
                         <tr style="border-bottom: 2px solid rgba(255,77,77,0.2);">
                             <th style="padding:15px; color:#ff4d4d;">ID</th>
-                            <th style="padding:15px; color:#ff4d4d;">Username</th>
+                            <th style="padding:15px; color:#ff4d4d;">Username / Email</th>
                             <th style="padding:15px; color:#ff4d4d;">Role</th>
                             <th style="padding:15px; color:#ff4d4d; text-align:right;">Actions</th>
                         </tr>
@@ -83,12 +85,23 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                             $aid = $row['admin_id'];
                             $is_me = ($aid == ($_SESSION['admin_id'] ?? 0));
                             echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
-                            echo "<td style='padding:15px; color:#888;'>STAFF-$aid</td>";
-                            echo "<td style='padding:15px; font-weight:bold; color:#fff;'>".htmlspecialchars($row['username'])."</td>";
-                            echo "<td style='padding:15px;'><span style='color:".($row['role']=='SuperAdmin'?'#ff007f':'#00f2fe').";'>".strtoupper($row['role'])."</span></td>";
+                            echo "<td style='padding:15px; color:#888; font-family:\"JetBrains Mono\";'>STAFF-$aid</td>";
+                            
+                            // 显示 Email 避免表格太空旷
+                            echo "<td style='padding:15px;'><strong>".htmlspecialchars($row['username'])."</strong><br><span style='font-size:12px; color:#64748b;'>".htmlspecialchars($row['email'] ?? 'No Email')."</span></td>";
+                            
+                            echo "<td style='padding:15px;'><span style='color:".($row['role']=='SuperAdmin'?'#ff007f':'#00f2fe')."; font-weight:bold;'>".strtoupper($row['role'])."</span></td>";
+                            
                             echo "<td style='padding:15px; text-align:right;'>";
-                            if (!$is_me) echo "<a href='manage_staff.php?delete_id=$aid' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px;'>Revoke</a>";
-                            else echo "<span style='color:#64748b; font-size:12px;'>You</span>";
+                            
+                            // 🌟 加上了蓝色的 Modify 按钮！
+                            echo "<a href='edit_staff.php?id=$aid' class='btn-action' style='color:#00f2fe; border-color:#00f2fe; padding:6px 12px; font-size:12px; margin-right:8px; text-decoration:none;'>Modify</a>";
+                            
+                            if (!$is_me) {
+                                echo "<a href='manage_staff.php?delete_id=$aid' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Revoke access for this personnel?\");'>Revoke</a>";
+                            } else {
+                                echo "<span style='color:#64748b; font-size:12px; padding:6px 12px;'>You</span>";
+                            }
                             echo "</td></tr>";
                         }
                         ?>
