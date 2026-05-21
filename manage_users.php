@@ -78,8 +78,11 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                             echo "<td style='padding:15px; color:#888;'>USR-$uid</td>";
                             echo "<td style='padding:15px;'><strong>".htmlspecialchars($row['username'])."</strong><br><span style='color:#64748b; font-size:12px;'>".htmlspecialchars($row['email'])."</span></td>";
                             echo "<td style='padding:15px;'><span style='background:rgba(255,215,0,0.1); color:#ffd700; padding:4px 10px; border-radius:4px; font-size:12px;'>{$row['total_orders']} Orders</span></td>";
+                            
+                            // 🌟 这里加上了 Details 按钮
                             echo "<td style='padding:15px; text-align:right;'>
-                                    <a href='manage_users.php?delete_id=$uid' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px;' onclick='return confirm(\"Neutralize profile?\");'>Neutralize</a>
+                                    <a href='view_customer.php?id=$uid' class='btn-action' style='color:#00f2fe; border-color:#00f2fe; padding:6px 12px; font-size:12px; text-decoration:none; margin-right:8px;'><i class='fas fa-eye'></i> Details</a>
+                                    <a href='manage_users.php?delete_id=$uid' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Neutralize profile?\");'>Neutralize</a>
                                   </td>";
                             echo "</tr>";
                         }

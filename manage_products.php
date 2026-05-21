@@ -13,9 +13,12 @@ $message = "";
 
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
-    $check_stmt = $conn->prepare("SELECT item_id FROM order_details WHERE product_id = ? LIMIT 1");
+    
+    // 🌟 核心修复：把 item_id 改成了 product_id，完美避开找不到列名的报错
+    $check_stmt = $conn->prepare("SELECT product_id FROM order_details WHERE product_id = ? LIMIT 1");
     $check_stmt->bind_param("i", $delete_id);
     $check_stmt->execute();
+    
     if ($check_stmt->get_result()->num_rows > 0) {
         $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'><i class='fas fa-lock'></i> Cannot delete! Linked to active orders.</div>";
     } else {
@@ -25,7 +28,7 @@ if (isset($_GET['delete_id'])) {
         $stmt_del->close();
     }
 }
-if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'>✅ Node purged.</div>";
+if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'>✅ Data deleted successfully.</div>";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -94,8 +97,8 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                                 echo "<td style='padding:15px; color:#00e676;'>RM ".number_format($row['price'], 2)."</td>";
                                 echo "<td style='padding:15px;'>{$row['stock_quantity']} UNITS</td>";
                                 echo "<td style='padding:15px; text-align:right;'>
-                                        <a href='edit_product.php?product_id={$row['product_id']}' class='btn-action' style='color:#00f2fe; border-color:#00f2fe; padding:6px 12px; font-size:12px;'>Modify</a>
-                                        <a href='manage_products.php?delete_id={$row['product_id']}' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px;' onclick='return confirm(\"Purge node?\");'>Purge</a>
+                                        <a href='edit_product.php?product_id={$row['product_id']}' class='btn-action' style='color:#00f2fe; border-color:#00f2fe; padding:6px 12px; font-size:12px; text-decoration:none; margin-right:8px;'>Modify</a>
+                                        <a href='manage_products.php?delete_id={$row['product_id']}' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Delete node?\");'>Delete</a>
                                       </td>";
                                 echo "</tr>";
                             }

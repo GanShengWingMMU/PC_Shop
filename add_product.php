@@ -12,7 +12,7 @@ $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
     $name = trim($_POST['product_name']);
-    $category_id = intval($_POST['category']); 
+   $category_id = intval($_POST['category_id']);
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
     $specs = trim($_POST['specs']);
