@@ -3,20 +3,14 @@ session_start();
 if (file_exists('config.php')) { require_once 'config.php'; } 
 else { include 'db_connect.php'; }
 
+// 🌟 权限验证：只有老板(SuperAdmin)能进入
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
 if (empty($current_role) || strtolower($current_role) !== 'superadmin') {
     die("<div style='background:#000; color:#ff4d4d; padding:50px; text-align:center; font-family:monospace;'>ACCESS DENIED: ALPHA REQUIRED.</div>");
 }
 
 $message = "";
-if (isset($_GET['delete_id'])) {
-    $delete_id = intval($_GET['delete_id']);
-    $stmt_del = $conn->prepare("DELETE FROM customers WHERE customer_id = ?");
-    $stmt_del->bind_param("i", $delete_id);
-    if ($stmt_del->execute()) { header("Location: manage_users.php?deleted=1"); exit(); }
-    $stmt_del->close();
-}
-if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px;'>✅ Citizen Neutralized.</div>";
+// 💡 注：为了数据库的绝对安全，已经把顶部的“删除(Neutralize)”后端逻辑彻底移除了，防止有人恶意通过网址删号。
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,7 +32,6 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                 <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
                 
                 <?php 
-                // 🌟 终极双重识别：不管是 admin_role 还是 role，只要是 superadmin 就放行！
                 $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
                 if (strtolower($sidebar_role) === 'superadmin'): 
                 ?>
@@ -56,15 +49,19 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
         </nav>
 
         <div class="admin-content" style="padding: 30px;">
-            <header class="admin-header" style="margin-bottom: 30px;"><h2 style="color: #ffd700; margin:0;"><i class="fas fa-users-cog"></i> CRM Database</h2></header>
+            <header class="admin-header" style="margin-bottom: 30px;">
+                <h2 style="color: #ffd700; margin:0;"><i class="fas fa-users"></i> Customer Information</h2>
+            </header>
+            
             <?php echo $message; ?>
+            
             <div class="table-container" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                 <table style="width:100%; border-collapse: collapse;">
                     <thead>
                         <tr style="border-bottom: 2px solid rgba(255,215,0,0.2);">
-                            <th style="padding:15px; color:#ffd700;">ID</th>
-                            <th style="padding:15px; color:#ffd700;">Name/Email</th>
-                            <th style="padding:15px; color:#ffd700;">Orders</th>
+                            <th style="padding:15px; color:#ffd700; text-align:left;">ID</th>
+                            <th style="padding:15px; color:#ffd700; text-align:left;">Name / Email</th>
+                            <th style="padding:15px; color:#ffd700; text-align:left;">Orders</th>
                             <th style="padding:15px; color:#ffd700; text-align:right;">Actions</th>
                         </tr>
                     </thead>
@@ -75,14 +72,13 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                         while ($row = $res->fetch_assoc()) {
                             $uid = $row['customer_id'];
                             echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
-                            echo "<td style='padding:15px; color:#888;'>USR-$uid</td>";
-                            echo "<td style='padding:15px;'><strong>".htmlspecialchars($row['username'])."</strong><br><span style='color:#64748b; font-size:12px;'>".htmlspecialchars($row['email'])."</span></td>";
-                            echo "<td style='padding:15px;'><span style='background:rgba(255,215,0,0.1); color:#ffd700; padding:4px 10px; border-radius:4px; font-size:12px;'>{$row['total_orders']} Orders</span></td>";
+                            echo "<td style='padding:15px; color:#888; text-align:left;'>USR-$uid</td>";
+                            echo "<td style='padding:15px; text-align:left;'><strong>".htmlspecialchars($row['username'])."</strong><br><span style='color:#64748b; font-size:12px;'>".htmlspecialchars($row['email'])."</span></td>";
+                            echo "<td style='padding:15px; text-align:left;'><span style='background:rgba(255,215,0,0.1); color:#ffd700; padding:4px 10px; border-radius:4px; font-size:12px;'>{$row['total_orders']} Orders</span></td>";
                             
-                            // 🌟 这里加上了 Details 按钮
+                            // 🌟 移除了 Neutralize 按钮，只保留 Details 按钮
                             echo "<td style='padding:15px; text-align:right;'>
-                                    <a href='view_customer.php?id=$uid' class='btn-action' style='color:#00f2fe; border-color:#00f2fe; padding:6px 12px; font-size:12px; text-decoration:none; margin-right:8px;'><i class='fas fa-eye'></i> Details</a>
-                                    <a href='manage_users.php?delete_id=$uid' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Neutralize profile?\");'>Neutralize</a>
+                                    <a href='view_customer.php?id=$uid' class='btn-action' style='color:#00f2fe; border-color:#00f2fe; padding:6px 12px; font-size:12px; text-decoration:none;'><i class='fas fa-eye'></i> Details</a>
                                   </td>";
                             echo "</tr>";
                         }
