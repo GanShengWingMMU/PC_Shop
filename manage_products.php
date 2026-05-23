@@ -13,8 +13,7 @@ $message = "";
 
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
-    
-    // 🌟 核心修复：把 item_id 改成了 product_id，完美避开找不到列名的报错
+    // 🌟 之前修好的 product_id 防呆检查
     $check_stmt = $conn->prepare("SELECT product_id FROM order_details WHERE product_id = ? LIMIT 1");
     $check_stmt->bind_param("i", $delete_id);
     $check_stmt->execute();
@@ -28,7 +27,10 @@ if (isset($_GET['delete_id'])) {
         $stmt_del->close();
     }
 }
-if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'>✅ Data deleted successfully.</div>";
+if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'>✅ Node deleted.</div>";
+
+// 🌟 捕获搜索关键词
+$search = $_GET['search'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -50,7 +52,6 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                 <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
                 
                 <?php 
-                // 🌟 终极双重识别：不管是 admin_role 还是 role，只要是 superadmin 就放行！
                 $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
                 if (strtolower($sidebar_role) === 'superadmin'): 
                 ?>
@@ -72,22 +73,69 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                 <div><h2 style="color: #00f2fe; margin:0;"><i class="fas fa-microchip"></i> Hardware Registry</h2></div>
                 <a href="add_product.php" class="btn-action" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color:#000; font-weight:900; border:none; padding:10px 20px; border-radius:6px; text-decoration:none;"><i class="fas fa-plus"></i> New Node</a>
             </header>
+            
             <?php echo $message; ?>
+
+            <!-- 🌟 全新科幻搜索栏 (修复按钮霸凌挤压问题) -->
+            <form method="GET" action="manage_products.php" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                
+                <!-- 强制输入框占据剩余空间，并设好最小宽度 -->
+                <input type="text" name="search" placeholder="Search by Product Name..." value="<?php echo htmlspecialchars($search); ?>" style="flex: 1; min-width: 250px; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,242,254,0.3); color: #fff; padding: 10px 15px; border-radius: 6px; outline: none; box-sizing: border-box;">
+                
+                <!-- 强制按钮不准膨胀 (width: auto, flex-shrink: 0) -->
+                <button type="submit" style="width: auto; flex-shrink: 0; white-space: nowrap; background: #00f2fe; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow='0 0 15px rgba(0,242,254,0.4)'" onmouseout="this.style.boxShadow='none'"><i class="fas fa-search"></i> Search</button>
+                
+                <?php if(!empty($search)): ?>
+                    <!-- 强制清除按钮不准膨胀 -->
+                    <a href="manage_products.php" style="width: auto; flex-shrink: 0; white-space: nowrap; background: rgba(255,77,77,0.1); color: #ff4d4d; border: 1px solid rgba(255,77,77,0.3); text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; display: flex; align-items: center; transition: 0.3s;" onmouseover="this.style.background='rgba(255,77,77,0.2)'" onmouseout="this.style.background='rgba(255,77,77,0.1)'">Clear</a>
+                <?php endif; ?>
+                
+            </form>
+
             <div class="table-container" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                 <table style="width:100%; border-collapse: collapse;">
                     <thead>
                         <tr style="border-bottom: 2px solid rgba(0,242,254,0.2);">
-                            <th style="padding:15px; color:#00f2fe;">Visual</th>
-                            <th style="padding:15px; color:#00f2fe;">Product Name</th>
-                            <th style="padding:15px; color:#00f2fe;">Price</th>
-                            <th style="padding:15px; color:#00f2fe;">Stock</th>
+                            <th style="padding:15px; color:#00f2fe; text-align:left;">Visual</th>
+                            <th style="padding:15px; color:#00f2fe; text-align:left;">Product Name</th>
+                            <th style="padding:15px; color:#00f2fe; text-align:left;">Price</th>
+                            <th style="padding:15px; color:#00f2fe; text-align:left;">Stock</th>
                             <th style="padding:15px; color:#00f2fe; text-align:right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
-                        $sql = "SELECT p.*, c.category_name FROM products p JOIN categories c ON p.category_id = c.category_id ORDER BY p.product_id DESC";
-                        $res = $conn->query($sql);
+                        // 🌟 终极智能分词搜索逻辑
+                        if ($search !== '') {
+                            // 将搜索词按空格拆分成多个重点字
+                            $keywords = explode(' ', trim($search));
+                            $conditions = [];
+                            $params = [];
+                            $types = "";
+                            
+                            foreach ($keywords as $kw) {
+                                if (trim($kw) !== '') {
+                                    $conditions[] = "p.product_name LIKE ?";
+                                    $params[] = "%" . trim($kw) . "%";
+                                    $types .= "s";
+                                }
+                            }
+                            
+                            // 把所有重点字组合起来 (必须同时包含这些重点字)
+                            $where_clause = implode(" AND ", $conditions);
+                            $sql = "SELECT p.*, c.category_name FROM products p JOIN categories c ON p.category_id = c.category_id WHERE $where_clause ORDER BY p.product_id DESC";
+                            
+                            $stmt = $conn->prepare($sql);
+                            if (!empty($params)) {
+                                $stmt->bind_param($types, ...$params);
+                            }
+                            $stmt->execute();
+                            $res = $stmt->get_result();
+                        } else {
+                            $sql = "SELECT p.*, c.category_name FROM products p JOIN categories c ON p.category_id = c.category_id ORDER BY p.product_id DESC";
+                            $res = $conn->query($sql);
+                        }
+
                         if ($res && $res->num_rows > 0) {
                             while ($row = $res->fetch_assoc()) {
                                 $img = htmlspecialchars($row['image_url']) ?: 'image/placeholder_pc.png';
@@ -102,6 +150,8 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
                                       </td>";
                                 echo "</tr>";
                             }
+                        } else {
+                            echo "<tr><td colspan='5' style='padding:20px; text-align:center; color:#888;'>No products match your search.</td></tr>";
                         }
                         ?>
                     </tbody>
