@@ -13,7 +13,7 @@ $message = "";
 
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
-    // 🌟 之前修好的 product_id 防呆检查
+    // 🌟 product_id 防呆检查
     $check_stmt = $conn->prepare("SELECT product_id FROM order_details WHERE product_id = ? LIMIT 1");
     $check_stmt->bind_param("i", $delete_id);
     $check_stmt->execute();
@@ -40,6 +40,22 @@ $search = $_GET['search'] ?? '';
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
+    <style>
+        /* 🌟 图片悬浮放大的赛博黑科技 CSS */
+        .zoom-img {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            z-index: 1;
+            cursor: zoom-in;
+        }
+        .zoom-img:hover {
+            transform: scale(3.5); /* 放大 3.5 倍 */
+            z-index: 999;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 15px rgba(0,242,254,0.6);
+            border: 1px solid #00f2fe;
+            border-radius: 8px !important;
+        }
+    </style>
 </head>
 <body>
     <div class="admin-container">
@@ -76,20 +92,14 @@ $search = $_GET['search'] ?? '';
             
             <?php echo $message; ?>
 
-            <!-- 🌟 全新科幻搜索栏 (修复按钮霸凌挤压问题) -->
             <form method="GET" action="manage_products.php" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                
-                <!-- 强制输入框占据剩余空间，并设好最小宽度 -->
                 <input type="text" name="search" placeholder="Search by Product Name..." value="<?php echo htmlspecialchars($search); ?>" style="flex: 1; min-width: 250px; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,242,254,0.3); color: #fff; padding: 10px 15px; border-radius: 6px; outline: none; box-sizing: border-box;">
                 
-                <!-- 强制按钮不准膨胀 (width: auto, flex-shrink: 0) -->
                 <button type="submit" style="width: auto; flex-shrink: 0; white-space: nowrap; background: #00f2fe; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow='0 0 15px rgba(0,242,254,0.4)'" onmouseout="this.style.boxShadow='none'"><i class="fas fa-search"></i> Search</button>
                 
                 <?php if(!empty($search)): ?>
-                    <!-- 强制清除按钮不准膨胀 -->
                     <a href="manage_products.php" style="width: auto; flex-shrink: 0; white-space: nowrap; background: rgba(255,77,77,0.1); color: #ff4d4d; border: 1px solid rgba(255,77,77,0.3); text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; display: flex; align-items: center; transition: 0.3s;" onmouseover="this.style.background='rgba(255,77,77,0.2)'" onmouseout="this.style.background='rgba(255,77,77,0.1)'">Clear</a>
                 <?php endif; ?>
-                
             </form>
 
             <div class="table-container" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
@@ -107,7 +117,6 @@ $search = $_GET['search'] ?? '';
                         <?php
                         // 🌟 终极智能分词搜索逻辑
                         if ($search !== '') {
-                            // 将搜索词按空格拆分成多个重点字
                             $keywords = explode(' ', trim($search));
                             $conditions = [];
                             $params = [];
@@ -121,7 +130,6 @@ $search = $_GET['search'] ?? '';
                                 }
                             }
                             
-                            // 把所有重点字组合起来 (必须同时包含这些重点字)
                             $where_clause = implode(" AND ", $conditions);
                             $sql = "SELECT p.*, c.category_name FROM products p JOIN categories c ON p.category_id = c.category_id WHERE $where_clause ORDER BY p.product_id DESC";
                             
@@ -140,7 +148,10 @@ $search = $_GET['search'] ?? '';
                             while ($row = $res->fetch_assoc()) {
                                 $img = htmlspecialchars($row['image_url']) ?: 'image/placeholder_pc.png';
                                 echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
-                                echo "<td style='padding:15px;'><img src='{$img}' style='height:40px; width:40px; object-fit:contain; border-radius:6px; background:#000;'></td>";
+                                
+                                // 🌟 核心：给 img 标签加上 class='zoom-img'
+                                echo "<td style='padding:15px;'><img src='{$img}' class='zoom-img' style='height:40px; width:40px; object-fit:contain; border-radius:6px; background:#000;'></td>";
+                                
                                 echo "<td style='padding:15px; font-weight:600; color:#fff;'>".htmlspecialchars($row['product_name'])."</td>";
                                 echo "<td style='padding:15px; color:#00e676;'>RM ".number_format($row['price'], 2)."</td>";
                                 echo "<td style='padding:15px;'>{$row['stock_quantity']} UNITS</td>";
@@ -160,4 +171,4 @@ $search = $_GET['search'] ?? '';
         </div>
     </div>
 </body>
-</html>
+</html> 
