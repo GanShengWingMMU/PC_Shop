@@ -37,10 +37,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         $update_err = "Invalid email format."; 
     } elseif (!empty($new_phone) && !preg_match('/^\+60[0-9]{8,10}$/', $new_phone)) {
         $update_err = "Phone number must be a valid Malaysian format (8 to 10 digits after +60).";
-    } elseif (!empty($new_birthday) && (strtotime($new_birthday) === false || strtotime($new_birthday) > time())) {
-        // 🌟 修复：严谨的生日日期检查，防止写入非法或未来日期
-        $update_err = "Invalid birthday date.";
-    } else {
+    } elseif (!empty($new_birthday)) {
+        $input_time = strtotime($new_birthday);
+        $min_allowed_time = strtotime('1900-01-01');
+        $max_allowed_time = strtotime('-13 years'); // 必須滿 13 歲
+
+        if ($input_time === false || $input_time < $min_allowed_time || $input_time > $max_allowed_time) {
+            $update_err = "Invalid birthday. You must be at least 13 years old to maintain a profile.";
+        }} else {
         
         if (!empty($new_pass)) {
             $current_pass = $_POST['current_password'] ?? '';
@@ -320,9 +324,14 @@ $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = 
                                 </div>
                             </div>
                             <div class="tech-input-group">
-                                <label class="tech-label">Date of Birth</label>
-                                <input type="date" name="birthday" class="tech-input" value="<?php echo htmlspecialchars($user['birthday']); ?>" max="<?php echo date('Y-m-d'); ?>">
-                            </div>
+    <label class="tech-label">Date of Birth (Must be 13+ years old)</label>
+    <?php 
+        // 動態計算 13 年前的日期作為可選的「最新日期」 (如果是 18 歲就把 -13 改成 -18)
+        $max_bday = date('Y-m-d', strtotime('-13 years')); 
+        $min_bday = '1900-01-01'; // 限制最老只能選到 1900 年
+    ?>
+    <input type="date" name="birthday" class="tech-input" value="<?php echo htmlspecialchars($user['birthday']); ?>" min="<?php echo $min_bday; ?>" max="<?php echo $max_bday; ?>">
+</div>
                         </div>
                         
                         <h4 style="color: #cbd5e1; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">Security Credentials</h4>
