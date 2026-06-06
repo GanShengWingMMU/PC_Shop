@@ -44,17 +44,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
         } else {
             $ext = strtolower(pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION));
             
-            // 🚀 魔法開始：不存文件，直接讀取圖片的「二進位原始數據」
-            $img_data = file_get_contents($file_tmp);
+            // 🚀 業界標準寫法：將圖片移動到 image/ 資料夾
+            $ext = strtolower(pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION));
             
-            // 將原始數據翻譯成 Base64 亂碼字串
-            $base64_string = base64_encode($img_data);
-            
-            // 判斷 MIME Type (jpg 要換成 jpeg)
-            $mime_type = ($ext == 'jpg') ? 'jpeg' : $ext;
-            
-            // 組合成 HTML 可以直接讀取的超長 URL 格式！
-            $image_url = "data:image/" . $mime_type . ";base64," . $base64_string;
+            // 產生隨機檔名防止覆蓋 (例如：prod_6a2403...jpg)
+            $new_filename = 'prod_' . uniqid() . '.' . $ext;
+            $upload_dir = 'image/';
+            $target_file = $upload_dir . $new_filename;
+
+            // 確保資料夾存在
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0777, true);
+            }
+
+            if (move_uploaded_file($file_tmp, $target_file)) {
+                // 上傳成功，只把檔名/路徑存入資料庫 (長度絕對小於 255)
+                $image_url = $target_file;
+            } else {
+                $message = "<div class='alert-error'>⚠️ System Error: Failed to save image to server directory.</div>";
+                $upload_ok = false;
+            }
         }
     }
 

@@ -380,7 +380,25 @@ $stmt->close();
                         <a href="product_detail.php?id=<?php echo $item['product_id']; ?>" style="text-decoration: none; display: block;">
                             
                             <div style="position: relative; padding-bottom: 100%; background: #0a0a0a; border-radius: 8px; overflow: hidden; margin-bottom: 15px;">
-                                <img src="<?php echo $item['image_url']; ?>" alt="<?php echo htmlspecialchars($item['product_name']); ?>" 
+                                <?php 
+    // 🌟 CTO 終極智能圖片路徑處理引擎 (修復 placeholder 誤殺 Bug)
+    $raw_img = !empty($item['image_url']) ? trim($item['image_url']) : '';
+    
+    if (strpos($raw_img, 'http') === 0) {
+        // 1. 如果是 http 開頭的外部網址 (包含 via.placeholder.com)，直接放行！
+        $img_src = $raw_img;
+    } elseif (strpos($raw_img, 'data:image') === 0) {
+        // 2. 如果是 Base64 格式，直接放行！
+        $img_src = $raw_img;
+    } elseif (empty($raw_img) || $raw_img == 'image/placeholder_pc.png') {
+        // 3. 如果資料庫真的是空的，才用本地的預設圖
+        $img_src = 'image/placeholder.jpg';
+    } else {
+        // 4. 本地上傳的實體檔案 (例如 image/prod_123.jpg)
+        $img_src = 'image/' . basename($raw_img); 
+    }
+?>
+                                <img src="<?php echo htmlspecialchars($img_src); ?>" alt="<?php echo htmlspecialchars($item['product_name']); ?>" 
                                      onerror="this.src='image/placeholder.jpg';" 
                                      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; transition: 0.4s;"
                                      onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
