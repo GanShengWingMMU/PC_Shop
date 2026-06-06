@@ -30,60 +30,88 @@ if ($res_prod) {
 }
 
 // ==========================================
-// 2. 處理表單提交 (ACID Transaction 關聯寫入)
+// 2. 處理表單提交 (ACID Transaction 關聯寫入 + 圖片上傳)
 // ==========================================
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $package_name = trim($_POST['package_name']);
     $description = trim($_POST['description']);
-    $image_url = trim($_POST['image_url']);
     $target_persona = trim($_POST['target_persona']);
     $stock_status = trim($_POST['stock_status']);
+    
+    // 🌟 核心：圖片上傳邏輯
+    $image_url = "image/placeholder_pc.png"; // 預設圖片
+    
+    if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] == UPLOAD_ERR_OK) {
+        $target_dir = "image/";
+        // 確保 image 資料夾存在
+        if (!is_dir($target_dir)) { mkdir($target_dir, 0777, true); }
+        
+        $file_extension = strtolower(pathinfo($_FILES["image_file"]["name"], PATHINFO_EXTENSION));
+        $valid_extensions = array("jpg", "jpeg", "png", "gif", "webp");
+        
+        if (!in_array($file_extension, $valid_extensions)) {
+            $error = "Error: Invalid image format. Only JPG, PNG, GIF, WEBP are allowed.";
+        } else {
+            // 生成獨一無二的檔名防止覆蓋
+            $new_filename = uniqid("pkg_") . "." . $file_extension;
+            $target_file = $target_dir . $new_filename;
+            
+            if (move_uploaded_file($_FILES["image_file"]["tmp_name"], $target_file)) {
+                $image_url = $target_file; // 上傳成功，把路徑存給資料庫
+            } else {
+                $error = "Error: Failed to upload the image to the server.";
+            }
+        }
+    }
     
     $score_gamer = intval($_POST['score_gamer']);
     $score_creator = intval($_POST['score_creator']);
     $score_student = intval($_POST['score_student']);
     $score_enthusiast = intval($_POST['score_enthusiast']);
 
-    // 防呆：攔截非法的 AI 分數
-    if ($score_gamer < 0 || $score_gamer > 10 || $score_creator < 0 || $score_creator > 10 || $score_student < 0 || $score_student > 10 || $score_enthusiast < 0 || $score_enthusiast > 10) {
-        $error = "System Error: AI Scores must be strictly between 0 and 10.";
-    } else {
-        // 🌟 開啟資料庫事務 (ACID Transaction)
-        $conn->begin_transaction();
-        
-        try {
-            // 第一步：寫入 packages 主表 (注意：基礎 price 強制設為 0，完全交給前台動態引擎計算！)
-            $base_price = 0;
-            $insert_pkg = $conn->prepare("INSERT INTO packages (package_name, description, price, image_url, target_persona, stock_status, score_gamer, score_creator, score_student, score_enthusiast) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $insert_pkg->bind_param("ssdsssiiii", $package_name, $description, $base_price, $image_url, $target_persona, $stock_status, $score_gamer, $score_creator, $score_student, $score_enthusiast);
-            $insert_pkg->execute();
+    // 只有在圖片上傳沒報錯的情況下，才繼續寫入資料庫
+    if (empty($error)) {
+        // 防呆：攔截非法的 AI 分數
+        if ($score_gamer < 0 || $score_gamer > 10 || $score_creator < 0 || $score_creator > 10 || $score_student < 0 || $score_student > 10 || $score_enthusiast < 0 || $score_enthusiast > 10) {
+            $error = "System Error: AI Scores must be strictly between 0 and 10.";
+        } else {
+            // 🌟 開啟資料庫事務 (ACID Transaction)
+            $conn->begin_transaction();
             
-            // 獲取剛剛新增的套餐 ID
-            $new_package_id = $conn->insert_id;
-            $insert_pkg->close();
+            try {
+                // 第一步：寫入 packages 主表
+                $base_price = 0;
+                $insert_pkg = $conn->prepare("INSERT INTO packages (package_name, description, price, image_url, target_persona, stock_status, score_gamer, score_creator, score_student, score_enthusiast) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $insert_pkg->bind_param("ssdsssiiii", $package_name, $description, $base_price, $image_url, $target_persona, $stock_status, $score_gamer, $score_creator, $score_student, $score_enthusiast);
+                $insert_pkg->execute();
+                
+                // 獲取剛剛新增的套餐 ID
+                $new_package_id = $conn->insert_id;
+                $insert_pkg->close();
 
-            // 第二步：把管理員挑選的零件，逐一寫入 package_items 關聯表！
-            if (isset($_POST['components']) && is_array($_POST['components'])) {
-                $insert_item = $conn->prepare("INSERT INTO package_items (package_id, product_id, quantity) VALUES (?, ?, 1)");
-                foreach ($_POST['components'] as $prod_id) {
-                    if (!empty($prod_id)) { // 只處理有被選取的下拉選單
-                        $pid = intval($prod_id);
-                        $insert_item->bind_param("ii", $new_package_id, $pid);
-                        $insert_item->execute();
+                // 第二步：把管理員挑選的零件，逐一寫入 package_items 關聯表！
+                if (isset($_POST['components']) && is_array($_POST['components'])) {
+                    $insert_item = $conn->prepare("INSERT INTO package_items (package_id, product_id, quantity) VALUES (?, ?, 1)");
+                    foreach ($_POST['components'] as $prod_id) {
+                        if (!empty($prod_id)) {
+                            $pid = intval($prod_id);
+                            $insert_item->bind_param("ii", $new_package_id, $pid);
+                            $insert_item->execute();
+                        }
                     }
+                    $insert_item->close();
                 }
-                $insert_item->close();
+
+                // 雙雙成功，提交事務！
+                $conn->commit();
+                header("Location: manage_packages.php?msg=added");
+                exit();
+
+            } catch (Exception $e) {
+                // 如果發生任何錯誤，全部退回，絕不產生半殘資料！
+                $conn->rollback();
+                $error = "Database Error: Could not save package. " . $e->getMessage();
             }
-
-            // 雙雙成功，提交事務！
-            $conn->commit();
-            header("Location: manage_packages.php?msg=added");
-            exit();
-
-        } catch (Exception $e) {
-            // 如果發生任何錯誤，全部退回，絕不產生半殘資料！
-            $conn->rollback();
-            $error = "Database Error: Could not save package. " . $e->getMessage();
         }
     }
 }
@@ -109,7 +137,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
                 
                 <?php 
-                // 🌟 终极双重识别：不管是 admin_role 还是 role，只要是 superadmin 就放行！
                 $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
                 if (strtolower($sidebar_role) === 'superadmin'): 
                 ?>
@@ -138,7 +165,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
             <?php endif; ?>
 
-            <form method="POST" style="background: rgba(0,0,0,0.5); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+            <form method="POST" enctype="multipart/form-data" style="background: rgba(0,0,0,0.5); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                 
                 <div style="background: rgba(0,242,254,0.05); padding: 20px; border-radius: 8px; border: 1px solid rgba(0,242,254,0.2); margin-bottom: 30px;">
                     <h3 style="color: #00f2fe; margin-top: 0; margin-bottom: 10px;"><i class="fas fa-microchip"></i> Select Package Components</h3>
@@ -189,8 +216,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
 
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
-                        <label>Image URL (e.g., image/pkg_neon.jpg)</label>
-                        <input type="text" name="image_url" class="form-control" value="image/placeholder_pc.png" style="width: 100%;">
+                        <label style="color: #00e676;"><i class="fas fa-image"></i> Insert Photo (Upload Package Image)</label>
+                        <input type="file" name="image_file" accept="image/*" class="form-control" style="width: 100%; padding: 10px; background: rgba(0,230,118,0.05); color: #fff; border: 1px dashed rgba(0,230,118,0.4); cursor: pointer;">
+                        <p style="color: #888; font-size: 11px; margin-top: 5px;">* Leave empty to use default placeholder. Allowed formats: JPG, PNG, GIF, WEBP.</p>
                     </div>
 
                     <div class="form-group full-width" style="grid-column: 1 / -1; margin-top: 10px;">
