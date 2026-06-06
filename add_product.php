@@ -12,7 +12,7 @@ $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
     $name = trim($_POST['product_name']);
-   $category_id = intval($_POST['category_id']);
+    $category_id = intval($_POST['category_id']);
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
     $specs = trim($_POST['specs']);
@@ -27,32 +27,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
     $image_url = 'image/placeholder_pc.png'; 
     $upload_ok = true;
     
-    // 🛡️ 企業級防木馬上傳引擎
+    // 🛡️ 企業級防木馬上傳引擎 + 🚀 Base64 圖片直入資料庫
     if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] === UPLOAD_ERR_OK) {
         $file_tmp = $_FILES['product_image']['tmp_name'];
         $file_size = $_FILES['product_image']['size'];
         
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime_type = finfo_file($finfo, $file_tmp);
+        $mime_type_check = finfo_file($finfo, $file_tmp);
         finfo_close($finfo);
         
         $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
         
-        if (!in_array($mime_type, $allowed_mimes) || $file_size > 5 * 1024 * 1024) {
+        if (!in_array($mime_type_check, $allowed_mimes) || $file_size > 5 * 1024 * 1024) {
             $message = "<div class='alert-error'>⚠️ Upload Denied: Invalid format or exceeds 5MB.</div>";
             $upload_ok = false;
         } else {
             $ext = strtolower(pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION));
-            $new_filename = uniqid('prod_') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-            $target_dir = "image/";
-            if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
-            $target_file = $target_dir . $new_filename;
-
-            if (move_uploaded_file($file_tmp, $target_file)) {
-                $image_url = $target_file;
-            } else {
-                $upload_ok = false;
-            }
+            
+            // 🚀 魔法開始：不存文件，直接讀取圖片的「二進位原始數據」
+            $img_data = file_get_contents($file_tmp);
+            
+            // 將原始數據翻譯成 Base64 亂碼字串
+            $base64_string = base64_encode($img_data);
+            
+            // 判斷 MIME Type (jpg 要換成 jpeg)
+            $mime_type = ($ext == 'jpg') ? 'jpeg' : $ext;
+            
+            // 組合成 HTML 可以直接讀取的超長 URL 格式！
+            $image_url = "data:image/" . $mime_type . ";base64," . $base64_string;
         }
     }
 
@@ -90,7 +92,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
                 <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
                 
                 <?php 
-                // 🌟 终极双重识别：不管是 admin_role 还是 role，只要是 superadmin 就放行！
                 $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
                 if (strtolower($sidebar_role) === 'superadmin'): 
                 ?>
@@ -123,20 +124,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
                     </div>
                     
                     <div class="form-group">
-    <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Category *</label>
-    <select name="category_id" class="form-control" required style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px;">
-        <option value="" disabled selected>-- Select a Category --</option>
-        <?php
-        $cat_query = "SELECT category_id, category_name FROM categories ORDER BY category_name ASC";
-        $cat_result = mysqli_query($conn, $cat_query);
-        if ($cat_result && mysqli_num_rows($cat_result) > 0) {
-            while ($cat_row = mysqli_fetch_assoc($cat_result)) {
-                echo "<option value='{$cat_row['category_id']}'>" . htmlspecialchars($cat_row['category_name']) . "</option>";
-            }
-        }
-        ?>
-    </select>
-</div>
+                        <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:block;">Category *</label>
+                        <select name="category_id" class="form-control" required style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px;">
+                            <option value="" disabled selected>-- Select a Category --</option>
+                            <?php
+                            $cat_query = "SELECT category_id, category_name FROM categories ORDER BY category_name ASC";
+                            $cat_result = mysqli_query($conn, $cat_query);
+                            if ($cat_result && mysqli_num_rows($cat_result) > 0) {
+                                while ($cat_row = mysqli_fetch_assoc($cat_result)) {
+                                    echo "<option value='{$cat_row['category_id']}'>" . htmlspecialchars($cat_row['category_name']) . "</option>";
+                                }
+                            }
+                            ?>
+                        </select>
+                    </div>
                     
                     <div class="form-group">
                         <label>Price (RM) *</label>
@@ -149,8 +150,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
                     </div>
 
                     <div class="form-group">
-                        <label>Product Image (Max 5MB) *</label>
-                        <input type="file" name="product_image" class="form-control" accept=".jpg,.jpeg,.png,.webp" style="width: 100%; padding: 10px;">
+                        <label style="color: #00e676;"><i class="fas fa-image"></i> Product Image (Max 5MB) *</label>
+                        <input type="file" name="product_image" class="form-control" accept=".jpg,.jpeg,.png,.webp" style="width: 100%; padding: 10px; background: rgba(0,230,118,0.05); border: 1px dashed rgba(0,230,118,0.4); cursor: pointer;">
+                        <p style="color: #888; font-size: 11px; margin-top: 5px;">* Leave empty to use default placeholder.</p>
                     </div>
 
                     <div class="form-group full-width" style="grid-column: 1 / -1;">

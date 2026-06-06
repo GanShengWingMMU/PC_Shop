@@ -38,8 +38,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $target_persona = trim($_POST['target_persona']);
     $stock_status = trim($_POST['stock_status']);
     
-    // 🌟 核心：圖片上傳邏輯
-    $image_url = "image/placeholder_pc.png"; // 預設圖片
+    // 🌟 核心：圖片轉 Base64 直入資料庫邏輯！
+    $image_url = "image/placeholder_pc.png"; // 如果沒上傳，還是用預設的本地圖
+    
+    if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] == UPLOAD_ERR_OK) {
+        $file_extension = strtolower(pathinfo($_FILES["image_file"]["name"], PATHINFO_EXTENSION));
+        $valid_extensions = array("jpg", "jpeg", "png", "gif", "webp");
+        
+        if (!in_array($file_extension, $valid_extensions)) {
+            $error = "Error: Invalid image format. Only JPG, PNG, GIF, WEBP are allowed.";
+        } else {
+            // 🚀 魔法開始：不存文件，直接讀取圖片的「二進位原始數據」
+            $img_data = file_get_contents($_FILES['image_file']['tmp_name']);
+            
+            // 將原始數據翻譯成 Base64 亂碼字串
+            $base64_string = base64_encode($img_data);
+            
+            // 判斷 MIME Type (jpg 要換成 jpeg)
+            $mime_type = ($file_extension == 'jpg') ? 'jpeg' : $file_extension;
+            
+            // 組合成 HTML 可以直接讀取的超長 URL 格式！
+            $image_url = "data:image/" . $mime_type . ";base64," . $base64_string;
+            
+            // 現在 $image_url 裡面裝的不是路徑，而是一整張圖片的代碼！
+        }
+    }
     
     if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] == UPLOAD_ERR_OK) {
         $target_dir = "image/";
