@@ -609,13 +609,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <span>FPX Banking</span>
                             </div>
                         </label>
-                        <label class="pm-card">
-                            <input type="radio" name="payment_method" value="Cash on Delivery" onchange="togglePaymentSections()">
-                            <div class="pm-content">
-                                <i class="fa-solid fa-truck-fast"></i>
-                                <span>Pay on Delivery</span>
-                            </div>
-                        </label>
                     </div>
 
                     <div id="ewallet_section" class="ewallet-card" style="display: none; margin-top: 15px;">
