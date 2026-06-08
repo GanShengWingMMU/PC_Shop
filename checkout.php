@@ -224,44 +224,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bank_account_id_to_deduct = null; 
         if ($final_payment_method === 'Credit Card') {
             $selected_card = $_POST['selected_card'] ?? '';
-            if ($selected_card === 'new') {
+if ($selected_card === 'new') {
                 $card_num = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
-                if(strlen($card_num) < 15 || strlen($card_num) > 16) {
-                    throw new Exception("Security Alert: Invalid Card Format.");
-                }
                 $card_cvc = trim($_POST['dummy_card_cvc']);
-                $bank_stmt = $conn->prepare("SELECT id FROM bank WHERE card_number = ? AND cvc = ?");
-                $bank_stmt->bind_param("ss", $card_num, $card_cvc);
+                $card_name = trim($_POST['dummy_card_name'] ?? 'Cardholder'); 
+                $card_expiry = trim($_POST['dummy_card_expiry'] ?? ''); // 🌟 1. 抓取顧客在畫面上輸入的到期日
+                
+                // 🌟 2. 銀行驗證升級：加上 expiry_date 條件，必須卡號、CVC、到期日三個都對才放行！
+                $bank_stmt = $conn->prepare("SELECT id FROM bank WHERE card_number = ? AND cvc = ? AND expiry_date = ?");
+                $bank_stmt->bind_param("sss", $card_num, $card_cvc, $card_expiry);
                 $bank_stmt->execute();
                 $bank_result = $bank_stmt->get_result();
+                
                 if ($bank_result->num_rows > 0) {
-                    
                     $bank_account_id_to_deduct = $bank_result->fetch_assoc()['id']; 
+                    $last_four = substr($card_num, -4);
                     
-                    $save_new_card = isset($_POST['save_new_card']) ? 1 : 0;
-                    if ($save_new_card) {
-                        $cardholder_name = htmlspecialchars(trim($_POST['dummy_card_name'] ?? 'Cardholder'));
-                        $expiry_date = htmlspecialchars(trim($_POST['dummy_card_expiry'] ?? '12/99'));
-                        $last_four = substr($card_num, -4);
-                        
-                        $first_digit = substr($card_num, 0, 1);
-                        if ($first_digit === '4') $card_brand = 'Visa';
-                        elseif ($first_digit === '5') $card_brand = 'Mastercard';
-                        elseif ($first_digit === '3') $card_brand = 'American Express';
-                        else $card_brand = 'Credit Card';
+// 🌟 企業級智慧判斷卡片品牌 (支援大馬常見的 Visa, Mastercard, Amex, UnionPay)
+$card_brand = 'Credit Card'; // 預設值
 
-                        $check_first = $conn->query("SELECT COUNT(*) as count FROM saved_cards WHERE customer_id = $customer_id");
-                        $is_def = ($check_first->fetch_assoc()['count'] == 0) ? 1 : 0;
-
-                        $insert_card = $conn->prepare("INSERT INTO saved_cards (customer_id, bank_id, cardholder_name, last_four_digits, expiry_date, card_brand, is_default) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                        $insert_card->bind_param("iissssi", $customer_id, $bank_account_id_to_deduct, $cardholder_name, $last_four, $expiry_date, $card_brand, $is_def);
-                        $insert_card->execute();
-                    }
-
-                    $final_payment_method = "Visa ending in " . substr($card_num, -4); 
+if (strpos($card_num, '4') === 0) {
+    $card_brand = 'Visa';
+} elseif (strpos($card_num, '5') === 0 || strpos($card_num, '2') === 0) {
+    $card_brand = 'Mastercard';
+} elseif (strpos($card_num, '3') === 0) {
+    $card_brand = 'Amex'; // Maybank 用戶非常常用
+} elseif (strpos($card_num, '6') === 0) {
+    $card_brand = 'UnionPay';
+}
+                    $final_payment_method = $card_brand . " ending in " . $last_four; 
+                    
+                    // 🌟 3. 動態儲存：拔掉寫死的 '12/28'，把顧客剛剛輸入的真實 $card_expiry 存進 saved_cards
+                    $save_card = $conn->prepare("INSERT INTO saved_cards (customer_id, bank_id, cardholder_name, last_four_digits, expiry_date, card_brand) VALUES (?, ?, ?, ?, ?, ?)");
+                    $save_card->bind_param("iissss", $customer_id, $bank_account_id_to_deduct, $card_name, $last_four, $card_expiry, $card_brand);
+                    $save_card->execute();
 
                 } else {
-                    throw new Exception("Bank Declined: Invalid Card Number or CVC. Please try again.");
+                    // 🌟 4. 錯誤訊息也要跟著升級
+                    throw new Exception("Bank Declined: Invalid Card Number, Expiry Date, or CVC. Please try again.");
                 }
             } else {
                 $card_id = intval($selected_card);
@@ -626,7 +626,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <label class="info-card">
                                     <input type="radio" name="selected_card" value="<?php echo htmlspecialchars($card['card_id']); ?>" onchange="toggleNewCardForm()" <?php echo $card['is_default'] ? 'checked' : ''; ?>>
                                     <div class="card-content">
-                                        <strong style="color: #fff;"><?php echo htmlspecialchars($card['card_brand']); ?> ending in <?php echo htmlspecialchars($card['last_four_digits']); ?></strong>
+<span style="font-family: 'JetBrains Mono', monospace; letter-spacing: 2px;">
+    <?php echo $card['card_brand']; ?> &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; <?php echo $card['last_four_digits']; ?>
+</span>
                                         <?php if($card['is_default']) echo '<span class="info-badge" style="margin-left:10px;">DEFAULT</span>'; ?>
                                     </div>
                                 </label>
@@ -996,9 +998,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const expiryInput = document.getElementById('dummy_card_expiry');
         if (expiryInput) {
             expiryInput.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, '');
-                if (value.length > 2) {
-                    value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                let value = e.target.value.replace(/\D/g, ''); // 移除非數字
+                
+                if (value.length > 0) {
+                    // 🌟 1. 抓取前兩個數字 (月份)
+                    let month = value.substring(0, 2);
+                    
+                    if (value.length >= 2) {
+                        // 🌟 核心防呆：如果月份大於 12，強制改成 12；如果是 00，強制改成 01
+                        if (parseInt(month) > 12) month = '12';
+                        if (parseInt(month) === 0) month = '01';
+                    }
+                    
+                    // 🌟 2. 抓取後面的數字 (年份)
+                    let year = value.substring(2, 4);
+                    
+                    // 🌟 3. 組合回去並加上斜線
+                    if (value.length > 2) {
+                        value = month + '/' + year;
+                    } else {
+                        value = month;
+                    }
                 }
                 e.target.value = value;
             });
