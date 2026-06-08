@@ -13,7 +13,6 @@ $product_id = isset($_GET['product_id']) ? intval($_GET['product_id']) : 0;
 
 if ($product_id <= 0) { header("Location: manage_products.php"); exit(); }
 
-// 🌟 獲取現有資料 (存入 $prod)
 $stmt = $conn->prepare("SELECT * FROM products WHERE product_id = ?");
 $stmt->bind_param("i", $product_id);
 $stmt->execute();
@@ -23,10 +22,7 @@ if (!$prod) { header("Location: manage_products.php"); exit(); }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     $name = trim($_POST['product_name']);
-    
-    // ✅ 修复 1：把 'category' 改成了 'category_id' 对应表单里的 name
     $category_id = intval($_POST['category_id']); 
-    
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
     $specs = trim($_POST['specs']);
@@ -37,28 +33,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     $ram_type = trim($_POST['ram_type'] ?? '');
     $performance_tier = intval($_POST['performance_tier'] ?? 1);
 
-    $image_url = $prod['image_url']; // 預設保留舊圖
+    // 🌟 回歸最穩定的實體檔案上傳！
+    $image_url = $prod['image_url']; 
     $upload_ok = true;
     
-    // 如果有上傳新圖，則執行企業級驗證
     if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] === UPLOAD_ERR_OK) {
         $file_tmp = $_FILES['product_image']['tmp_name'];
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime_type = finfo_file($finfo, $file_tmp);
-        finfo_close($finfo);
+        $ext = strtolower(pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION));
+        $valid_extensions = ["jpg", "jpeg", "png", "gif", "webp"];
         
-        $allowed_mimes = ['image/jpeg', 'image/png', 'image/webp'];
-        if (in_array($mime_type, $allowed_mimes)) {
-            $ext = strtolower(pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION));
-            $new_filename = uniqid('prod_') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-            $target_dir = "image/";
-            $target_file = $target_dir . $new_filename;
-            if (move_uploaded_file($file_tmp, $target_file)) {
-                $image_url = $target_file; // 更新路徑
-            }
-        } else {
-            $error = "⚠️ Invalid image format.";
+        if (!in_array($ext, $valid_extensions)) {
+            $error = "⚠️ Upload Denied: Invalid format. Only JPG, PNG, WEBP allowed.";
             $upload_ok = false;
+        } else {
+            // 生成隨機檔名，存入 image/ 資料夾
+            $new_filename = uniqid('prod_') . '.' . $ext;
+            $target_dir = "image/";
+            if (!is_dir($target_dir)) { mkdir($target_dir, 0777, true); }
+            $target_file = $target_dir . $new_filename;
+            
+            if (move_uploaded_file($file_tmp, $target_file)) {
+                $image_url = $target_file; // 資料庫只存路徑 "image/prod_xxx.jpg"
+            } else {
+                $error = "⚠️ Failed to save image to folder.";
+                $upload_ok = false;
+            }
         }
     }
 
@@ -88,24 +87,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
 <body>
     <div class="admin-container">
         <nav class="admin-sidebar">
-            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
+            <div class="sidebar-header">
+                <h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3>
+                <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
+            </div>
             <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
                 
                 <?php 
                 $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
                 if (strtolower($sidebar_role) === 'superadmin'): 
                 ?>
                     <li><a href="manage_staff.php" style="color: var(--accent-warning);" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_staff.php') echo 'class="active"'; ?>><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_users.php') echo 'class="active"'; ?>><i class="fas fa-users"></i> Manage Customers</a></li>
+                    <li><a href="manage_users.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_users.php') echo 'class="active"'; ?>>Manage Customers</a></li>
                 <?php endif; ?>
                 
-                <li><a href="manage_categories.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_categories.php') echo 'class="active"'; ?>><i class="fas fa-tags"></i> Categories</a></li>
-                <li><a href="manage_products.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_products.php') echo 'class="active"'; ?>><i class="fas fa-box"></i> Products</a></li> 
-                <li><a href="manage_packages.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_packages.php') echo 'class="active"'; ?>><i class="fas fa-layer-group"></i> Packages</a></li>
-                <li><a href="manage_orders.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_orders.php') echo 'class="active"'; ?>><i class="fas fa-shopping-cart"></i> Orders</a></li>
+                <li><a href="manage_categories.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_categories.php') echo 'class="active"'; ?>>Categories</a></li>
+                <li><a href="manage_products.php" class="active"><i class="fas fa-box"></i> Products</a></li> 
+                <li><a href="manage_packages.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_packages.php') echo 'class="active"'; ?>>Packages</a></li>
+                <li><a href="manage_orders.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_orders.php') echo 'class="active"'; ?>>Orders</a></li>
                 
-                <li><a href="admin_logout.php" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Log out</a></li> 
+                <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
             </ul>
         </nav>
 
@@ -133,9 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
                             $cat_result = mysqli_query($conn, $cat_query);
                             if ($cat_result && mysqli_num_rows($cat_result) > 0) {
                                 while ($cat_row = mysqli_fetch_assoc($cat_result)) {
-                                    // ✅ 修复 2：把 $product 改成 $prod，匹配上面查出来的变量名
                                     $selected = (isset($prod['category_id']) && $prod['category_id'] == $cat_row['category_id']) ? 'selected' : '';
-                                    
                                     echo "<option value='{$cat_row['category_id']}' {$selected}>" . htmlspecialchars($cat_row['category_name']) . "</option>";
                                 }
                             }
@@ -153,9 +153,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
                         <input type="number" name="stock" class="form-control" value="<?php echo $prod['stock_quantity']; ?>" required style="width: 100%;">
                     </div>
 
-                    <div class="form-group">
-                        <label>Replace Image (Leave blank to keep current)</label>
-                        <input type="file" name="product_image" class="form-control" accept=".jpg,.jpeg,.png,.webp" style="width: 100%; padding: 10px;">
+                    <div class="form-group full-width" style="grid-column: 1 / -1;">
+                        <label style="color: #00e676;"><i class="fas fa-image"></i> Update Photo</label>
+                        <input type="file" name="product_image" accept=".jpg,.jpeg,.png,.webp" class="form-control" style="width: 100%; padding: 10px; background: rgba(0,230,118,0.05); color: #fff; border: 1px dashed rgba(0,230,118,0.4); cursor: pointer;">
+                        <p style="color: #888; font-size: 11px; margin-top: 5px;">* Leave empty to keep current image. Saved securely in the local image folder.</p>
                     </div>
 
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
@@ -192,7 +193,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
                 </div>
 
                 <button type="submit" name="update_product" style="width: 100%; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: 900; font-size: 16px; cursor: pointer; transition: 0.3s;">
-                    <i class="fas fa-sync"></i> Re-align Matrix Data
+                    <i class="fas fa-sync"></i> Save & Re-align Data
                 </button>
             </form>
         </div>
