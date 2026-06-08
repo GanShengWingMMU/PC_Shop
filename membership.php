@@ -11,38 +11,64 @@ if (!isset($_SESSION['customer_id'])) {
 $customer_id = $_SESSION['customer_id'];
 
 // 🌟 抓取會員狀態、到期日與自動續約狀態
-$stmt = $conn->prepare("SELECT membership_tier, reward_coins, vip_expiry_date, auto_renew FROM customers WHERE customer_id = ?");
+$stmt = $conn->prepare("SELECT membership_tier, reward_coins, wallet_balance, vip_expiry_date, auto_renew FROM customers WHERE customer_id = ?");
 $stmt->bind_param("i", $customer_id);
 $stmt->execute();
 $user_data = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 $current_tier = $user_data['membership_tier'];
+$is_first_time = empty($user_data['vip_expiry_date']); // 🌟 判断是否曾经开通过 VIP
+$subscription_fee = 29.90;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
-    // 🎯 情況 A：第一次加入 (首月免費)
+    // 🎯 情況 A：加入/續訂 VIP
     if (isset($_POST['join_vip'])) {
-        // 🌟 致命修復：嚴格檢查是否已經是 VIP，防止無限刷 500 金幣漏洞！
         if ($current_tier === 'VIP') {
             $_SESSION['error_msg'] = "SECURITY ALERT: You are already an ELITE member.";
             header("Location: membership.php");
             exit();
         }
 
+        // 🌟 修复：如果不是首次开通，则必须从钱包扣除 RM 29.90
+        if (!$is_first_time) {
+            if ($user_data['wallet_balance'] < $subscription_fee) {
+                $_SESSION['error_msg'] = "Insufficient wallet balance. Please top up RM " . number_format($subscription_fee, 2) . " to renew ELITE.";
+                header("Location: membership.php");
+                exit();
+            }
+            // 扣除余额并记录交易
+            $new_balance = $user_data['wallet_balance'] - $subscription_fee;
+            $deduct_stmt = $conn->prepare("UPDATE customers SET wallet_balance = ? WHERE customer_id = ?");
+            $deduct_stmt->bind_param("di", $new_balance, $customer_id);
+            $deduct_stmt->execute();
+            
+            $trans_stmt = $conn->prepare("INSERT INTO wallet_transactions (customer_id, amount, transaction_type, description) VALUES (?, ?, 'Deduction', 'Renewed ELITE Membership')");
+            $trans_stmt->bind_param("id", $customer_id, $subscription_fee);
+            $trans_stmt->execute();
+        }
+
         $expiry_date = date('Y-m-d H:i:s', strtotime('+30 days'));
+        // 🌟 修复：防止刷金币，只有首次开通才送 500 金币
+        $coins_to_add = $is_first_time ? 500 : 0;
 
         $update_sql = "UPDATE customers 
                        SET membership_tier = 'VIP', 
-                           reward_coins = reward_coins + 500,
-                           vip_expiry_date = ? 
+                           reward_coins = reward_coins + ?,
+                           vip_expiry_date = ?,
+                           auto_renew = 1 
                        WHERE customer_id = ?";
                        
         $stmt = $conn->prepare($update_sql);
-        $stmt->bind_param("si", $expiry_date, $customer_id);
+        $stmt->bind_param("isi", $coins_to_add, $expiry_date, $customer_id);
         
         if ($stmt->execute()) {
-            $_SESSION['success_msg'] = "Welcome to ELITE! Your first month is free and expires on " . date('d M Y', strtotime($expiry_date));
+            if ($is_first_time) {
+                $_SESSION['success_msg'] = "Welcome to ELITE! Your first month is free and expires on " . date('d M Y', strtotime($expiry_date));
+            } else {
+                $_SESSION['success_msg'] = "Welcome back! RM 29.90 has been deducted. ELITE expires on " . date('d M Y', strtotime($expiry_date));
+            }
         }
         $stmt->close();
         
@@ -217,9 +243,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </form>
             <?php else: ?>
                 <form method="POST">
-                    <button type="submit" name="join_vip" style="background: #00f2fe; color: #000; padding: 15px 35px; border-radius: 30px; border: none; font-weight: 900; font-size: 1.2rem; cursor: pointer; box-shadow: 0 0 20px rgba(0,242,254,0.4);">
-                        Claim First Month FREE <i class="fa-solid fa-arrow-right"></i>
-                    </button>
+                    <?php if ($is_first_time): ?>
+                        <button type="submit" name="join_vip" style="background: #00f2fe; color: #000; padding: 15px 35px; border-radius: 30px; border: none; font-weight: 900; font-size: 1.2rem; cursor: pointer; box-shadow: 0 0 20px rgba(0,242,254,0.4);">
+                            Claim First Month FREE <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    <?php else: ?>
+                        <button type="submit" name="join_vip" style="background: #ffd700; color: #000; padding: 15px 35px; border-radius: 30px; border: none; font-weight: 900; font-size: 1.2rem; cursor: pointer; box-shadow: 0 0 20px rgba(255,215,0,0.4);">
+                            Renew ELITE (RM 29.90/mo) <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    <?php endif; ?>
                 </form>
             <?php endif; ?>
         </div>

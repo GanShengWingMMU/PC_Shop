@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     }
 
     // 后端严谨校验
+    // 后端严谨校验
     if (empty($new_user) || empty($new_email)) { 
         $update_err = "Core fields (Username/Email) cannot be empty."; 
     } elseif (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $new_user)) {
@@ -44,8 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
 
         if ($input_time === false || $input_time < $min_allowed_time || $input_time > $max_allowed_time) {
             $update_err = "Invalid birthday. You must be at least 13 years old to maintain a profile.";
-        }} else {
+        }
+    } // 🌟 修复：删除了原来的 else 括号，让后面的更新逻辑能够正常运行
         
+    // 独立出密码校验和更新逻辑
+    if (empty($update_err)) {
         if (!empty($new_pass)) {
             $current_pass = $_POST['current_password'] ?? '';
             
@@ -65,36 +69,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
                 $update_err = "New passwords do not match."; 
             }
         }
+    }
         
-        if (empty($update_err)) {
-            $check_stmt = $conn->prepare("SELECT customer_id FROM customers WHERE (email = ? OR username = ?) AND customer_id != ?");
-            $check_stmt->bind_param("ssi", $new_email, $new_user, $customer_id);
-            $check_stmt->execute();
-            if ($check_stmt->get_result()->num_rows > 0) {
-                $update_err = "The selected Username or Email is already taken by another account.";
-            } else {
-                $sql = "UPDATE customers SET username=?, email=?, phone_number=?, birthday=? " . (!empty($new_pass) ? ", password=?" : "") . " WHERE customer_id=?";
-                $stmt = $conn->prepare($sql);
-                
-                if (!empty($new_pass)) {
-                    $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
-                    $stmt->bind_param("sssssi", $new_user, $new_email, $new_phone, $new_birthday, $hashed, $customer_id);
-                } else { 
-                    $stmt->bind_param("ssssi", $new_user, $new_email, $new_phone, $new_birthday, $customer_id); 
-                }
-                
-                if ($stmt->execute()) { 
-                    $_SESSION['username'] = $new_user; 
-                    $update_msg = "Profile updated successfully."; 
-                } else {
-                    $update_err = "Database error. Failed to update profile.";
-                }
-                $stmt->close();
+    if (empty($update_err)) {
+        $check_stmt = $conn->prepare("SELECT customer_id FROM customers WHERE (email = ? OR username = ?) AND customer_id != ?");
+        $check_stmt->bind_param("ssi", $new_email, $new_user, $customer_id);
+        $check_stmt->execute();
+        if ($check_stmt->get_result()->num_rows > 0) {
+            $update_err = "The selected Username or Email is already taken by another account.";
+        } else {
+            $sql = "UPDATE customers SET username=?, email=?, phone_number=?, birthday=? " . (!empty($new_pass) ? ", password=?" : "") . " WHERE customer_id=?";
+            $stmt = $conn->prepare($sql);
+            
+            if (!empty($new_pass)) {
+                $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
+                $stmt->bind_param("sssssi", $new_user, $new_email, $new_phone, $new_birthday, $hashed, $customer_id);
+            } else { 
+                $stmt->bind_param("ssssi", $new_user, $new_email, $new_phone, $new_birthday, $customer_id); 
             }
-            $check_stmt->close();
+            
+            if ($stmt->execute()) { 
+                $_SESSION['username'] = $new_user; 
+                $update_msg = "Profile updated successfully."; 
+            } else {
+                $update_err = "Database error. Failed to update profile.";
+            }
+            $stmt->close();
         }
+        $check_stmt->close();
     }
 }
+
 
 // ==========================================
 // 🌟 核心逻辑 2：处理地址管理
