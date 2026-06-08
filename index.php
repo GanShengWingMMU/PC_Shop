@@ -347,7 +347,17 @@ include 'includes/header.php';
             <div class="matrix-card">
                 <a href="builder_load_package.php?pkg_id=<?php echo $pkg['package_id']; ?>" style="text-decoration: none;">
                     <div class="mc-img-box">
-                        <img src="<?php echo htmlspecialchars($pkg['image_url'] ?? 'https://via.placeholder.com/300x300'); ?>" alt="PC Package">
+                        <?php 
+                            $raw_pkg_img = $pkg['image_url'] ?? '';
+                            if (empty($raw_pkg_img) || strpos($raw_pkg_img, 'placeholder') !== false) {
+                                $pkg_img_src = 'image/placeholder.jpg';
+                            } elseif (strpos($raw_pkg_img, 'data:image') === 0 || strpos($raw_pkg_img, 'http') === 0) {
+                                $pkg_img_src = $raw_pkg_img;
+                            } else {
+                                $pkg_img_src = (strpos($raw_pkg_img, 'image/') === 0) ? $raw_pkg_img : 'image/' . basename($raw_pkg_img);
+                            }
+                        ?>
+                        <img src="<?php echo htmlspecialchars($pkg_img_src); ?>" alt="PC Package" onerror="this.src='image/placeholder.jpg';">
                         
                         <div class="telemetry-overlay">
                             <div class="tele-row">

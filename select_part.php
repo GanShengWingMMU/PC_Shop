@@ -3,7 +3,7 @@ ob_start();
 session_start();
 require_once 'config.php';
 
-// 🌟 终极强力洗消：如果 pc_build 脏了（变成了数字而不是数组），强行重置！彻底消灭 int on int 报错！
+// 🌟 强力洗消：如果 pc_build 脏了（变成了数字而不是数组），强行重置！
 if (!isset($_SESSION['pc_build']) || !is_array($_SESSION['pc_build'])) {
     $_SESSION['pc_build'] = [];
 }
@@ -21,6 +21,7 @@ if ($category_id == 0) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
     $product_id = intval($_POST['product_id']);
     
+    // 🌟 CTO 修复：只查询和存储 ID，绝对不存多维数组！
     $stmt = $conn->prepare("SELECT product_id FROM products WHERE product_id = ? AND category_id = ? AND stock_quantity > 0 AND status = 'Available'");
     $stmt->bind_param("ii", $product_id, $category_id);
     $stmt->execute();
@@ -28,7 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
     
     if ($res->num_rows > 0) {
         $row = $res->fetch_assoc();
-        // 🌟 核心修复：只存整数 ID！与 builder.php 第 101 行完美契合
         $_SESSION['pc_build'][$category_id] = (int)$row['product_id'];
     } else {
         $_SESSION['error_msg'] = "Sorry, this item just went out of stock or is invalid.";
@@ -48,7 +48,7 @@ $ram_type_req = isset($_GET['ram_type']) ? trim($_GET['ram_type']) : '';
 
 $cat_name = "Component";
 $stmt_cat = $conn->prepare("SELECT category_name FROM categories WHERE category_id = ?");
-$stmt_cat->bind_param("i", $category_id);
+$stmt_cat->bind_param("i", $category_id); // 🌟 CTO 修复：废除 PDO 数组绑定
 $stmt_cat->execute();
 if ($row_cat = $stmt_cat->get_result()->fetch_assoc()) {
     $cat_name = $row_cat['category_name']; 
@@ -85,7 +85,7 @@ if ($min_wattage > 0 && $category_id == 6) {
 }
 
 $stmt_products = $conn->prepare($sql);
-$stmt_products->bind_param($types, ...$params);
+$stmt_products->bind_param($types, ...$params); // 🌟 CTO 修复：使用展开运算符完美兼容
 $stmt_products->execute();
 $result = $stmt_products->get_result();
 
@@ -136,7 +136,19 @@ include 'includes/header.php';
         <?php if ($result->num_rows > 0): ?>
             <?php while ($row = $result->fetch_assoc()): ?>
                 <div class="product-card">
-                    <img src="<?php echo !empty($row['image_url']) ? htmlspecialchars($row['image_url']) : 'https://via.placeholder.com/280x180/111/333?text=PC+Part'; ?>" alt="Part" class="prod-img">
+                    
+                    <?php 
+                        // 🌟 CTO 终极智能图片路径处理引擎 (全面兼容 Base64)
+                        $raw_img = $row['image_url'] ?? '';
+                        if (empty($raw_img) || strpos($raw_img, 'placeholder') !== false) {
+                            $img_src = 'image/placeholder.jpg';
+                        } elseif (strpos($raw_img, 'data:image') === 0 || strpos($raw_img, 'http') === 0) {
+                            $img_src = $raw_img;
+                        } else {
+                            $img_src = (strpos($raw_img, 'image/') === 0) ? $raw_img : 'image/' . basename($raw_img);
+                        }
+                    ?>
+                    <img src="<?php echo htmlspecialchars($img_src); ?>" alt="<?php echo htmlspecialchars($row['product_name']); ?>" class="prod-img" onerror="this.src='image/placeholder.jpg';">
                     
                     <div class="prod-name"><?php echo htmlspecialchars($row['product_name']); ?></div>
                     <div class="prod-desc">

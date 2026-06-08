@@ -10,6 +10,32 @@ if (!isset($_SESSION['customer_id'])) {
 $customer_id = $_SESSION['customer_id'];
 $sys_msg = $sys_err = "";
 
+// ==========================================
+// 🌟 核心升级 1：处理删帖逻辑 (带所有权验证)
+// ==========================================
+if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['post_id'])) {
+    $del_post_id = intval($_GET['post_id']);
+    
+    // 强制验证：只能删除自己的帖子！
+    $verify_del = $conn->prepare("SELECT post_id FROM community_posts WHERE post_id = ? AND customer_id = ?");
+    $verify_del->bind_param("ii", $del_post_id, $customer_id);
+    $verify_del->execute();
+    
+    if ($verify_del->get_result()->num_rows > 0) {
+        $do_del = $conn->prepare("DELETE FROM community_posts WHERE post_id = ?");
+        $do_del->bind_param("i", $del_post_id);
+        if ($do_del->execute()) {
+            $sys_msg = "Signal permanently erased from the network.";
+        } else {
+            $sys_err = "System Error: Failed to erase signal.";
+        }
+        $do_del->close();
+    } else {
+        $sys_err = "SECURITY ALERT: You cannot delete someone else's signal.";
+    }
+    $verify_del->close();
+}
+
 // 1. 处理点赞逻辑 (🌟 统一 Prepared Statement)
 if (isset($_GET['action']) && $_GET['action'] == 'like' && isset($_GET['post_id'])) {
     $post_id = intval($_GET['post_id']);
@@ -28,7 +54,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'like' && isset($_GET['post_id'
         $ins_stmt->execute();
     }
     
-    // 🌟 修复 XSS 漏洞
     $filter_param = isset($_GET['filter']) ? "&filter=" . htmlspecialchars($_GET['filter']) : "";
     header("Location: community.php?$filter_param"); 
     exit();
@@ -36,15 +61,14 @@ if (isset($_GET['action']) && $_GET['action'] == 'like' && isset($_GET['post_id'
 
 // 2. 处理发布新帖 (🌟 增加所有权越权防御 IDOR)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
-    $title = htmlspecialchars(trim($_POST['title'])); // 防护XSS
-    $content = htmlspecialchars(trim($_POST['content'])); // 防护XSS
+    $title = htmlspecialchars(trim($_POST['title'])); 
+    $content = htmlspecialchars(trim($_POST['content'])); 
     $post_type = $_POST['post_type'];
     $pc_build_id = null;
 
     if ($post_type == 'Showcase' && !empty($_POST['pc_build_id'])) {
         $submitted_build_id = intval($_POST['pc_build_id']);
         
-        // 🌟 越权拦截：验证该配置确实属于当前登录用户！
         $verify_owner = $conn->prepare("SELECT pc_build FROM saved_builds WHERE pc_build = ? AND customer_id = ?");
         $verify_owner->bind_param("ii", $submitted_build_id, $customer_id);
         $verify_owner->execute();
@@ -72,12 +96,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
 // 3. 抓取页面数据
 $my_builds = $conn->query("SELECT pc_build, build_name, total_price FROM saved_builds WHERE customer_id = $customer_id ORDER BY created_at DESC");
 
-// 过滤器
+// ==========================================
+// 🌟 核心升级 2：Trending (热门) 过滤器支持
+// ==========================================
 $filter_type = isset($_GET['filter']) ? $_GET['filter'] : 'All';
 $where_clause = "";
-// 🌟 已修复：安全判断，只允许预设参数生效
-if ($filter_type == 'Showcase') $where_clause = "WHERE cp.post_type = 'Showcase'";
-elseif ($filter_type == 'Discussion') $where_clause = "WHERE cp.post_type IN ('Discussion', 'Question')";
+$order_clause = "ORDER BY cp.created_at DESC"; // 默认最新排序
+
+if ($filter_type == 'Showcase') {
+    $where_clause = "WHERE cp.post_type = 'Showcase'";
+} elseif ($filter_type == 'Discussion') {
+    $where_clause = "WHERE cp.post_type IN ('Discussion', 'Question')";
+} elseif ($filter_type == 'Trending') {
+    // 热门按赞数从高到低排序，其次才是时间
+    $order_clause = "ORDER BY like_count DESC, cp.created_at DESC";
+}
 
 $query_posts = "
     SELECT cp.*, c.username, c.reward_coins,
@@ -89,7 +122,7 @@ $query_posts = "
     JOIN customers c ON cp.customer_id = c.customer_id
     LEFT JOIN saved_builds sb ON cp.pc_build_id = sb.pc_build
     $where_clause
-    ORDER BY cp.created_at DESC
+    $order_clause
 ";
 $posts = $conn->query($query_posts);
 
@@ -120,7 +153,6 @@ function getRankBadge($coins) {
         
         .dashboard-container { max-width: 1300px; margin: 40px auto; padding: 0 20px; position: relative; z-index: 1; }
         
-        /* 头部高清晰度优化 */
         .community-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; border-bottom: 2px solid rgba(255,255,255,0.05); padding-bottom: 20px;}
         .community-header h1 { margin: 0; font-size: 2.8rem; font-weight: 900; color: #fff; letter-spacing: -1px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
         .community-header p { margin: 5px 0 0 0; color: #00f2fe; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;}
@@ -129,7 +161,6 @@ function getRankBadge($coins) {
         .tech-btn:hover { background: #00f2fe; color: #000; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); transform: translateY(-2px);}
         .tech-btn-primary { background: #00f2fe; color: #000; }
 
-        /* 发帖表单: 增加可读性 */
         .post-form-container { display: none; background: #0b0f16; border: 1px solid #00f2fe; padding: 30px; border-radius: 12px; margin-bottom: 30px; animation: slideDown 0.3s ease; box-shadow: 0 20px 40px rgba(0, 242, 254, 0.1);}
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .tech-input { width: 100%; background: #111827; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 15px; border-radius: 8px; font-size: 1rem; font-family: 'Inter', sans-serif; margin-bottom: 20px; box-sizing: border-box; transition: 0.3s;}
@@ -137,18 +168,16 @@ function getRankBadge($coins) {
         .tech-label { color: #cbd5e1; font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; display: block; }
         .helper-text { font-size: 0.8rem; color: #64748b; margin-top: -15px; margin-bottom: 20px; display: block; }
 
-        /* 双栏布局 */
         .community-layout { display: grid; grid-template-columns: 1fr 340px; gap: 40px; align-items: start;}
 
-        /* 过滤器 (明确的视觉反馈) */
         .filter-bar { display: flex; gap: 15px; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; overflow-x: auto; white-space: nowrap;}
         .filter-btn { padding: 10px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; font-size: 0.95rem; font-weight: 700; text-decoration: none; transition: 0.3s; background: rgba(255,255,255,0.02);}
         .filter-btn:hover { background: rgba(255,255,255,0.05); color: #fff;}
         .filter-btn.active { background: rgba(0, 242, 254, 0.1); color: #00f2fe; border-color: #00f2fe; }
+        .filter-btn.trending-active { background: rgba(255, 69, 0, 0.1); color: #ff4500; border-color: #ff4500; }
 
         .post-feed { display: flex; flex-direction: column; gap: 25px; }
         
-        /* 🌟 高清晰度帖子卡片 */
         .post-card { background: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 30px; transition: 0.3s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
         .post-card:hover { border-color: rgba(0,242,254,0.3); transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.6); }
         
@@ -167,26 +196,32 @@ function getRankBadge($coins) {
         .post-title { font-size: 1.5rem; font-weight: 900; margin: 0 0 15px 0; color: #fff; line-height: 1.3;}
         .post-content { color: #cbd5e1; line-height: 1.7; font-size: 1rem; margin-bottom: 25px; white-space: pre-wrap; }
         
-        /* 🌟 超强 PC Builder 联动展示 UI */
         .showcase-box { background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 10px; padding: 20px; margin-bottom: 25px; }
         .showcase-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px dashed rgba(168, 85, 247, 0.3); padding-bottom: 15px;}
         .showcase-badge { color: #d8b4fe; font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;}
         .showcase-price { color: #fff; font-family: 'JetBrains Mono'; font-weight: 800; font-size: 1.4rem; }
         
-        /* 联动预览硬件模块 */
         .specs-preview { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
-        .spec-tag { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; gap: 8px;}
+        .spec-tag { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; gap: 8px; position: relative; cursor: crosshair; transition: 0.3s;}
         .spec-tag i { color: #00f2fe; }
+        .spec-tag:hover { border-color: #00f2fe; background: rgba(0, 242, 254, 0.1); }
+
+        .tech-tooltip { position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%) translateY(10px); background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(10px); border: 1px solid #00f2fe; border-radius: 8px; padding: 15px; width: 260px; box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,242,254,0.2); opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 100; pointer-events: none;}
+        .tech-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #00f2fe transparent transparent transparent;}
+        .spec-tag:hover .tech-tooltip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+        .tt-cat { color: #00f2fe; font-family: 'JetBrains Mono'; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+        .tt-name { color: #fff; font-size: 0.95rem; font-weight: 800; line-height: 1.3; margin-bottom: 15px; }
+        .tt-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; }
+        .tt-price { color: #a855f7; font-family: 'JetBrains Mono'; font-weight: 900; font-size: 1.1rem; }
+        .tt-stock { font-size: 0.75rem; font-weight: bold; }
 
         .post-actions { display: flex; gap: 20px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 20px; flex-wrap: wrap;}
         .action-btn { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); color: #cbd5e1; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; text-decoration: none;}
         .action-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
         .action-btn.liked { background: rgba(255, 0, 127, 0.1); border-color: rgba(255, 0, 127, 0.3); color: #ff007f; }
 
-        /* --- 右侧挂件栏 --- */
         .sidebar { display: flex; flex-direction: column; gap: 25px; }
         
-        /* 🌟 新增：用户引导/行动号召 (CTA) 挂件 */
         .widget-cta { background: linear-gradient(135deg, rgba(0,242,254,0.1), rgba(168,85,247,0.1)); border: 1px solid #00f2fe; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 10px 20px rgba(0,242,254,0.1);}
         .widget-cta h3 { color: #fff; margin: 0 0 10px 0; font-size: 1.2rem; font-weight: 800;}
         .widget-cta p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5;}
@@ -203,7 +238,6 @@ function getRankBadge($coins) {
         .top-user-list li:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
         .top-avatar { width: 40px; height: 40px; border-radius: 10px; background: #1f2937; border: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; font-weight: 900; font-size: 1rem;}
 
-        /* 📱 响应式设计 (Responsive Design) */
         @media (max-width: 992px) {
             .community-layout { grid-template-columns: 1fr; }
             .sidebar { order: -1; margin-bottom: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;}
@@ -215,38 +249,6 @@ function getRankBadge($coins) {
             .post-actions { flex-wrap: wrap; }
             .action-btn { flex-grow: 1; justify-content: center; }
         }
-         /* 🌟 极客悬浮窗 (Tech Tooltip) 动画与样式 */
-.spec-tag { 
-    background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; 
-    border-radius: 6px; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; gap: 8px;
-    position: relative; cursor: crosshair; transition: 0.3s;
-}
-.spec-tag i { color: #00f2fe; }
-.spec-tag:hover { border-color: #00f2fe; background: rgba(0, 242, 254, 0.1); }
-
-/* Tooltip 本体：初始隐藏并往下沉 */
-.tech-tooltip {
-    position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%) translateY(10px);
-    background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(10px);
-    border: 1px solid #00f2fe; border-radius: 8px; padding: 15px; width: 260px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,242,254,0.2);
-    opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    z-index: 100; pointer-events: none;
-}
-/* 小三角箭头 */
-.tech-tooltip::after {
-    content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px;
-    border-width: 6px; border-style: solid; border-color: #00f2fe transparent transparent transparent;
-}
-/* 鼠标悬停：浮现并上浮 */
-.spec-tag:hover .tech-tooltip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
-
-/* Tooltip 内部排版 */
-.tt-cat { color: #00f2fe; font-family: 'JetBrains Mono'; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
-.tt-name { color: #fff; font-size: 0.95rem; font-weight: 800; line-height: 1.3; margin-bottom: 15px; }
-.tt-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; }
-.tt-price { color: #a855f7; font-family: 'JetBrains Mono'; font-weight: 900; font-size: 1.1rem; }
-.tt-stock { font-size: 0.75rem; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -318,8 +320,11 @@ function getRankBadge($coins) {
             
             <div class="filter-bar">
                 <a href="community.php?filter=All" class="filter-btn <?php echo htmlspecialchars($filter_type) == 'All' ? 'active' : ''; ?>">All Signals</a>
-                <a href="community.php?filter=Showcase" class="filter-btn <?php echo htmlspecialchars($filter_type) == 'Showcase' ? 'active' : ''; ?>"><i class="fas fa-fire"></i> Build Showcases</a>
-                <a href="community.php?filter=Discussion" class="filter-btn <?php echo htmlspecialchars($filter_type) == 'Discussion' ? 'active' : ''; ?>">Discussions & Q&A</a>
+                
+                <a href="community.php?filter=Trending" class="filter-btn <?php echo htmlspecialchars($filter_type) == 'Trending' ? 'active' : ''; ?>"><i class="fas fa-fire" style="color: #ff4d4d; margin-right: 5px;"></i> Trending</a>
+                
+                <a href="community.php?filter=Showcase" class="filter-btn <?php echo htmlspecialchars($filter_type) == 'Showcase' ? 'active' : ''; ?>"><i class="fas fa-desktop"></i> Build Showcases</a>
+                <a href="community.php?filter=Discussion" class="filter-btn <?php echo htmlspecialchars($filter_type) == 'Discussion' ? 'active' : ''; ?>"><i class="fas fa-comments"></i> Discussions & Q&A</a>
             </div>
 
             <div class="post-feed">
@@ -359,7 +364,6 @@ function getRankBadge($coins) {
                                 <div class="specs-preview">
                                     <?php
                                     $b_id = $p['pc_build_id'];
-                                    // 🌟 升级：多抓取 price, stock_quantity 和 status
                                     $specs_sql = "SELECT c.category_name, p.product_name, p.price, p.stock_quantity, p.status 
                                                   FROM build_items bi 
                                                   JOIN products p ON bi.product_id = p.product_id 
@@ -377,7 +381,6 @@ function getRankBadge($coins) {
                                             
                                             $short_name = strlen($spec['product_name']) > 20 ? substr($spec['product_name'],0,20)."..." : $spec['product_name'];
                                             
-                                            // 库存逻辑判断
                                             $stock_color = $spec['stock_quantity'] > 0 ? '#00e676' : '#ff4d4d';
                                             $stock_text = $spec['stock_quantity'] > 0 ? $spec['stock_quantity'].' In Stock' : 'Out of Stock';
                                             
@@ -411,9 +414,16 @@ function getRankBadge($coins) {
                             <a href="community.php?action=like&post_id=<?php echo $p['post_id']; ?><?php echo htmlspecialchars($filter_type) != 'All' ? '&filter='.htmlspecialchars($filter_type) : ''; ?>" class="action-btn <?php echo $p['user_liked'] > 0 ? 'liked' : ''; ?>">
                                 <i class="<?php echo $p['user_liked'] > 0 ? 'fas' : 'far'; ?> fa-heart"></i> <?php echo $p['like_count']; ?> Likes
                             </a>
-                            <a href="#" class="action-btn">
+                            
+                            <a href="post_detail.php?id=<?php echo $p['post_id']; ?>" class="action-btn">
                                 <i class="far fa-comment-dots"></i> <?php echo $p['comment_count']; ?> Replies
                             </a>
+
+                            <?php if ($p['customer_id'] == $customer_id): ?>
+                                <a href="community.php?action=delete&post_id=<?php echo $p['post_id']; ?>" class="action-btn" style="color: #ff4d4d; border-color: rgba(255, 77, 77, 0.3);" onclick="return confirm('Are you sure you want to erase this signal?');">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endwhile; else: ?>

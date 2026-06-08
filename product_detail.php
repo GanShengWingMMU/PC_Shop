@@ -366,9 +366,20 @@ if (count($reviews) > 0) {
         
         <div class="image-gallery">
             <div class="main-image-box">
-                <img src="<?php echo htmlspecialchars($product['image_url'] ? $product['image_url'] : 'image/placeholder_pc.png'); ?>" alt="<?php echo htmlspecialchars($product['product_name']); ?>" class="main-image" id="mainProductImage">
+               <?php 
+                // 🌟 CTO 终极智能图片路径处理引擎
+                $raw_img = $product['image_url'] ?? '';
+                if (empty($raw_img) || strpos($raw_img, 'placeholder') !== false) {
+                    $img_src = 'image/placeholder.jpg';
+                } elseif (strpos($raw_img, 'data:image') === 0 || strpos($raw_img, 'http') === 0) {
+                    $img_src = $raw_img;
+                } else {
+                    $img_src = (strpos($raw_img, 'image/') === 0) ? $raw_img : 'image/' . basename($raw_img);
+                }
+            ?>
+            <img src="<?php echo htmlspecialchars($img_src); ?>" alt="<?php echo htmlspecialchars($product['product_name']); ?>" class="main-image" id="mainProductImage" onerror="this.src='image/placeholder.jpg';">
             </div>
-            </div>
+        </div>
         
         <div class="info-panel">
             <div class="product-meta">
@@ -452,7 +463,18 @@ if (count($reviews) > 0) {
             <?php foreach ($recommended_products as $rec): ?>
                 <a href="product_detail.php?id=<?php echo $rec['product_id']; ?>" class="rec-card">
                     <div class="rec-img-box">
-                        <img src="<?php echo htmlspecialchars($rec['image_url']); ?>" alt="Recommended" class="rec-img">
+                        <?php 
+                // 🌟 CTO 终极智能图片路径处理引擎
+                $raw_img = $product['image_url'] ?? '';
+                if (empty($raw_img) || strpos($raw_img, 'placeholder') !== false) {
+                    $img_src = 'image/placeholder.jpg';
+                } elseif (strpos($raw_img, 'data:image') === 0 || strpos($raw_img, 'http') === 0) {
+                    $img_src = $raw_img;
+                } else {
+                    $img_src = (strpos($raw_img, 'image/') === 0) ? $raw_img : 'image/' . basename($raw_img);
+                }
+            ?>
+            <img src="<?php echo htmlspecialchars($img_src); ?>" alt="<?php echo htmlspecialchars($product['product_name']); ?>" class="main-image" id="mainProductImage" onerror="this.src='image/placeholder.jpg';">
                     </div>
                     
                     <h4 class="rec-title"><?php echo htmlspecialchars($rec['product_name']); ?></h4>
