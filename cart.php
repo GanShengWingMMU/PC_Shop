@@ -11,6 +11,29 @@ $customer_id = $_SESSION['customer_id'];
 $cart_items = [];
 $total_price = 0;
 
+// 👇 🌟 新增：在這裡處理數量 +1 和 -1 的邏輯 👇
+if (isset($_POST['update_quantity'])) {
+    $cart_id = $_POST['cart_id'];
+    $qty_action = $_POST['qty_action'];
+
+    if ($qty_action === 'plus') {
+        // 數量 +1
+        $update_stmt = $conn->prepare("UPDATE shopping_cart SET quantity = quantity + 1 WHERE cart_id = ? AND customer_id = ?");
+        $update_stmt->bind_param("ii", $cart_id, $customer_id);
+        $update_stmt->execute();
+        $update_stmt->close();
+    } elseif ($qty_action === 'minus') {
+        // 數量 -1 (用 GREATEST 防呆，確保數量最低是 1)
+        $update_stmt = $conn->prepare("UPDATE shopping_cart SET quantity = GREATEST(1, quantity - 1) WHERE cart_id = ? AND customer_id = ?");
+        $update_stmt->bind_param("ii", $cart_id, $customer_id);
+        $update_stmt->execute();
+        $update_stmt->close();
+    }
+    // 處理完畢後，重新載入頁面以顯示最新總價
+    header("Location: cart.php");
+    exit();
+}
+
 // 🌟 升級 1：SQL 查詢加入 packages 表格的 LEFT JOIN
 $sql = "SELECT c.cart_id, c.quantity, c.product_id, c.pc_build, c.package_id, 
                p.product_name AS product_name, p.price AS product_price, p.image_url,
@@ -211,7 +234,17 @@ if ($stmt = $conn->prepare($sql)) {
 
                         <div class="cart-item-controls">
                             <div class="qty" style="background: rgba(255,255,255,0.05); padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
-                                Qty: <strong style="color: var(--text-main);"><?php echo $item['quantity']; ?></strong>
+                             <form method="POST" style="display: inline-block; margin: 0;">
+    <input type="hidden" name="cart_id" value="<?php echo $item['cart_id']; ?>">
+    <input type="hidden" name="update_quantity" value="1">
+    <div class="quantity-badge" style="display: flex; align-items: center; gap: 10px; padding: 2px 10px;">
+        <button type="submit" name="qty_action" value="minus" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; font-size: 1.1rem; transition: 0.2s;" onmouseover="this.style.color='#ff4d4d'" onmouseout="this.style.color='#fff'">-</button>
+        
+        <span style="color: var(--accent-blue); font-weight: bold; font-size: 1rem;"><?php echo $item['quantity']; ?></span>
+        
+        <button type="submit" name="qty_action" value="plus" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; font-size: 1.1rem; transition: 0.2s;" onmouseover="this.style.color='#00e676'" onmouseout="this.style.color='#fff'">+</button>
+    </div>
+</form>
                             </div>
                             <a href="remove_cart.php?id=<?php echo $item['cart_id']; ?>" class="btn-remove" title="Remove Item" style="color: #ff4d4d; transition: 0.3s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
                                 <i class="fa-solid fa-trash-can"></i>
