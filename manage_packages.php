@@ -43,6 +43,22 @@ $search = $_GET['search'] ?? '';
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
+    <style>
+        /* 🌟 图片悬浮放大的赛博黑科技 CSS (紫钻专属版) */
+        .zoom-img {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            z-index: 1;
+            cursor: zoom-in;
+        }
+        .zoom-img:hover {
+            transform: scale(3.5); /* 放大 3.5 倍 */
+            z-index: 999;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 15px rgba(168,85,247,0.6); /* 紫色发光阴影 */
+            border: 1px solid #a855f7; /* 紫色边框 */
+            border-radius: 8px !important;
+        }
+    </style>
 </head>
 <body>
     <div class="admin-container">
@@ -79,7 +95,6 @@ $search = $_GET['search'] ?? '';
             
             <?php echo $message; ?>
 
-            <!-- 🌟 紫色主题的防霸凌智能搜索栏 -->
             <form method="GET" action="manage_packages.php" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
                 <input type="text" name="search" placeholder="Search by Blueprint Name..." value="<?php echo htmlspecialchars($search); ?>" style="flex: 1; min-width: 250px; background: rgba(0,0,0,0.6); border: 1px solid rgba(168,85,247,0.4); color: #fff; padding: 10px 15px; border-radius: 6px; outline: none; box-sizing: border-box;">
                 
@@ -143,7 +158,10 @@ $search = $_GET['search'] ?? '';
                             while ($row = $res->fetch_assoc()) {
                                 $img = htmlspecialchars($row['image_url']) ?: 'image/placeholder_pc.png';
                                 echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
-                                echo "<td style='padding:15px;'><img src='{$img}' style='height:40px; width:40px; object-fit:contain; border-radius:6px; background:#000;'></td>";
+                                
+                                // 🌟 核心：给 img 标签加上 class='zoom-img' 激活悬浮放大功能
+                                echo "<td style='padding:15px;'><img src='{$img}' class='zoom-img' style='height:40px; width:40px; object-fit:contain; border-radius:6px; background:#000;'></td>";
+                                
                                 echo "<td style='padding:15px; font-weight:900; color:#fff;'>".htmlspecialchars($row['package_name'])."</td>";
                                 echo "<td style='padding:15px; color:#a855f7;'>{$row['part_count']} Parts</td>";
                                 echo "<td style='padding:15px; color:#00e676;'>RM ".number_format($row['real_price'], 2)."</td>";
