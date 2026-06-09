@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 08, 2026 at 02:54 PM
+-- Generation Time: Jun 09, 2026 at 06:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -41,7 +41,7 @@ CREATE TABLE `admins` (
 --
 
 INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `created_at`) VALUES
-(1, 'superadmin', 'Superadmin@123', 'boss@pcshop.com', 'SuperAdmin', '2026-04-29 21:17:21'),
+(1, 'Alvis', 'Alvis@100884', 'chenweishen8733@gmail.com', 'SuperAdmin', '2026-04-29 21:17:21'),
 (4, 'admin', 'Admin@@12345', 'admin123@gmail.com', 'Admin', '2026-05-19 14:19:02');
 
 -- --------------------------------------------------------
