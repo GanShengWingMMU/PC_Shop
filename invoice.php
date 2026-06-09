@@ -125,7 +125,7 @@ while ($item = $details_result->fetch_assoc()) {
         <div class="billing-info">
             <div class="info-box">
                 <h3>Billed To</h3>
-                <p><strong><?php echo htmlspecialchars($order['first_name'] . ' ' . $order['last_name']); ?></strong></p>
+                <p><strong><?php echo htmlspecialchars($order['username']); ?></strong></p>
                 <p><?php echo htmlspecialchars($order['email']); ?></p>
             </div>
             <div class="info-box">
