@@ -225,7 +225,9 @@ $stmt_cards->close();
                             <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 10px; color: #ccc; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
                                 <input type="radio" name="selected_card" value="<?php echo htmlspecialchars($card['card_id']); ?>" style="margin-right: 15px;" onchange="toggleNewCardForm()" <?php echo $card['is_default'] ? 'checked' : ''; ?>>
                                 <div style="flex: 1;">
-                                    <strong style="color: #fff;"><?php echo htmlspecialchars($card['card_brand']); ?> ending in <?php echo htmlspecialchars($card['last_four_digits']); ?></strong>
+                                    <strong style="color: #fff; font-family: 'JetBrains Mono', monospace; letter-spacing: 2px;">
+    <?php echo htmlspecialchars($card['card_brand']); ?> &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; <?php echo htmlspecialchars($card['last_four_digits']); ?>
+</strong>
                                     <?php echo $card['is_default'] ? '<span style="margin-left: 8px; background: #00f2fe; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">Default</span>' : ''; ?>
                                 </div>
                             </label>

@@ -12,7 +12,8 @@ require 'PHPMailer/src/SMTP.php';
 $message = ""; 
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    // 🌟 防呆升級：使用 trim() 自動去除前後多餘的隱形空白
+$email = mysqli_real_escape_string($conn, trim($_POST['email']));
     
     // 🌟 A+ 级安全修复：使用 Prepared Statement
     $stmt = $conn->prepare("SELECT customer_id, first_name FROM customers WHERE email = ?");
@@ -41,7 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $mail->SMTPAuth   = true;
                 $mail->Username   = 'ganshengwing1126@gmail.com'; 
                 // 🌟 核心修复：禁止密码硬编码！调用 config.php 中的变量
-                $mail->Password   = $smtp_password; 
+                $mail->Password   = 'rigj fzjw wrcd nfog'; 
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port       = 587;
 
@@ -69,9 +70,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         $update_stmt->close();
     } else {
-        $_SESSION['reset_email'] = $email;
-        header("Location: verify_otp.php");
-        exit();
+$message = "<div style='color: #ff4d4d; background: rgba(255, 77, 77, 0.1); padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 15px; font-weight: bold;'>
+                        <i class='fas fa-exclamation-circle'></i> Error: This email address is not registered.
+                    </div>";
     }
     $stmt->close();
 }
