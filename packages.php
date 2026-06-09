@@ -58,7 +58,7 @@ if (array_sum($user_dna) > 0) {
 }
 
 // ==========================================
-// 🔍 模块二：动态多维筛选器 (🌟 升级为动态 Prepared Statement)
+// 🔍 模块二：动态多维筛选器
 // ==========================================
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $persona_filter = isset($_GET['persona']) ? trim($_GET['persona']) : '';
@@ -72,7 +72,6 @@ $params = [];
 $types = "";
 
 if (!empty($search_query)) {
-    // 🌟 使用 ? 占位符，防止任何形式的 SQL 注入
     $conditions[] = "(package_name LIKE ? OR description LIKE ?)";
     $search_param = "%" . $search_query . "%";
     $params[] = $search_param;
@@ -131,15 +130,14 @@ include 'includes/header.php';
     :root { --accent: #00f2fe; --dark-bg: #030305; --card-bg: rgba(255,255,255,0.02); --card-border: rgba(255,255,255,0.08); }
     
     body { background-color: var(--dark-bg); color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; }
-    
     .page-container { max-width: 1200px; margin: 2rem auto; padding: 0 20px; }
 
-    /* 模块一：AI 英雄区 */
+    /* AI 英雄区 */
     .ai-hero { background: linear-gradient(135deg, rgba(0,242,254,0.1) 0%, rgba(10,10,10,0.8) 100%); border: 1px solid var(--accent); border-radius: 12px; padding: 30px; margin-bottom: 40px; display: flex; gap: 30px; align-items: center; box-shadow: 0 0 30px rgba(0,242,254,0.15); position: relative; overflow: hidden; }
     .ai-badge { position: absolute; top: 0; left: 0; background: var(--accent); color: #000; padding: 5px 15px; font-weight: 900; font-size: 0.8rem; border-bottom-right-radius: 10px; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;}
     
-    /* 高级过滤控制台 (保留优化的功能面板) */
-    .filter-panel { background: rgba(10, 10, 15, 0.6); backdrop-filter: blur(20px); border: 1px solid var(--card-border); padding: 25px; border-radius: 12px; margin-bottom: 40px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    /* 过滤器 */
+    .filter-panel { background: rgba(10, 10, 15, 0.6); backdrop-filter: blur(20px); border: 1px solid var(--card-border); padding: 25px; border-radius: 12px; margin-bottom: 30px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
     .filter-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
     
     .search-wrapper { position: relative; flex: 1; min-width: 250px; }
@@ -170,9 +168,9 @@ include 'includes/header.php';
     .btn-exec { background: transparent; color: #00f2fe; border: 1px solid #00f2fe; font-family: 'JetBrains Mono', monospace; font-weight: 700; padding: 12px 20px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; display: inline-flex; justify-content: center; align-items: center; box-sizing: border-box; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; }
     .btn-exec:hover { background: #00f2fe; color: #000; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); transform: translateY(-2px); }
 
-    /* 🌟 复原！卡片商品按钮的样式 (完全等同于你最初的设定) */
+    /* 商品按钮 */
     .btn-group { display: flex; gap: 10px; margin-top: 15px; }
-    .btn-buy { flex: 1; background: var(--accent); color: #000; text-align: center; padding: 10px; border-radius: 6px; font-weight: bold; text-decoration: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-buy { flex: 1; background: var(--accent); color: #000; text-align: center; padding: 10px; border-radius: 6px; font-weight: bold; text-decoration: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer;}
     .btn-buy:hover { background: #fff; box-shadow: 0 0 15px var(--accent); }
     .btn-cust { flex: 1; background: transparent; border: 1px solid var(--accent); color: var(--accent); text-align: center; padding: 10px; border-radius: 6px; font-weight: bold; text-decoration: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; }
     .btn-cust:hover { background: var(--accent); color: #000; }
@@ -189,8 +187,8 @@ include 'includes/header.php';
     .pkg-desc { font-size: 0.9rem; color: #888; flex-grow: 1; margin-bottom: 20px; line-height: 1.5; }
     .pkg-price { font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 900; color: #00e676; margin-bottom: 15px; }
     
-    /* 🌟 复原！AI 控制台区域 (完全等同于你最初的设定) */
-    .ai-command-center { margin: 60px auto 40px; max-width: 800px; background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(0, 242, 254, 0.15); border-radius: 16px; padding: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.02); }
+    /* 🌟 AI 控制台区域 (支持 4 宫格) */
+    .ai-command-center { margin: 60px auto 40px; max-width: 900px; background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(0, 242, 254, 0.15); border-radius: 16px; padding: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.02); }
     .ai-cc-header { text-align: center; margin-bottom: 40px; }
     .ai-cc-badge-top { display: inline-block; background: rgba(0,242,254,0.1); color: var(--accent); padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; font-weight: 900; border: 1px solid var(--accent); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; }
     .budget-display-area { text-align: center; margin-bottom: 30px; }
@@ -201,21 +199,28 @@ include 'includes/header.php';
     .ai-custom-range::-webkit-slider-thumb:hover { transform: scale(1.2); }
     .tier-feedback { font-size: 0.9rem; color: #a855f7; font-weight: bold; letter-spacing: 1px; transition: color 0.3s; }
     
-    .persona-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 40px; }
+    /* 🌟 升级：支持 4 列布局 */
+    .persona-selector { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 40px; }
     .persona-option { position: relative; cursor: pointer; }
     .persona-option input[type="radio"] { display: none; }
-    .persona-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 20px 15px; text-align: center; color: #888; transition: all 0.3s ease; }
+    .persona-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 20px 10px; text-align: center; color: #888; transition: all 0.3s ease; height: 100%; box-sizing: border-box;}
     .persona-card i { font-size: 1.8rem; margin-bottom: 10px; display: block; }
-    .persona-card span { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+    .persona-card span { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; display: block; line-height: 1.3;}
+    
     .persona-option input:checked + .persona-card[data-theme="gamer"] { background: rgba(0, 242, 254, 0.1); border-color: #00f2fe; color: #00f2fe; box-shadow: 0 0 20px rgba(0,242,254,0.2); }
     .persona-option input:checked + .persona-card[data-theme="creator"] { background: rgba(168, 85, 247, 0.1); border-color: #a855f7; color: #a855f7; box-shadow: 0 0 20px rgba(168,85,247,0.2); }
     .persona-option input:checked + .persona-card[data-theme="student"] { background: rgba(250, 204, 21, 0.1); border-color: #facc15; color: #facc15; box-shadow: 0 0 20px rgba(250,204,21,0.2); }
+    /* 🌟 补全：Enthusiast 主题颜色 */
+    .persona-option input:checked + .persona-card[data-theme="enthusiast"] { background: rgba(255, 0, 127, 0.1); border-color: #ff007f; color: #ff007f; box-shadow: 0 0 20px rgba(255,0,127,0.2); }
     
-    /* 🌟 复原！AI 生成按钮的大渐变样式 */
     .btn-generate { display: block; width: 100%; background: linear-gradient(90deg, #00f2fe, #4facfe); color: #000; border: none; padding: 20px; border-radius: 10px; font-size: 1.2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 10px 30px rgba(0,242,254,0.3); font-family: 'Inter', sans-serif;}
     .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(0,242,254,0.5); }
     
-    @media (max-width: 768px) { .filter-row { flex-direction: column; align-items: stretch; } .persona-selector { grid-template-columns: 1fr; } .budget-amount { font-size: 3rem; } }
+    @media (max-width: 768px) { 
+        .filter-row { flex-direction: column; align-items: stretch; } 
+        .persona-selector { grid-template-columns: repeat(2, 1fr); } 
+        .budget-amount { font-size: 3rem; } 
+    }
 </style>
 
 <div class="page-container">
@@ -239,9 +244,12 @@ include 'includes/header.php';
                 </p>
                 <div style="font-family: 'JetBrains Mono', monospace; font-size: 2rem; color: #00e676; font-weight: 900; margin-bottom: 20px;">RM <?php echo number_format($top_package['real_price'], 2); ?></div>
                 
-                <!-- 🌟 复原的按钮类名 btn-buy 和 btn-cust -->
                 <div class="btn-group" style="max-width: 400px; margin-top: 0;">
-                    <a href="add_to_cart.php?pkg_id=<?php echo $top_package['package_id']; ?>" class="btn-buy"><i class="fas fa-shopping-cart" style="margin-right: 6px;"></i> Buy Now</a>
+                    <form action="add_to_cart.php" method="POST" style="flex:1;">
+                        <input type="hidden" name="package_id" value="<?php echo $top_package['package_id']; ?>">
+                        <input type="hidden" name="action" value="buy_now">
+                        <button type="submit" class="btn-buy" style="width:100%;"><i class="fas fa-shopping-cart" style="margin-right: 6px;"></i> Buy Now</button>
+                    </form>
                     <a href="builder_load_package.php?pkg_id=<?php echo $top_package['package_id']; ?>" class="btn-cust"><i class="fas fa-wrench" style="margin-right: 6px;"></i> Customize</a>
                 </div>
             </div>
@@ -276,6 +284,10 @@ include 'includes/header.php';
                     <input type="radio" name="persona" value="Student" style="display: none;" <?php echo $persona_filter == 'Student' ? 'checked' : ''; ?>>
                     <i class="fas fa-graduation-cap"></i> Students
                 </label>
+                <label class="pill <?php echo $persona_filter == 'Enthusiast' ? 'active' : ''; ?>">
+                    <input type="radio" name="persona" value="Enthusiast" style="display: none;" <?php echo $persona_filter == 'Enthusiast' ? 'checked' : ''; ?>>
+                    <i class="fas fa-rocket"></i> Enthusiast
+                </label>
             </div>
 
             <div class="price-widget">
@@ -306,6 +318,16 @@ include 'includes/header.php';
         </div>
     </form>
 
+    <div style="margin-bottom: 30px; background: rgba(0, 242, 254, 0.05); border: 1px solid rgba(0, 242, 254, 0.1); border-left: 4px solid #00f2fe; padding: 18px 25px; border-radius: 8px; display: flex; align-items: flex-start; gap: 15px;">
+        <i class="fas fa-info-circle" style="color: #00f2fe; font-size: 1.5rem; margin-top: 2px;"></i>
+        <div>
+            <h4 style="margin: 0 0 5px 0; color: #fff; font-size: 1rem; letter-spacing: 0.5px;">System Note: Builder Load Completion</h4>
+            <p style="margin: 0; color: #cbd5e1; font-size: 0.9rem; line-height: 1.6;">
+                Loading a package into the PC Builder may display <strong>73% or 82% completion</strong>. This is normal! Our pre-built packages cover the <strong>Core Tower components</strong> (CPU, GPU, MB, RAM, etc.). Peripherals like <strong>Monitors and Keyboards</strong> are intentionally left blank so you can personalize your exact setup.
+            </p>
+        </div>
+    </div>
+
     <div class="pkg-grid">
         <?php if (mysqli_num_rows($catalog_result) > 0): ?>
             <?php while ($pkg = mysqli_fetch_assoc($catalog_result)): ?>
@@ -320,17 +342,12 @@ include 'includes/header.php';
                         <div class="pkg-price">RM <?php echo number_format($pkg['real_price'], 2); ?></div>
                     </a>
                     
-                    <!-- 🌟 复原的按钮类名 btn-buy 和 btn-cust -->
                     <div class="btn-group">
-                    <form action="add_to_cart.php" method="POST" style="display:inline-block;">
-    <input type="hidden" name="package_id" value="<?php echo $pkg['package_id']; ?>">
-    <input type="hidden" name="action" value="buy_now">
-    
-    <button type="submit" class="btn btn-primary" style="background: #00f2fe; color: #000; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.boxShadow='0 0 15px rgba(0, 242, 254, 0.5)'" onmouseout="this.style.boxShadow='none'">
-        Buy Now
-    </button>
-</form>
-
+                        <form action="add_to_cart.php" method="POST" style="flex:1;">
+                            <input type="hidden" name="package_id" value="<?php echo $pkg['package_id']; ?>">
+                            <input type="hidden" name="action" value="buy_now">
+                            <button type="submit" class="btn-buy" style="width:100%;">Buy Now</button>
+                        </form>
                         <a href="builder_load_package.php?pkg_id=<?php echo $pkg['package_id']; ?>" class="btn-cust"><i class="fas fa-wrench"></i> Customize</a>
                     </div>
                 </div>
@@ -344,7 +361,6 @@ include 'includes/header.php';
         <?php endif; ?>
     </div>
 
-    <!-- 🌟 原汁原味的 AI 控制台 -->
     <div class="ai-command-center">
         <div class="ai-cc-header">
             <div class="ai-cc-badge-top"><i class="fas fa-microchip"></i> Heuristic Blueprint Engine</div>
@@ -374,7 +390,7 @@ include 'includes/header.php';
                     <input type="radio" name="target_persona" value="Gamer" checked>
                     <div class="persona-card" data-theme="gamer">
                         <i class="fas fa-gamepad"></i>
-                        <span>Extreme Gamer</span>
+                        <span>Gamer</span>
                     </div>
                 </label>
                 
@@ -382,7 +398,7 @@ include 'includes/header.php';
                     <input type="radio" name="target_persona" value="Creator">
                     <div class="persona-card" data-theme="creator">
                         <i class="fas fa-palette"></i>
-                        <span>Creator / Editor</span>
+                        <span>Creator</span>
                     </div>
                 </label>
                 
@@ -393,9 +409,16 @@ include 'includes/header.php';
                         <span>Student / Dev</span>
                     </div>
                 </label>
+
+                <label class="persona-option">
+                    <input type="radio" name="target_persona" value="Enthusiast">
+                    <div class="persona-card" data-theme="enthusiast">
+                        <i class="fas fa-rocket"></i>
+                        <span>Enthusiast</span>
+                    </div>
+                </label>
             </div>
 
-            <!-- 🌟 绝对还原的 渐变 大按钮 -->
             <button type="submit" class="btn-generate">
                 <i class="fas fa-bolt"></i> Generate Blueprint
             </button>
@@ -408,7 +431,7 @@ include 'includes/header.php';
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // 🌟 AI 预算滑块
+    // AI 预算滑块
     const aiSlider = document.getElementById("ai-budget-slider");
     const aiDisplay = document.getElementById("ai-budget-value");
     const aiHiddenInput = document.getElementById("ai-hidden-budget");
@@ -434,7 +457,7 @@ document.addEventListener("DOMContentLoaded", function() {
         updateAIFeedback(aiSlider.value);
     }
 
-    // 🌟 过滤器双向价格滑块逻辑
+    // 过滤器双向价格滑块逻辑
     const rangeInputs = document.querySelectorAll(".range-inputs input");
     const priceInputs = document.querySelectorAll(".price-inputs input");
     const trackFill = document.querySelector(".slider-track-fill");

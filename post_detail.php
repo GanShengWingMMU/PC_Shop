@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_comment'])) {
         $stmt = $conn->prepare("INSERT INTO community_comments (post_id, customer_id, comment) VALUES (?, ?, ?)");
         $stmt->bind_param("iis", $post_id, $customer_id, $comment_text);
         if ($stmt->execute()) {
-            $sys_msg = "Reply posted successfully."; // 🌟 简化
+            $sys_msg = "Reply posted successfully.";
             header("Location: post_detail.php?id=$post_id");
             exit();
         } else {
@@ -35,8 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_comment'])) {
     }
 }
 
+// 🌟 修复点 1：详情页抓取带上 membership_tier
 $query_post = "
-    SELECT cp.*, c.username, c.reward_coins,
+    SELECT cp.*, c.username, c.reward_coins, c.membership_tier,
            (SELECT COUNT(*) FROM community_likes WHERE post_id = cp.post_id) AS like_count,
            (SELECT COUNT(*) FROM community_likes WHERE post_id = cp.post_id AND customer_id = ?) AS user_liked,
            sb.build_name, sb.total_price
@@ -56,8 +57,9 @@ if ($post_result->num_rows === 0) {
 }
 $post = $post_result->fetch_assoc();
 
+// 🌟 修复点 2：评论区抓取带上 membership_tier
 $query_comments = "
-    SELECT cc.*, c.username, c.reward_coins 
+    SELECT cc.*, c.username, c.reward_coins, c.membership_tier 
     FROM community_comments cc
     JOIN customers c ON cc.customer_id = c.customer_id
     WHERE cc.post_id = ?
@@ -68,10 +70,12 @@ $stmt_comments->bind_param("i", $post_id);
 $stmt_comments->execute();
 $comments_result = $stmt_comments->get_result(); 
 
-function getRankBadge($coins) {
-    if ($coins >= 1000) return '<span class="rank-badge elite"><i class="fas fa-crown"></i> Elite</span>';
-    if ($coins >= 500) return '<span class="rank-badge pro"><i class="fas fa-star"></i> Pro</span>';
-    return '<span class="rank-badge novice">Enthusiast</span>';
+// 🌟 修复点 3：算法重写
+function getRankBadge($coins, $tier = 'Basic') {
+    if ($tier === 'VIP') return '<span class="rank-badge elite" title="Elite Subscriber"><i class="fas fa-crown"></i> Elite</span>';
+    if ($coins >= 1000) return '<span class="rank-badge elite" title="Elite Architect"><i class="fas fa-crown"></i> Elite</span>';
+    if ($coins >= 500) return '<span class="rank-badge pro" title="Pro Builder"><i class="fas fa-star"></i> Pro</span>';
+    return '<span class="rank-badge novice" title="Enthusiast">Enthusiast</span>';
 }
 
 $current_user_query = $conn->query("SELECT username FROM customers WHERE customer_id = $customer_id");
@@ -161,7 +165,9 @@ $current_username = $current_user_query->fetch_assoc()['username'];
 <div class="cyber-grid-bg"></div>
 
 <div class="container-detail">
-    <a href="community.php" class="back-link"><i class="fas fa-arrow-left"></i> Return to Community</a> <?php if($sys_msg) echo "<div style='color:#00e676; padding:15px; border:1px solid #00e676; border-radius:8px; margin-bottom:20px; background:rgba(0,230,118,0.1);'><i class='fas fa-check'></i> $sys_msg</div>"; ?>
+    <a href="community.php" class="back-link"><i class="fas fa-arrow-left"></i> Return to Community</a> 
+
+    <?php if($sys_msg) echo "<div style='color:#00e676; padding:15px; border:1px solid #00e676; border-radius:8px; margin-bottom:20px; background:rgba(0,230,118,0.1);'><i class='fas fa-check'></i> $sys_msg</div>"; ?>
     <?php if($sys_err) echo "<div style='color:#ff4d4d; padding:15px; border:1px solid #ff4d4d; border-radius:8px; margin-bottom:20px; background:rgba(255,77,77,0.1);'><i class='fas fa-exclamation-triangle'></i> $sys_err</div>"; ?>
 
     <div class="post-card">
@@ -170,13 +176,14 @@ $current_username = $current_user_query->fetch_assoc()['username'];
             <div>
                 <div class="author-name">
                     <?php echo htmlspecialchars($post['username']); ?>
-                    <?php echo getRankBadge($post['reward_coins']); ?>
+                    <?php echo getRankBadge($post['reward_coins'], $post['membership_tier']); ?>
                     
                     <?php if($post['post_type'] == 'Showcase'): ?>
                         <span style="background: rgba(168, 85, 247, 0.15); color: #d8b4fe; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;"><i class="fas fa-desktop"></i> Showcase</span>
                     <?php endif; ?>
                 </div>
-                <div class="post-time">Posted on <?php echo date('F d, Y • H:i A', strtotime($post['created_at'])); ?></div> </div>
+                <div class="post-time">Posted on <?php echo date('F d, Y • H:i A', strtotime($post['created_at'])); ?></div> 
+            </div>
         </div>
 
         <h1 class="post-title"><?php echo htmlspecialchars($post['title']); ?></h1>
@@ -218,11 +225,14 @@ $current_username = $current_user_query->fetch_assoc()['username'];
         <?php endif; ?>
 
         <div style="display: flex; gap: 25px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 25px;">
-            <span style="color: #00f2fe; font-weight: 800;"><i class="fas fa-heart"></i> <?php echo $post['like_count']; ?> Likes</span> <span style="color: #cbd5e1; font-weight: 800;"><i class="fas fa-comments"></i> <?php echo $comments_result->num_rows; ?> Comments</span> </div>
+            <span style="color: #00f2fe; font-weight: 800;"><i class="fas fa-heart"></i> <?php echo $post['like_count']; ?> Likes</span> 
+            <span style="color: #cbd5e1; font-weight: 800;"><i class="fas fa-comments"></i> <?php echo $comments_result->num_rows; ?> Comments</span> 
+        </div>
     </div>
 
     <div class="comments-header-title">
-        <i class="fas fa-comments" style="color: #00f2fe;"></i> Discussion </div>
+        <i class="fas fa-comments" style="color: #00f2fe;"></i> Discussion 
+    </div>
 
     <div class="comments-wrapper">
         <?php if($comments_result->num_rows > 0): while($c = $comments_result->fetch_assoc()): ?>
@@ -232,6 +242,7 @@ $current_username = $current_user_query->fetch_assoc()['username'];
                     <div class="c-author-info">
                         <div class="c-author-name">
                             <?php echo htmlspecialchars($c['username']); ?>
+                            <?php echo getRankBadge($c['reward_coins'], $c['membership_tier']); ?>
                             <?php if($c['customer_id'] == $post['customer_id']) echo '<span class="c-op-badge"><i class="fas fa-check-circle"></i> OP</span>'; ?>
                         </div>
                         <div class="c-time"><?php echo date('Y-m-d // H:i:s', strtotime($c['created_at'])); ?></div>
@@ -242,7 +253,8 @@ $current_username = $current_user_query->fetch_assoc()['username'];
         <?php endwhile; else: ?>
             <div style="padding: 30px; text-align: center; border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px; margin-bottom: 20px;">
                 <i class="fas fa-comment-dots" style="font-size: 2rem; color: #475569; margin-bottom: 10px;"></i>
-                <p style="color: #64748b; margin: 0;">No comments yet. Be the first to reply!</p> </div>
+                <p style="color: #64748b; margin: 0;">No comments yet. Be the first to reply!</p> 
+            </div>
         <?php endif; ?>
     </div>
 
@@ -251,11 +263,14 @@ $current_username = $current_user_query->fetch_assoc()['username'];
             <div class="reply-flex">
                 <div class="current-user-avatar"><?php echo strtoupper(substr($current_username, 0, 1)); ?></div>
                 <div style="flex: 1;">
-                    <textarea name="comment_text" class="tech-textarea" placeholder="Write your reply here..." required></textarea> </div>
+                    <textarea name="comment_text" class="tech-textarea" placeholder="Write your reply here..." required></textarea> 
+                </div>
             </div>
             <div class="reply-actions">
-                <span class="reply-hint"><i class="fas fa-info-circle"></i> Be respectful and friendly.</span> <button type="submit" name="submit_comment" class="btn-transmit">
-                    <i class="fas fa-paper-plane"></i> Post Reply </button>
+                <span class="reply-hint"><i class="fas fa-info-circle"></i> Be respectful and friendly.</span> 
+                <button type="submit" name="submit_comment" class="btn-transmit">
+                    <i class="fas fa-paper-plane"></i> Post Reply 
+                </button>
             </div>
         </form>
     </div>

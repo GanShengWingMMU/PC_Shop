@@ -19,7 +19,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['post_i
         $do_del = $conn->prepare("DELETE FROM community_posts WHERE post_id = ?");
         $do_del->bind_param("i", $del_post_id);
         if ($do_del->execute()) {
-            $sys_msg = "Post permanently deleted."; // 🌟 改为直白的删除提示
+            $sys_msg = "Post permanently deleted."; 
         } else {
             $sys_err = "System Error: Failed to delete post.";
         }
@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
         $stmt = $conn->prepare("INSERT INTO community_posts (customer_id, pc_build_id, title, content, post_type, post_images) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("iissss", $customer_id, $pc_build_id, $title, $content, $post_type, $images_json);
         if ($stmt->execute()) {
-            $sys_msg = "Post published successfully!"; // 🌟 改为直白提示
+            $sys_msg = "Post published successfully!";
         } else {
             $sys_err = "System error: Failed to publish post.";
         }
@@ -111,8 +111,9 @@ if ($filter_type == 'Showcase') { $where_clause = "WHERE cp.post_type = 'Showcas
 elseif ($filter_type == 'Discussion') { $where_clause = "WHERE cp.post_type IN ('Discussion', 'Question')"; } 
 elseif ($filter_type == 'Trending') { $order_clause = "ORDER BY like_count DESC, cp.created_at DESC"; }
 
+// 🌟 修复点 1：抓取数据时带上 c.membership_tier
 $query_posts = "
-    SELECT cp.*, c.username, c.reward_coins,
+    SELECT cp.*, c.username, c.reward_coins, c.membership_tier,
            (SELECT COUNT(*) FROM community_likes WHERE post_id = cp.post_id) AS like_count,
            (SELECT COUNT(*) FROM community_likes WHERE post_id = cp.post_id AND customer_id = $customer_id) AS user_liked,
            (SELECT COUNT(*) FROM community_comments WHERE post_id = cp.post_id) AS comment_count,
@@ -125,9 +126,13 @@ $query_posts = "
 ";
 $posts = $conn->query($query_posts);
 $total_posts = $conn->query("SELECT COUNT(*) FROM community_posts")->fetch_row()[0];
-$top_builders = $conn->query("SELECT c.username, c.reward_coins, COUNT(cp.post_id) as post_count FROM customers c JOIN community_posts cp ON c.customer_id = cp.customer_id GROUP BY c.customer_id ORDER BY post_count DESC LIMIT 3");
 
-function getRankBadge($coins) {
+// 🌟 修复点 2：排行榜也带上 c.membership_tier
+$top_builders = $conn->query("SELECT c.username, c.reward_coins, c.membership_tier, COUNT(cp.post_id) as post_count FROM customers c JOIN community_posts cp ON c.customer_id = cp.customer_id GROUP BY c.customer_id ORDER BY post_count DESC LIMIT 3");
+
+// 🌟 修复点 3：算法重写，VIP 拥有最高优先权
+function getRankBadge($coins, $tier = 'Basic') {
+    if ($tier === 'VIP') return '<span class="rank-badge elite" title="Elite Subscriber"><i class="fas fa-crown"></i> Elite</span>';
     if ($coins >= 1000) return '<span class="rank-badge elite" title="Elite Architect"><i class="fas fa-crown"></i> Elite</span>';
     if ($coins >= 500) return '<span class="rank-badge pro" title="Pro Builder"><i class="fas fa-star"></i> Pro</span>';
     return '<span class="rank-badge novice" title="Enthusiast">Enthusiast</span>';
@@ -259,16 +264,21 @@ function getRankBadge($coins) {
     
     <div class="community-header">
         <div>
-            <p><i class="fas fa-users"></i> GridCitY Community</p> <h1>Forum & Showcase</h1> </div>
-        <button class="tech-btn tech-btn-primary" onclick="togglePostForm()"><i class="fas fa-pen"></i> Create Post</button> </div>
+            <p><i class="fas fa-users"></i> GridCitY Community</p> 
+            <h1>FORUM & SHOWCASE</h1> 
+        </div>
+        <button class="tech-btn tech-btn-primary" onclick="togglePostForm()"><i class="fas fa-pen"></i> Create Post</button> 
+    </div>
 
     <?php if($sys_msg) echo "<div style='color:#00e676; padding:15px; border:1px solid #00e676; border-radius:8px; margin-bottom:20px; background:rgba(0,230,118,0.1);'><i class='fas fa-check'></i> $sys_msg</div>"; ?>
     <?php if($sys_err) echo "<div style='color:#ff4d4d; padding:15px; border:1px solid #ff4d4d; border-radius:8px; margin-bottom:20px; background:rgba(255,77,77,0.1);'><i class='fas fa-exclamation-triangle'></i> $sys_err</div>"; ?>
 
     <div class="post-form-container" id="post-form">
-        <h3 style="margin:0 0 20px 0; color:#fff; font-size: 1.4rem;"><i class="fas fa-edit" style="color:#00f2fe; margin-right:10px;"></i> Create a New Post</h3> <form method="POST" action="community.php" enctype="multipart/form-data">
+        <h3 style="margin:0 0 20px 0; color:#fff; font-size: 1.4rem;"><i class="fas fa-edit" style="color:#00f2fe; margin-right:10px;"></i> Create a New Post</h3> 
+        <form method="POST" action="community.php" enctype="multipart/form-data">
             
-            <label class="tech-label">Select Category</label> <div class="type-selector-grid">
+            <label class="tech-label">Select Category</label> 
+            <div class="type-selector-grid">
                 <div class="type-card selected" onclick="selectPostType(this, 'Discussion')">
                     <input type="radio" name="post_type" value="Discussion" checked>
                     <span class="type-title"><i class="fas fa-comments" style="color:#00f2fe;"></i> Discussion</span>
@@ -309,7 +319,8 @@ function getRankBadge($coins) {
             <label class="tech-label">Post Content</label>
             <textarea name="content" class="tech-input" rows="6" placeholder="Write your thoughts or questions here..." required></textarea>
             
-            <label class="tech-label">Upload Images (Optional)</label> <div class="image-upload-wrapper" onclick="document.getElementById('post_images').click();">
+            <label class="tech-label">Upload Images (Optional)</label> 
+            <div class="image-upload-wrapper" onclick="document.getElementById('post_images').click();">
                 <i class="fas fa-cloud-upload-alt" style="font-size: 2.5rem; color: #00f2fe; margin-bottom: 10px;"></i>
                 <div style="color: #fff; font-weight: 800; font-size: 1.1rem;">Click to upload images</div>
                 <div style="color: #64748b; font-size: 0.85rem; margin-top: 5px;">Supports JPG, PNG, WEBP (Max 10 files)</div>
@@ -318,7 +329,8 @@ function getRankBadge($coins) {
             <div class="image-preview-grid" id="image-preview-container"></div>
             
             <div style="display: flex; gap: 15px; margin-top: 10px;">
-                <button type="submit" name="submit_post" class="tech-btn tech-btn-primary" style="padding: 14px 40px; font-size:1rem;">Publish Post</button> <button type="button" class="tech-btn" style="border-color:rgba(255,255,255,0.2); color:#fff;" onclick="togglePostForm()">Cancel</button>
+                <button type="submit" name="submit_post" class="tech-btn tech-btn-primary" style="padding: 14px 40px; font-size:1rem;">Publish Post</button> 
+                <button type="button" class="tech-btn" style="border-color:rgba(255,255,255,0.2); color:#fff;" onclick="togglePostForm()">Cancel</button>
             </div>
         </form>
     </div>
@@ -342,7 +354,7 @@ function getRankBadge($coins) {
                             <div class="author-info">
                                 <div class="author-name">
                                     <?php echo htmlspecialchars($p['username']); ?>
-                                    <?php echo getRankBadge($p['reward_coins']); ?>
+                                    <?php echo getRankBadge($p['reward_coins'], $p['membership_tier']); ?>
                                 </div>
                                 <div class="post-time"><?php echo date('M d, Y • H:i', strtotime($p['created_at'])); ?></div>
                             </div>
@@ -388,10 +400,12 @@ function getRankBadge($coins) {
 
                         <div class="post-actions">
                             <a href="community.php?action=like&post_id=<?php echo $p['post_id']; ?><?php echo htmlspecialchars($filter_type) != 'All' ? '&filter='.htmlspecialchars($filter_type) : ''; ?>" class="action-btn <?php echo $p['user_liked'] > 0 ? 'liked' : ''; ?>">
-                                <i class="<?php echo $p['user_liked'] > 0 ? 'fas' : 'far'; ?> fa-heart"></i> <?php echo $p['like_count']; ?> Likes </a>
+                                <i class="<?php echo $p['user_liked'] > 0 ? 'fas' : 'far'; ?> fa-heart"></i> <?php echo $p['like_count']; ?> Likes 
+                            </a>
                             
                             <a href="post_detail.php?id=<?php echo $p['post_id']; ?>" class="action-btn">
-                                <i class="far fa-comment-dots"></i> <?php echo $p['comment_count']; ?> Comments </a>
+                                <i class="far fa-comment-dots"></i> <?php echo $p['comment_count']; ?> Comments 
+                            </a>
 
                             <?php if ($p['customer_id'] == $customer_id): ?>
                                 <a href="community.php?action=delete&post_id=<?php echo $p['post_id']; ?>" class="action-btn" style="color: #ff4d4d; border-color: rgba(255, 77, 77, 0.3); margin-left:auto;" onclick="return confirm('Delete this post?');">
@@ -404,7 +418,8 @@ function getRankBadge($coins) {
                     <div style="text-align: center; padding: 60px 20px; background: #111827; border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1);">
                         <i class="fas fa-inbox" style="font-size: 3.5rem; color: #475569; margin-bottom: 20px;"></i>
                         <h3 style="margin:0 0 10px 0; color:#fff;">It's quiet here...</h3>
-                        <p style="color: #94a3b8; margin-bottom: 25px;">Be the first to start a discussion.</p> <button onclick="togglePostForm()" class="tech-btn tech-btn-primary">Create Post</button>
+                        <p style="color: #94a3b8; margin-bottom: 25px;">Be the first to start a discussion.</p> 
+                        <button onclick="togglePostForm()" class="tech-btn tech-btn-primary">Create Post</button>
                     </div>
                 <?php endif; ?>
             </div>
@@ -419,7 +434,8 @@ function getRankBadge($coins) {
             </div>
             
             <div class="widget">
-                <h3><i class="fas fa-chart-bar"></i> Community Stats</h3> <div class="stat-row">
+                <h3><i class="fas fa-chart-bar"></i> Community Stats</h3> 
+                <div class="stat-row">
                     <span>Total Posts</span>
                     <span class="stat-value"><?php echo $total_posts; ?></span>
                 </div>
@@ -430,7 +446,8 @@ function getRankBadge($coins) {
             </div>
 
             <div class="widget">
-                <h3><i class="fas fa-trophy" style="color: #ffd700;"></i> Top Contributors</h3> <ul class="top-user-list">
+                <h3><i class="fas fa-trophy" style="color: #ffd700;"></i> Top Contributors</h3> 
+                <ul class="top-user-list">
                     <?php 
                     $rank = 1;
                     if($top_builders->num_rows > 0): 
@@ -443,7 +460,7 @@ function getRankBadge($coins) {
                                 <?php echo htmlspecialchars($tb['username']); ?>
                             </div>
                             <div style="margin-top: 4px;">
-                                <?php echo getRankBadge($tb['reward_coins']); ?>
+                                <?php echo getRankBadge($tb['reward_coins'], $tb['membership_tier']); ?>
                             </div>
                         </div>
                         <?php if($rank == 1) echo '<i class="fas fa-medal" style="color: #ffd700; font-size: 1.5rem;"></i>'; ?>
