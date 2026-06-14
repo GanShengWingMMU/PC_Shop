@@ -167,9 +167,9 @@ $search = $_GET['search'] ?? '';
                                 echo "<td style='padding:15px; color:#00e676;'>RM ".number_format($row['real_price'], 2)."</td>";
                                 echo "<td style='padding:15px; color:#fff;'>".htmlspecialchars($row['stock_status'])."</td>";
                                 echo "<td style='padding:15px; text-align:right;'>
-                                        <a href='edit_package.php?package_id={$row['package_id']}' class='btn-action' style='color:#00f2fe; border-color:#00f2fe; padding:6px 12px; font-size:12px; text-decoration:none; margin-right:8px;'>Edit</a>
-                                        <a href='manage_packages.php?delete_id={$row['package_id']}' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Delete package?\");'>Delete</a>
-                                      </td>";
+        <a href='edit_package.php?package_id={$row['package_id']}' class='btn-action' style='color:#00f2fe; border-color:#00f2fe; padding:6px 12px; font-size:12px; text-decoration:none; margin-right:8px;'>Edit</a>
+        <a href='manage_packages.php?delete_id={$row['package_id']}' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Delete package?\");'>Delete</a>
+      </td>";
                                 echo "</tr>";
                             }
                         } else {

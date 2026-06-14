@@ -99,88 +99,143 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <title>Admin Login - GridCity PC</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-main: #0a0a0a;
-            --bg-surface: #141414;
-            --accent-blue: #00f2fe;
-            --accent-purple: #4facfe;
-            --text-main: #ffffff;
-            --text-muted: #888888;
-            --border-color: rgba(255, 255, 255, 0.08);
-        }
-        
-        body {
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            color: var(--text-main);
-            /* 🌟 核心魔法：加入背景图片，并盖上一层 75% 黑色的半透明滤镜 */
-            background-image: linear-gradient(rgba(10, 10, 10, 0.75), rgba(10, 10, 10, 0.75)), url('image/Login_background.jpg');
-            background-size: cover;          /* 让图片填满整个屏幕 */
-            background-position: center;     /* 让图片居中显示 */
-            background-repeat: no-repeat;    /* 防止图片重复拼贴 */
-            
-            /* 让登录框完美居中在屏幕正中间 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+<style>
+    /* 🌟 全屏背景设置 */
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', 'JetBrains Mono', sans-serif;
+        /* 这里加了一层半透明的黑色遮罩，防止背景太亮盖住文字 */
+        background-image: linear-gradient(rgba(10, 10, 15, 0.6), rgba(10, 10, 15, 0.8)), url('image/Login_background.png');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
 
-        .login-container {
-            background: var(--bg-surface);
-            padding: 40px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 15px 50px rgba(0,0,0,0.9); /* 加深了阴影，让卡片更立体 */
-            width: 100%;
-            max-width: 400px;
-            position: relative;
-            overflow: hidden;
-            /* 加入一点点毛玻璃效果让背景透过来一点点 */
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            background: rgba(20, 20, 20, 0.85);
-        }
+    /* 🌟 登录框的毛玻璃特效 (Glassmorphism) */
+    .login-container {
+        background: rgba(15, 15, 20, 0.65); /* 半透明深色背景 */
+        backdrop-filter: blur(12px); /* 核心：背景高斯模糊 */
+        -webkit-backdrop-filter: blur(12px); /* 兼容 Safari */
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 242, 254, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid rgba(0, 242, 254, 0.3); /* 顶部青色霓虹边框 */
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+    }
 
-        /* 顶部霓虹装饰线 */
-        .login-container::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: linear-gradient(to right, var(--accent-purple), var(--accent-blue));
-        }
+    /* 🌟 登录框大标题 (GridCity PC) - 完美同步按钮的渐变青蓝色 */
+    .login-container h1 {
+        background: linear-gradient(135deg, #00f2fe, #4facfe) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        margin-top: 0;
+        margin-bottom: 5px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.5));
+    }
 
-        .login-header { text-align: center; margin-bottom: 30px; }
-        .login-header h1 {
-            margin: 0; font-size: 2.2rem;
-            background: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
-            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-            font-weight: 800; letter-spacing: 1px;
-        }
-        .login-header p { color: var(--text-muted); font-size: 0.9rem; margin-top: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;}
+    /* 🌟 副标题样式 (从暗灰色改成明亮的浅灰色) */
+    .login-container p {
+        color: #cccccc !important; 
+        font-size: 12px;
+        margin-bottom: 30px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
 
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; color: var(--text-muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 8px; }
-        .form-control {
-            width: 100%; padding: 12px 15px; box-sizing: border-box;
-            background-color: rgba(0, 0, 0, 0.6); border: 1px solid var(--border-color);
-            border-radius: 6px; color: var(--text-main); font-size: 1rem;
-            transition: all 0.3s;
-        }
-        .form-control:focus { outline: none; border-color: var(--accent-blue); box-shadow: 0 0 10px rgba(0, 242, 254, 0.3); background-color: rgba(0, 0, 0, 0.9); }
+    /* 🌟 输入框样式 */
+    .form-group {
+        margin-bottom: 20px;
+        text-align: left;
+    }
 
-        .btn-login {
-            width: 100%; padding: 14px;
-            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
-            border: none; border-radius: 6px; color: #000; font-weight: 800; font-size: 1rem;
-            cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 242, 254, 0.2);
-            margin-top: 10px;
-        }
-        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 242, 254, 0.4); }
+    /* 🌟 账号密码的提示字 (改成纯白 + 加粗) */
+    .form-group label {
+        display: block;
+        color: #ffffff !important; 
+        font-weight: bold;
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
 
-        .error-msg { color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,77,77,0.3); text-align: center; margin-bottom: 20px; font-size: 0.9rem; font-weight: bold;}
-        .back-link { display: block; text-align: center; margin-top: 25px; color: var(--text-muted); font-size: 0.85rem; text-decoration: none; transition: 0.2s;}
-        .back-link:hover { color: var(--accent-blue); }
-    </style>
+    .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        color: #ffffff !important; /* 确保用户打字时是白色的 */
+        font-size: 14px;
+        box-sizing: border-box;
+        transition: 0.3s;
+    }
+    
+    /* 🌟 输入框里还没打字时的占位符 (稍微提亮一点) */
+    .form-control::placeholder {
+        color: #999999;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #00f2fe;
+        box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    /* 🌟 按钮样式 */
+    .btn-login {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #00f2fe, #4facfe);
+        border: none;
+        border-radius: 6px;
+        color: #000000;
+        font-weight: bold;
+        font-size: 15px;
+        cursor: pointer;
+        transition: 0.3s;
+        margin-top: 10px;
+    }
+
+    .btn-login:hover {
+        box-shadow: 0 0 15px rgba(0, 242, 254, 0.6);
+        transform: translateY(-2px);
+    }
+
+    .login-container a {
+        color: #00f2fe !important;
+        text-decoration: none;
+        font-size: 13px;
+        display: inline-block;
+        margin-top: 20px;
+        transition: 0.3s;
+    }
+
+    .login-container a:hover {
+        color: #ffffff !important;
+        text-shadow: 0 0 8px rgba(0, 242, 254, 0.8);
+    }
+    
+    .error-msg {
+        background: rgba(255, 77, 77, 0.1);
+        color: #ff4d4d;
+        border: 1px solid rgba(255, 77, 77, 0.3);
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        margin-bottom: 20px;
+    }
+</style>
 </head>
 <body>
 

@@ -9,17 +9,25 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
     exit();
 }
 
+// 🌟 1. 捕捉排序参数 (默认为 desc - Newest to Oldest)
+$current_sort = (isset($_GET['sort']) && strtolower($_GET['sort']) === 'asc') ? 'asc' : 'desc';
+$db_sort = $current_sort === 'asc' ? 'ASC' : 'DESC';
+
 // 🌟 更新訂單狀態
 if (isset($_POST['update_status'])) {
     $order_id = intval($_POST['order_id']);
     $new_status = trim($_POST['new_status']);
     $allowed = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled'];
     
+    // 记住更新前的排序状态
+    $saved_sort = isset($_POST['current_sort']) ? $_POST['current_sort'] : 'desc';
+    
     if (in_array($new_status, $allowed)) {
         $stmt = $conn->prepare("UPDATE orders SET order_status = ? WHERE order_id = ?");
         $stmt->bind_param("si", $new_status, $order_id);
         if ($stmt->execute()) {
-            header("Location: manage_orders.php?updated=1");
+            // 🌟 更新成功后带上当前的排序参数一起跳转
+            header("Location: manage_orders.php?updated=1&sort=" . urlencode($saved_sort));
             exit();
         }
         $stmt->close();
@@ -55,6 +63,28 @@ if (isset($_POST['update_status'])) {
         .tt-info { color: #fff; font-size: 13px; margin-bottom: 4px; line-height: 1.5; font-family: 'JetBrains Mono', monospace; }
         .qty-badge { background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 3px; color: var(--accent-blue); font-weight: bold; margin-right: 5px; }
         .item-row { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+        
+        /* 🌟 下拉排序菜单样式 */
+        .admin-sort-dropdown {
+            background: rgba(0,0,0,0.6); 
+            color: #00f2fe; 
+            border: 1px solid rgba(0,242,254,0.3); 
+            padding: 8px 15px; 
+            border-radius: 6px; 
+            outline: none; 
+            cursor: pointer; 
+            font-family: 'Inter', sans-serif; 
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .admin-sort-dropdown:hover {
+            border-color: #00f2fe;
+            box-shadow: 0 0 10px rgba(0,242,254,0.2);
+        }
+        .admin-sort-dropdown option {
+            background: #0b0b12;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -82,9 +112,18 @@ if (isset($_POST['update_status'])) {
         </nav>
 
         <div class="admin-content" style="padding: 30px;">
-            <header class="admin-header" style="margin-bottom: 30px;">
-                <h2 style="color: #00f2fe; margin:0;"><i class="fas fa-box-open"></i> Global Order Fulfillment Center</h2>
-                <p style="color: #64748b; margin-top:5px;">Hover over Date to see precise timestamps and shipping coordinates.</p>
+            <header class="admin-header" style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h2 style="color: #00f2fe; margin:0;"><i class="fas fa-box-open"></i> Global Order Fulfillment Center</h2>
+                    <p style="color: #64748b; margin-top:5px;">Hover over Date to see precise timestamps and shipping coordinates.</p>
+                </div>
+                
+                <form method="GET" action="manage_orders.php" id="sortForm" style="margin:0;">
+                    <select name="sort" class="admin-sort-dropdown" onchange="document.getElementById('sortForm').submit();">
+                        <option value="desc" <?php echo $current_sort == 'desc' ? 'selected' : ''; ?>>Sort: Newest to Oldest</option>
+                        <option value="asc" <?php echo $current_sort == 'asc' ? 'selected' : ''; ?>>Sort: Oldest to Newest</option>
+                    </select>
+                </form>
             </header>
 
             <?php if (isset($_GET['updated'])) echo "<div style='color:#00f2fe; background:rgba(0,242,254,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(0,242,254,0.3);'>✅ Logistics status updated successfully.</div>"; ?>
@@ -104,7 +143,8 @@ if (isset($_POST['update_status'])) {
                     </thead>
                     <tbody>
                         <?php
-                        $sql = "SELECT o.*, c.username FROM orders o JOIN customers c ON o.customer_id = c.customer_id ORDER BY o.order_id DESC";
+                        // 🌟 3. 在 SQL 语句中应用排序变量 $db_sort
+                        $sql = "SELECT o.*, c.username FROM orders o JOIN customers c ON o.customer_id = c.customer_id ORDER BY o.order_id $db_sort";
                         $res = $conn->query($sql);
                         while ($row = $res->fetch_assoc()) {
                             $order_id = $row['order_id'];
@@ -119,7 +159,7 @@ if (isset($_POST['update_status'])) {
                             echo "<td style='padding:15px;'>#$order_id</td>";
                             echo "<td style='padding:15px;'><strong>" . htmlspecialchars($row['username']) . "</strong></td>";
                             
-                            // 🌟 核心：Hover 日期列
+                            // 🌟 Hover 日期列
                             echo "<td style='padding:15px;' class='order-tooltip-container'>
                                     <span style='border-bottom: 1px dotted #00f2fe; color:#cbd5e1;'>" . date('d M, Y', strtotime($row['order_date'])) . "</span>
                                     <div class='order-tooltip'>
@@ -143,6 +183,7 @@ if (isset($_POST['update_status'])) {
                             echo "<td style='padding:15px;'>
                                     <form method='POST' style='display:flex; gap:5px;'>
                                         <input type='hidden' name='order_id' value='$order_id'>
+                                        <input type='hidden' name='current_sort' value='$current_sort'>
                                         <select name='new_status' style='background:#000; color:#fff; border:1px solid #333; padding:5px; border-radius:4px; font-size:12px;'>
                                             <option value='Pending' ".($status=='Pending'?'selected':'').">Pending</option>
                                             <option value='Processing' ".($status=='Processing'?'selected':'').">Processing</option>
@@ -150,7 +191,7 @@ if (isset($_POST['update_status'])) {
                                             <option value='Completed' ".($status=='Completed'?'selected':'').">Completed</option>
                                             <option value='Cancelled' ".($status=='Cancelled'?'selected':'').">Cancelled</option>
                                         </select>
-                                        <button type='submit' name='update_status' class='btn-action' style='padding:5px 10px; font-size:12px; background:#00f2fe; color:#000;'>Go</button>
+                                        <button type='submit' name='update_status' class='btn-action' style='padding:5px 10px; font-size:12px; background:#00f2fe; color:#000; cursor:pointer;'>Go</button>
                                     </form>
                                   </td>";
                             echo "</tr>";
