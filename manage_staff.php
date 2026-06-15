@@ -38,7 +38,7 @@ if (isset($_GET['msg']) && $_GET['msg'] == 'added') $message = "<div style='colo
     <div class="admin-container">
         <nav class="admin-sidebar">
             <div class="sidebar-header">
-                <h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3>
+                <h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3>
                 <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
            <ul class="sidebar-menu">

@@ -65,7 +65,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_category'])) {
     <div class="admin-container" style="display: flex; min-height: 100vh; width: 100%;">
         
         <nav class="admin-sidebar">
-            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
+            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3></div>
             <ul class="sidebar-menu">
                 <li><a href="admin_dashboard.php">Dashboard</a></li>
                 <?php 

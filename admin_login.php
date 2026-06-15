@@ -41,13 +41,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if ($result->num_rows === 1) {
                 $user = $result->fetch_assoc();
                 
-                // 🌟 智慧相容：同時驗證加密哈希與開發期明文（並提供安全提示）
+                // 🌟 智慧相容：同時驗證加密哈希與開發期明文
                 $is_password_correct = false;
                 if (password_verify($password, $user['password'])) {
                     $is_password_correct = true;
                 } elseif ($password === $user['password']) {
                     $is_password_correct = true;
-                    // 如果是明文登入，設定一個提示，可以顯示在後台儀表板上
                     $_SESSION['security_notice'] = "⚠️ Dev Notice: Admin password is currently stored in plain text. Please hash it before deployment.";
                 }
 
@@ -58,19 +57,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     unset($_SESSION['admin_login_attempts']);
                     unset($_SESSION['admin_lockout_time']);
                     
-                    // 🌟 終極相容：自動識別資料庫主鍵欄位名
+                    // 自動識別資料庫主鍵欄位名
                     $admin_pk = $user['admin_id'] ?? $user['user_id'] ?? 0;
                     
-                    // 🌟 終極大一統：同時寫入新舊兩套 Session 鍵值，徹底粉碎無窮導向死循環！
+                    // 🌟 寫入 Session
                     $_SESSION['admin_id'] = $admin_pk;
                     $_SESSION['user_id'] = $admin_pk;
-                    
                     $_SESSION['admin_username'] = $user['username'];
                     $_SESSION['username'] = $user['username'];
-                    
                     $_SESSION['admin_role'] = $user['role'];
                     $_SESSION['role'] = $user['role']; 
                     
+                    // ==========================================
+                    // 🚨 新增：Security Audit Logging (寫入登入日誌)
+                    // ==========================================
+                    $ip_address = $_SERVER['REMOTE_ADDR']; // 獲取使用者的真實 IP
+                    // 防止在 localhost 測試時出現奇怪的 IPv6 地址 (::1)，將其轉換為標準的 127.0.0.1
+                    if ($ip_address == '::1') { $ip_address = '127.0.0.1'; }
+                    
+                    $log_sql = "INSERT INTO admin_logs (admin_id, username, role, ip_address) VALUES (?, ?, ?, ?)";
+                    $log_stmt = $conn->prepare($log_sql);
+                    if ($log_stmt) {
+                        $log_stmt->bind_param("isss", $admin_pk, $user['username'], $user['role'], $ip_address);
+                        $log_stmt->execute();
+                        $log_stmt->close();
+                    }
+                    // ==========================================
+
                     header("Location: admin_dashboard.php");
                     exit();
                 } else {

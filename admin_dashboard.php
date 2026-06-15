@@ -23,7 +23,20 @@ $total_users = $res_users->fetch_assoc()['total'] ?? 0;
 $res_pending = $conn->query("SELECT COUNT(*) as total FROM orders WHERE order_status = 'Pending'");
 $total_pending = $res_pending->fetch_assoc()['total'] ?? 0;
 
-// 🌟 ====== 卡片底部小波浪图动态数据 (过去 7 天) ======
+// 🌟 ====== 通知中心数据 ======
+$recent_pending_orders = [];
+$sql_notif = "SELECT o.order_id, c.username, o.order_date 
+              FROM orders o JOIN customers c ON o.customer_id = c.customer_id 
+              WHERE o.order_status = 'Pending' 
+              ORDER BY o.order_date DESC LIMIT 3";
+$res_notif = $conn->query($sql_notif);
+if($res_notif && $res_notif->num_rows > 0) {
+    while($row = $res_notif->fetch_assoc()) {
+        $recent_pending_orders[] = $row;
+    }
+}
+
+// 🌟 ====== 卡片底部小波浪图动态数据 ======
 $dates = [];
 for ($i = 6; $i >= 0; $i--) { $dates[] = date('Y-m-d', strtotime("-$i days")); }
 
@@ -47,25 +60,21 @@ $res = $conn->query("SELECT DATE(order_date) as dt, COUNT(*) as cnt FROM orders 
 if($res) { while($r = $res->fetch_assoc()) { if(isset($pen_data[$r['dt']])) $pen_data[$r['dt']] = $r['cnt']; } }
 $pen_chart_data = implode(',', array_values($pen_data));
 
-// 🌟 ====== 弹窗大图表动态数据 (今年 1-12 月各维度数据) ======
+// 🌟 ====== 弹窗大图表动态数据 ======
 $m_revenue = array_fill(1, 12, 0);
 $m_orders = array_fill(1, 12, 0);
 $m_users = array_fill(1, 12, 0);
 $m_pending = array_fill(1, 12, 0);
 
-// 1. 月度营收
 $res = $conn->query("SELECT MONTH(order_date) as mth, SUM(total_amount) as total FROM orders WHERE order_status != 'Cancelled' AND YEAR(order_date) = YEAR(CURDATE()) GROUP BY MONTH(order_date)");
 if($res) while($r = $res->fetch_assoc()) $m_revenue[$r['mth']] = $r['total'];
 
-// 2. 月度订单数
 $res = $conn->query("SELECT MONTH(order_date) as mth, COUNT(*) as total FROM orders WHERE YEAR(order_date) = YEAR(CURDATE()) GROUP BY MONTH(order_date)");
 if($res) while($r = $res->fetch_assoc()) $m_orders[$r['mth']] = $r['total'];
 
-// 3. 月度新增用户
 $res = $conn->query("SELECT MONTH(created_at) as mth, COUNT(*) as total FROM customers WHERE YEAR(created_at) = YEAR(CURDATE()) GROUP BY MONTH(created_at)");
 if($res) while($r = $res->fetch_assoc()) $m_users[$r['mth']] = $r['total'];
 
-// 4. 卡在各月的 Pending 订单数
 $res = $conn->query("SELECT MONTH(order_date) as mth, COUNT(*) as total FROM orders WHERE order_status = 'Pending' AND YEAR(order_date) = YEAR(CURDATE()) GROUP BY MONTH(order_date)");
 if($res) while($r = $res->fetch_assoc()) $m_pending[$r['mth']] = $r['total'];
 
@@ -91,7 +100,6 @@ $js_m_pen = implode(',', array_values($m_pending));
             backdrop-filter: blur(10px); position: relative; overflow: hidden;   
             display: flex; flex-direction: column; transition: all 0.3s ease; cursor: pointer;
         }
-        /* 🌟 各卡片专属悬浮发光颜色 */
         .card-revenue:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0, 230, 118, 0.2); border-color: rgba(0, 230, 118, 0.5); }
         .card-orders:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0, 242, 254, 0.2); border-color: rgba(0, 242, 254, 0.5); }
         .card-users:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(255, 215, 0, 0.2); border-color: rgba(255, 215, 0, 0.5); }
@@ -103,7 +111,6 @@ $js_m_pen = implode(',', array_values($m_pending));
         .stat-card .value { font-size: 1.8rem; font-weight: 900; margin-top: 15px; font-family: 'Inter', sans-serif; z-index: 2; }
         .chart-sparkline { position: absolute; bottom: 0; left: 0; width: 100%; z-index: 1; pointer-events: none; }
         
-        /* 🌟 动态模态框 (Modal) 样式 */
         .cyber-modal {
             display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px);
@@ -128,13 +135,23 @@ $js_m_pen = implode(',', array_values($m_pending));
         .recent-order-items::-webkit-scrollbar-thumb { background: rgba(0,242,254,0.3); border-radius: 4px; }
         .item-qty { color: #00f2fe; font-weight: bold; margin-right: 5px; background: rgba(0,242,254,0.1); padding: 2px 6px; border-radius: 4px; }
         .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        @keyframes ring { 0% { transform: rotate(0); } 10% { transform: rotate(15deg); } 20% { transform: rotate(-15deg); } 30% { transform: rotate(10deg); } 40% { transform: rotate(-10deg); } 50% { transform: rotate(0); } 100% { transform: rotate(0); } }
+        @keyframes slideDownNotif { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Notification Bell Styles */
+        .notif-btn { color: #64748b; font-size: 22px; cursor: pointer; transition: 0.3s; position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.05); }
+        .notif-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        .notif-btn.active .fa-bell { animation: ring 2s infinite; color: #fff; }
+        .notif-badge { position: absolute; top: -2px; right: -2px; background: #ff4d4d; color: #fff; font-size: 10px; font-family: 'Inter'; font-weight: 900; padding: 2px 5px; border-radius: 10px; box-shadow: 0 0 10px rgba(255,77,77,0.6); animation: pulse 2s infinite; }
     </style>
 </head>
 <body>
     <div class="admin-container">
         <nav class="admin-sidebar">
             <div class="sidebar-header">
-                <h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3>
+                <h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3>
                 <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
             
@@ -156,13 +173,58 @@ $js_m_pen = implode(',', array_values($m_pending));
         </nav>
 
         <div class="admin-content" style="padding: 30px;">
-            <header class="admin-header" style="margin-bottom: 25px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h2 style="color: #00f2fe; margin:0;"><i class="fas fa-chart-pie"></i> Operations Control Center</h2>
-                    <p style="color: #64748b; margin-top:5px;">Welcome back, <strong><?php echo htmlspecialchars($_SESSION['admin_username'] ?? 'Commander'); ?></strong>. Monitoring live telemetry.</p>
-                </div>
-                <div style="font-family:'JetBrains Mono'; color:#00f2fe; background:rgba(0,242,254,0.05); padding:10px 20px; border-radius:8px; border:1px solid rgba(0,242,254,0.2);">
-                    <i class="fa-solid fa-satellite"></i> LIVE NODE
+            <header class="admin-header" style="margin-bottom: 30px; display:flex; justify-content:space-between; align-items:center; background: rgba(11,11,18,0.4); padding: 20px 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                <a href="edit_staff.php?id=<?php echo $_SESSION['admin_id'] ?? 0; ?>" style="display: flex; align-items: center; gap: 20px; text-decoration: none; cursor: pointer; transition: 0.3s;" onmouseover="this.style.transform='translateX(5px)'; this.style.opacity='0.8';" onmouseout="this.style.transform='none'; this.style.opacity='1';" title="Edit Profile">
+                    <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #00f2fe, #4facfe); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: #000; box-shadow: 0 0 15px rgba(0,242,254,0.4);">
+                        <?php echo strtoupper(substr($_SESSION['admin_username'] ?? 'C', 0, 1)); ?>
+                    </div>
+                    <div>
+                        <h2 style="color: #fff; margin:0; font-size: 22px;">
+                            <?php echo htmlspecialchars($_SESSION['admin_username'] ?? 'Commander'); ?>
+                            <span style="font-size: 10px; background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(168, 85, 247, 0.5); vertical-align: middle; margin-left: 10px; text-transform: uppercase;">
+                                <i class="fas fa-star"></i> <?php echo htmlspecialchars($_SESSION['admin_role'] ?? 'ADMIN'); ?>
+                            </span>
+                        </h2>
+                        <p style="color: #64748b; font-size: 13px; margin-top:5px; margin-bottom: 0;">System operations nominal. Awaiting your command.</p>
+                    </div>
+                </a>
+                
+                <div style="display: flex; align-items: center; gap: 25px;">
+                    <div class="notification-wrapper" style="position: relative;">
+                        <div class="notif-btn <?php echo ($total_pending > 0) ? 'active' : ''; ?>" onclick="toggleNotif()">
+                            <i class="fas fa-bell"></i>
+                            <?php if($total_pending > 0): ?><span class="notif-badge"><?php echo $total_pending; ?></span><?php endif; ?>
+                        </div>
+                        <div id="notifDropdown" style="display: none; position: absolute; right: 0; top: 55px; width: 320px; background: rgba(15,15,20,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.8); backdrop-filter: blur(20px); z-index: 1000; overflow: hidden; animation: slideDownNotif 0.2s ease-out;">
+                            <div style="padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+                                <strong style="color: #fff; font-size: 14px;"><i class="fas fa-inbox" style="color: #00f2fe; margin-right: 5px;"></i> Action Required</strong>
+                                <span style="color: <?php echo ($total_pending > 0) ? '#ff4d4d' : '#64748b'; ?>; font-size: 12px; font-weight: bold;"><?php echo $total_pending; ?> Pending</span>
+                            </div>
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                <?php if($total_pending > 0): ?>
+                                    <?php foreach($recent_pending_orders as $notif): ?>
+                                        <a href="manage_orders.php" style="display: block; padding: 15px 20px; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.03); transition: 0.3s;" onmouseover="this.style.background='rgba(0,242,254,0.05)'" onmouseout="this.style.background='transparent'">
+                                            <div style="color: #fff; font-size: 13px; font-weight: bold; margin-bottom: 4px;">
+                                                <i class="fas fa-circle" style="color: #ff4d4d; font-size: 8px; margin-right: 5px; vertical-align: middle; animation: pulse 1.5s infinite;"></i> New Order #<?php echo str_pad($notif['order_id'], 5, '0', STR_PAD_LEFT); ?>
+                                            </div>
+                                            <div style="color: #cbd5e1; font-size: 12px; margin-bottom: 4px;">Placed by <span style="color: #ffd700;"><?php echo htmlspecialchars($notif['username']); ?></span></div>
+                                            <div style="color: #64748b; font-size: 11px;"><i class="far fa-clock"></i> <?php echo date('d M Y, h:i A', strtotime($notif['order_date'])); ?></div>
+                                        </a>
+                                    <?php endforeach; ?>
+                                    <a href="manage_orders.php" style="display: block; text-align: center; padding: 12px; color: #00f2fe; font-size: 12px; font-weight: bold; text-decoration: none; background: rgba(0,242,254,0.05); transition: 0.3s;" onmouseover="this.style.background='rgba(0,242,254,0.1)'">Open Logistics Hub &rarr;</a>
+                                <?php else: ?>
+                                    <div style="padding: 40px 20px; text-align: center; color: #64748b; font-size: 13px;">
+                                        <i class="fas fa-check-shield" style="font-size: 30px; color: #00e676; margin-bottom: 15px; display: block; opacity: 0.8;"></i>All systems clear.<br>No pending orders at this moment.
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="text-align: right;">
+                        <div style="font-family:'JetBrains Mono'; color:#00f2fe; font-size: 18px; font-weight: bold; text-shadow: 0 0 10px rgba(0,242,254,0.5);" id="cyber-clock">00:00:00</div>
+                        <div style="color: #00e676; font-size: 11px; margin-top: 4px; font-weight: bold; letter-spacing: 1px;"><i class="fa-solid fa-satellite-dish" style="animation: pulse 1.5s infinite;"></i> MAIN NODE ONLINE</div>
+                    </div>
                 </div>
             </header>
 
@@ -261,38 +323,108 @@ $js_m_pen = implode(',', array_values($m_pending));
                 </table>
             </div>
 
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
-                <div style="background:rgba(11,11,18,0.4); padding:30px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
-                    <h3 style="color:#ff4d4d; margin-top:0; font-size:16px; text-transform:uppercase;"><i class="fas fa-radiation"></i> Hardware Stock Emergency Alert</h3>
-                    <p style="color:#64748b; font-size:13px; margin-bottom:20px;">The following nodes are running critically low on inventory.</p>
-                    
+            <?php if (strtolower($current_role) === 'superadmin'): ?>
+            <div style="background:rgba(11,11,18,0.4); padding:30px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); margin-bottom: 40px; border-left: 4px solid #a855f7;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="color:#a855f7; margin:0; font-size:16px; text-transform:uppercase;"><i class="fas fa-shield-alt"></i> Security Audit Logs (Alpha Clearance)</h3>
+                    <span style="background:rgba(168,85,247,0.1); color:#a855f7; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; border:1px solid rgba(168,85,247,0.3);">RESTRICTED ACCESS</span>
+                </div>
+                
+                <table style="width:100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; white-space: nowrap; width: 20%;">Timestamp</th>
+                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; width: 20%;">Personnel</th>
+                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; width: 45%;">Event / Action Taken</th>
+                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; white-space: nowrap; width: 15%;">IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $log_sql = "SELECT * FROM admin_logs ORDER BY login_time DESC LIMIT 8";
+                        $log_res = @$conn->query($log_sql);
+
+                        if ($log_res && $log_res->num_rows > 0) {
+                            while ($log = $log_res->fetch_assoc()) {
+                                $role_color = (strtolower($log['role']) == 'superadmin') ? '#a855f7' : '#00f2fe';
+                                
+                                // 🌟 区分登入动作和系统修改动作的颜色
+                                $event = htmlspecialchars($log['action_event'] ?? 'System Login');
+                                $event_color = ($event == 'System Login') ? '#00e676' : '#facc15';
+                                if (strpos(strtolower($event), 'Delete') !== false) { $event_color = '#ff4d4d'; } 
+
+                                echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.03);'>";
+                                
+                                // 🌟 这里也加上了 white-space: nowrap 强制时间永远在一行显示
+                                echo "<td style='padding: 15px; color:#64748b; font-size:12px; white-space: nowrap;'><i class='far fa-clock'></i> " . htmlspecialchars($log['login_time']) . "</td>";
+                                
+                                echo "<td style='padding: 15px; color:#fff; font-weight:bold; white-space: nowrap;'>" . htmlspecialchars($log['username']) . " <span style='color:{$role_color}; background:rgba(255,255,255,0.05); padding:2px 4px; border-radius:4px; font-size:9px; border:1px solid {$role_color}; margin-left:5px;'>" . strtoupper(htmlspecialchars($log['role'])) . "</span></td>";
+                                
+                                echo "<td style='padding: 15px; color:{$event_color}; font-size:12px; font-weight:600;'>{$event}</td>";
+                                
+                                // 🌟 IP 地址也不允许换行
+                                echo "<td style='padding: 15px; color:#cbd5e1; font-size:12px; white-space: nowrap;'><i class='fas fa-network-wired' style='color:#64748b;'></i> " . htmlspecialchars($log['ip_address']) . "</td>";
+                                echo "</tr>";
+                            }
+                        } else {
+                            echo "<tr><td colspan='4' style='padding: 20px; text-align: center; color: #64748b;'>No logs recorded.</td></tr>";
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                
+                <div style="background:rgba(11,11,18,0.4); padding:25px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); transition: transform 0.3s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='none'">
+                    <h3 style="color:#ff4d4d; margin-top:0; font-size:15px; text-transform:uppercase;"><i class="fas fa-radiation"></i> Stock Emergency</h3>
+                    <p style="color:#64748b; font-size:12px; margin-bottom:15px;">Nodes running critically low.</p>
                     <ul style="list-style:none; padding:0; margin:0;">
                         <?php
-                        $stock_res = $conn->query("SELECT product_id, product_name, stock_quantity FROM products WHERE stock_quantity <= 3 ORDER BY stock_quantity ASC LIMIT 5");
+                        $stock_res = $conn->query("SELECT product_name, stock_quantity FROM products WHERE stock_quantity <= 3 ORDER BY stock_quantity ASC LIMIT 4");
                         if($stock_res && $stock_res->num_rows > 0) {
                             while($item = $stock_res->fetch_assoc()) {
                                 $qty = $item['stock_quantity'];
-                                $lbl = ($qty == 0) ? "DEPLETED (Out of Stock)" : "$qty UNITS REMAINING";
                                 $c = ($qty == 0) ? "#ff4d4d" : "#facc15";
-                                
-                                echo "<li style='display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid rgba(255,255,255,0.03); font-size:14px;'>
-                                        <span><i class='fa-solid fa-microchip' style='color:#8a2be2; margin-right:10px;'></i> " . htmlspecialchars($item['product_name']) . "</span>
-                                        <span style='color:$c; font-weight:bold; font-family:\"JetBrains Mono\"; font-size:12px;'>$lbl</span>
+                                echo "<li style='display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.03); font-size:13px;'>
+                                        <span style='white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;'><i class='fa-solid fa-microchip' style='color:#8a2be2; margin-right:8px;'></i> " . htmlspecialchars($item['product_name']) . "</span>
+                                        <span style='color:$c; font-weight:bold; font-family:\"JetBrains Mono\"; font-size:12px;'>$qty LEFT</span>
                                       </li>";
                             }
                         } else {
-                            echo "<li style='color:#00e676; padding:15px; text-align:center; background:rgba(0,230,118,0.05); border-radius:6px; border:1px solid rgba(0,230,118,0.1);'><i class='fas fa-check-shield'></i> All core component supply chains stable. Quantum grids optimal.</li>";
+                            echo "<li style='color:#00e676; padding:15px; text-align:center; background:rgba(0,230,118,0.05); border-radius:6px; font-size:13px;'>Inventory optimal.</li>";
                         }
                         ?>
                     </ul>
                 </div>
 
-                <div style="background:rgba(11,11,18,0.4); padding:30px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:12px;">
-                    <h3 style="color:#00f2fe; margin-top:0; font-size:16px; text-transform:uppercase;"><i class="fas fa-terminal"></i> Command Matrix</h3>
-                    <a href="add_product.php" class="quick-action-btn" style="text-align:center; display:block; text-decoration:none;"><i class="fas fa-plus"></i> Launch New Hardware</a>
-                    <a href="add_package.php" class="quick-action-btn" style="text-align:center; display:block; text-decoration:none; background:linear-gradient(135deg, #8a2be2, #4facfe); border:none; color:#fff;"><i class="fas fa-hammer"></i> Forge Pre-built Package</a>
-                    <a href="manage_orders.php" class="quick-action-btn" style="text-align:center; display:block; text-decoration:none; background:transparent; border:1px solid #333; color:#aaa;"><i class="fas fa-truck"></i> Access Logistics Hub</a>
+                <div style="background:rgba(11,11,18,0.4); padding:25px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); position: relative; transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='none'">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                        <h3 style="color:#ffd700; margin:0; font-size:15px; text-transform:uppercase;"><i class="fas fa-satellite-communicate"></i> Team Comm-Link</h3>
+                        <div style="display:flex; flex-direction: row-reverse;">
+                            <img src="image/placeholder.jpg" style="width: 25px; height: 25px; border-radius: 50%; border: 2px solid #141414; margin-left: -10px; z-index: 1;" title="Admin 2 Online">
+                            <div style="width: 25px; height: 25px; border-radius: 50%; border: 2px solid #141414; background: #00f2fe; color: #000; font-size: 10px; font-weight: bold; display:flex; justify-content:center; align-items:center; margin-left: -10px; z-index: 2;" title="You">ME</div>
+                        </div>
+                    </div>
+                    <div style="background: rgba(255,215,0,0.05); border: 1px dashed rgba(255,215,0,0.3); padding: 15px; border-radius: 8px; height: 90px; overflow-y: auto;">
+                        <p style="margin:0; font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+                            <strong style="color: #ffd700;">[System Bot]:</strong> Reminder: Perform monthly DB backup by Friday. <br>
+                            <strong style="color: #00f2fe;">[SuperAdmin]:</strong> Whoever handles Order #00021, please verify the payment receipt.
+                        </p>
+                    </div>
+                    <input type="text" placeholder="Transmit message to team..." style="width: 100%; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px; font-size: 12px; box-sizing: border-box; outline: none;">
                 </div>
+
+                <div style="background:rgba(11,11,18,0.4); padding:25px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:12px; justify-content:center;">
+                    <h3 style="color:#a855f7; margin-top:0; font-size:15px; text-transform:uppercase; margin-bottom:5px;"><i class="fas fa-terminal"></i> Command Matrix</h3>
+                    <a href="add_product.php" class="quick-action-btn" style="text-align:center; display:block; text-decoration:none; background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.3); color:#00f2fe; padding:12px; border-radius:6px; font-size:13px; font-weight:bold; transition: 0.3s;"><i class="fas fa-plus"></i> Inject Hardware</a>
+                    
+                    <a href="add_package.php" class="quick-action-btn" style="text-align:center; display:block; text-decoration:none; background:rgba(168, 85, 247, 0.1); border:1px solid rgba(168, 85, 247, 0.3); color:#a855f7; padding:12px; border-radius:6px; font-size:13px; font-weight:bold; transition: 0.3s;"><i class="fas fa-hammer"></i> Forge Blueprint</a>
+                    
+                    <a href="manage_orders.php" class="quick-action-btn" style="text-align:center; display:block; text-decoration:none; background:transparent; border:1px dashed #64748b; color:#64748b; padding:12px; border-radius:6px; font-size:13px; transition: 0.3s;"><i class="fas fa-truck"></i> Logistics Hub</a>
+                </div>
+
             </div>
         </div>
     </div>
@@ -300,16 +432,34 @@ $js_m_pen = implode(',', array_values($m_pending));
     <div id="detailModal" class="cyber-modal">
         <div class="cyber-modal-content" id="modalBox">
             <span class="close-modal" onclick="closeDetailModal()">&times;</span>
-            <h3 id="modalTitle" style="margin-top: 0; display: flex; align-items: center; gap: 10px; font-size: 20px;">
-                </h3>
-            <p id="modalSubtitle" style="color: #64748b; font-size: 13px; margin-bottom: 20px;">
-                </p>
-            
+            <h3 id="modalTitle" style="margin-top: 0; display: flex; align-items: center; gap: 10px; font-size: 20px;"></h3>
+            <p id="modalSubtitle" style="color: #64748b; font-size: 13px; margin-bottom: 20px;"></p>
             <div id="modalChart" style="min-height: 350px;"></div>
         </div>
     </div>
 
     <script>
+        // --- 实时跳动的赛博时钟 ---
+        function updateCyberClock() {
+            var now = new Date();
+            var h = String(now.getHours()).padStart(2, '0');
+            var m = String(now.getMinutes()).padStart(2, '0');
+            var s = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('cyber-clock').innerText = h + ':' + m + ':' + s;
+        }
+        setInterval(updateCyberClock, 1000);
+        updateCyberClock(); 
+
+        // --- 通知下拉菜单逻辑 ---
+        function toggleNotif() {
+            var dropdown = document.getElementById("notifDropdown");
+            if (dropdown.style.display === "none" || dropdown.style.display === "") {
+                dropdown.style.display = "block";
+            } else {
+                dropdown.style.display = "none";
+            }
+        }
+
         // --- 1. 卡片底部的小动态 Sparkline 图表 ---
         var commonOptions = {
             chart: { type: 'area', height: 80, sparkline: { enabled: true } },
@@ -326,7 +476,7 @@ $js_m_pen = implode(',', array_values($m_pending));
         // --- 2. 强大的动态弹窗 (Modal) 与大图表逻辑 ---
         var modal = document.getElementById("detailModal");
         var modalBox = document.getElementById("modalBox");
-        var detailChart = null; // 全局变量存储图表实例
+        var detailChart = null; 
 
         function openDetailModal(type) {
             var title = document.getElementById("modalTitle");
@@ -337,7 +487,6 @@ $js_m_pen = implode(',', array_values($m_pending));
             var chartName = '';
             var isCurrency = false;
 
-            // 根据点击的卡片类型，注入不同的数据和文案
             if (type === 'revenue') {
                 title.innerHTML = '<i class="fas fa-chart-bar"></i> Monthly Revenue Overview (<?php echo date('Y'); ?>)';
                 title.style.color = '#00e676';
@@ -377,12 +526,10 @@ $js_m_pen = implode(',', array_values($m_pending));
                 chartName = 'Pending Orders';
             }
 
-            // 如果之前有图表，先销毁掉再画新的
             if(detailChart) {
                 detailChart.destroy();
             }
 
-            // 渲染动态大图表
             var options = {
                 series: [{ name: chartName, data: chartData }],
                 chart: { type: 'bar', height: 350, toolbar: { show: false }, foreColor: '#64748b' },
@@ -419,10 +566,16 @@ $js_m_pen = implode(',', array_values($m_pending));
             modal.style.display = "none";
         }
 
-        // 点击黑色遮罩空白处自动关闭
+        // 点击外部空白处关闭弹窗和通知下拉菜单
         window.onclick = function(event) {
             if (event.target == modal) {
                 closeDetailModal();
+            }
+            if (!event.target.closest('.notification-wrapper')) {
+                var dropdown = document.getElementById("notifDropdown");
+                if (dropdown && dropdown.style.display === "block") {
+                    dropdown.style.display = "none";
+                }
             }
         }
     </script>

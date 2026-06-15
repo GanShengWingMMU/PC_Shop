@@ -3,14 +3,16 @@ session_start();
 if (file_exists('config.php')) { require_once 'config.php'; } 
 else { include 'db_connect.php'; }
 
-// 🌟 只有老板才能进入
+// 🌟 只有老板才能进入或者修改自己的资料
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
-if (empty($current_role) || strtolower($current_role) !== 'superadmin') {
-    die("<div style='background:#000; color:#ff4d4d; padding:50px; text-align:center; font-family:monospace;'>ACCESS DENIED: ALPHA REQUIRED.</div>");
+$logged_in_id = $_SESSION['admin_id'] ?? 0;
+$staff_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+if (empty($current_role) || (strtolower($current_role) !== 'superadmin' && $logged_in_id !== $staff_id)) {
+    die("<div style='background:#000; color:#ff4d4d; padding:50px; text-align:center; font-family:monospace;'>ACCESS DENIED: ALPHA REQUIRED OR OWNER ONLY.</div>");
 }
 
 $error = "";
-$staff_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($staff_id <= 0) { header("Location: manage_staff.php"); exit(); }
 
@@ -62,6 +64,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
                 }
                 
                 if ($stmt->execute()) {
+                    // 如果改的是自己，更新一下 Session 名字
+                    if ($logged_in_id === $staff_id) {
+                        $_SESSION['admin_username'] = $username;
+                    }
                     header("Location: manage_staff.php?msg=updated");
                     exit();
                 } else {
@@ -73,17 +79,109 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
         }
     }
 }
+
+// 获取首字母作为头像
+$avatar_letter = strtoupper(substr($staff['username'], 0, 1));
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Edit Staff - Admin</title>
+    <title>Edit Staff Profile - Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 🌟 动态密码提示框的专属 CSS */
+        /* 🌟 两栏布局设定 */
+        .profile-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        /* 🌟 左侧头像卡片 */
+        .profile-sidebar {
+            background: rgba(11,11,18,0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-top: 2px solid var(--accent-purple);
+            padding: 30px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a855f7, #00f2fe);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: 900;
+            color: #000;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 20px rgba(0,242,254,0.4);
+            border: 3px solid rgba(255,255,255,0.1);
+        }
+
+        .profile-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: #fff;
+            margin: 0 0 5px;
+        }
+
+        .profile-role {
+            font-size: 12px;
+            color: #a855f7;
+            background: rgba(168, 85, 247, 0.1);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            display: inline-block;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .profile-detail-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #cbd5e1;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        /* 🌟 右侧表单设定 */
+        .profile-form-area {
+            background: rgba(11,11,18,0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .profile-form-area h3 {
+            color: #00f2fe;
+            margin-top: 0;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 密码验证样式保留 */
         .pwd-rules {
             display: none;
             background: rgba(0,0,0,0.8);
@@ -119,7 +217,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
 <body>
     <div class="admin-container">
         <nav class="admin-sidebar">
-            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
+            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3></div>
             <ul class="sidebar-menu">
                 <li><a href="admin_dashboard.php">Dashboard</a></li>
                 <?php 
@@ -137,56 +235,81 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
             </ul>
         </nav>
 
-        <div class="admin-content">
-            <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
-                <h2 style="color: #ff4d4d; margin: 0;"><i class="fas fa-user-edit"></i> Modify Personnel File</h2>
-                <a href="manage_staff.php" class="btn-action" style="color: #888; border-color: #555; text-decoration:none;">&larr; Abort</a>
+        <div class="admin-content" style="padding: 30px;">
+            <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 style="color: #fff; margin: 0;"><i class="fas fa-user-cog" style="color: #a855f7;"></i> Personnel Profile</h2>
+                <a href="manage_staff.php" class="btn-action" style="color: #888; border-color: #555; text-decoration:none;"><i class="fas fa-arrow-left"></i> Back to Roster</a>
             </header>
 
-            <div class="form-card">
-                <?php if ($error) echo "<div style='color:#ff4d4d; background:rgba(255,77,77,0.1); padding:15px; border-radius:6px; margin-bottom:20px;'>$error</div>"; ?>
+            <?php if ($error) echo "<div style='color:#ff4d4d; background:rgba(255,77,77,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border: 1px solid rgba(255,77,77,0.3);'><i class='fas fa-exclamation-triangle'></i> $error</div>"; ?>
 
-                <form method="POST">
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label style="color: #ff4d4d;">Username *</label>
-                            <input type="text" name="username" class="form-control" value="<?php echo htmlspecialchars($staff['username']); ?>" required>
+            <div class="profile-container">
+                <div class="profile-sidebar">
+                    <div class="profile-avatar">
+                        <?php echo $avatar_letter; ?>
+                    </div>
+                    <h2 class="profile-name"><?php echo htmlspecialchars($staff['username']); ?></h2>
+                    <div class="profile-role"><i class="fas fa-star"></i> <?php echo htmlspecialchars($staff['role']); ?></div>
+                    
+                    <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 15px; padding-top: 20px;">
+                        <div class="profile-detail-item">
+                            <i class="fas fa-envelope" style="color: #64748b; width: 20px;"></i>
+                            <span><?php echo htmlspecialchars($staff['email'] ?: 'No email provided'); ?></span>
                         </div>
-                        
-                        <div class="form-group full-width">
-                            <label style="color: #ff4d4d;">Email</label>
-                            <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($staff['email'] ?? ''); ?>">
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label style="color: #ff4d4d;">New High-Security Password (Optional)</label>
-                            <div style="position: relative;">
-                                <input type="password" name="password" id="pwd-input" class="form-control" placeholder="Leave blank to keep current password" style="padding-right: 40px; margin-bottom:0;">
-                                <i class="fas fa-eye" id="toggle-pwd" style="position: absolute; right: 15px; top: 15px; color: #888; cursor: pointer; transition: 0.2s;"></i>
-                            </div>
-
-                            <div id="pwd-rules" class="pwd-rules">
-                                <p id="req-len"><i class="fas fa-times-circle"></i> At least 12 characters</p>
-                                <p id="req-up"><i class="fas fa-times-circle"></i> 1 Uppercase letter</p>
-                                <p id="req-low"><i class="fas fa-times-circle"></i> 1 Lowercase letter</p>
-                                <p id="req-num"><i class="fas fa-times-circle"></i> 1 Number</p>
-                                <p id="req-spc"><i class="fas fa-times-circle"></i> 1 Special character (e.g. @$!%*?&)</p>
-                            </div>
-                        </div>
-
-                        <div class="form-group full-width" style="margin-top: 15px;">
-                            <label style="color: #ff4d4d;">Role Level *</label>
-                            <select name="role" class="form-control" required style="cursor:pointer;">
-                                <option value="Admin" <?php if($staff['role'] == 'Admin') echo 'selected'; ?>>Admin (Standard Access Control)</option>
-                                <option value="SuperAdmin" <?php if($staff['role'] == 'SuperAdmin') echo 'selected'; ?>>SuperAdmin (Full Access Control)</option>
-                            </select>
+                        <div class="profile-detail-item">
+                            <i class="fas fa-id-badge" style="color: #64748b; width: 20px;"></i>
+                            <span>ID: ADM-<?php echo str_pad($staff['admin_id'], 4, '0', STR_PAD_LEFT); ?></span>
                         </div>
                     </div>
+                </div>
 
-                    <button type="submit" name="update_staff" id="submit-btn" style="width: 100%; margin-top:30px; background: linear-gradient(135deg, #ff4d4d, #f39c12); color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: 900; font-size: 16px; transition: 0.3s;">
-                        <i class="fas fa-sync"></i> Update Clearance
-                    </button>
-                </form>
+                <div class="profile-form-area">
+                    <h3><i class="fas fa-sliders-h"></i> Update Security Credentials</h3>
+                    
+                    <form method="POST">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group full-width" style="grid-column: 1 / -1;">
+                                <label style="color: #cbd5e1; font-size: 13px;">Username</label>
+                                <input type="text" name="username" class="form-control" value="<?php echo htmlspecialchars($staff['username']); ?>" required style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color:#fff; padding: 12px; border-radius: 6px;">
+                            </div>
+                            
+                            <div class="form-group full-width" style="grid-column: 1 / -1;">
+                                <label style="color: #cbd5e1; font-size: 13px;">Email Address</label>
+                                <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($staff['email'] ?? ''); ?>" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color:#fff; padding: 12px; border-radius: 6px;">
+                            </div>
+
+                            <div class="form-group full-width" style="grid-column: 1 / -1;">
+                                <label style="color: #cbd5e1; font-size: 13px;">Clearance Level (Role)</label>
+                                <select name="role" class="form-control" required style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color:#fff; padding: 12px; border-radius: 6px; cursor:pointer;">
+                                    <option value="Admin" <?php if($staff['role'] == 'Admin') echo 'selected'; ?>>Admin (Standard Access Control)</option>
+                                    <?php if(strtolower($current_role) === 'superadmin'): ?>
+                                        <option value="SuperAdmin" <?php if($staff['role'] == 'SuperAdmin') echo 'selected'; ?>>SuperAdmin (Full System Control)</option>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+
+                            <div class="form-group full-width" style="grid-column: 1 / -1;">
+                                <label style="color: #ff4d4d; font-size: 13px;">Change Password (Optional)</label>
+                                <div style="position: relative;">
+                                    <input type="password" name="password" id="pwd-input" class="form-control" placeholder="Leave blank to maintain current password" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,77,77,0.3); color:#fff; padding: 12px 40px 12px 12px; border-radius: 6px; margin-bottom:0;">
+                                    <i class="fas fa-eye" id="toggle-pwd" style="position: absolute; right: 15px; top: 15px; color: #888; cursor: pointer; transition: 0.2s;"></i>
+                                </div>
+
+                                <div id="pwd-rules" class="pwd-rules">
+                                    <p id="req-len"><i class="fas fa-times-circle"></i> At least 12 characters</p>
+                                    <p id="req-up"><i class="fas fa-times-circle"></i> 1 Uppercase letter</p>
+                                    <p id="req-low"><i class="fas fa-times-circle"></i> 1 Lowercase letter</p>
+                                    <p id="req-num"><i class="fas fa-times-circle"></i> 1 Number</p>
+                                    <p id="req-spc"><i class="fas fa-times-circle"></i> 1 Special character (e.g. @$!%*?&)</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" name="update_staff" id="submit-btn" style="width: 100%; margin-top:30px; background: linear-gradient(135deg, #a855f7, #00f2fe); color: #fff; border: none; padding: 15px; border-radius: 8px; font-weight: 800; font-size: 15px; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,242,254,0.2);">
+                            <i class="fas fa-save"></i> Save Profile Changes
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -196,7 +319,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
         const togglePwd = document.getElementById('toggle-pwd');
         const rulesBox = document.getElementById('pwd-rules');
         const submitBtn = document.getElementById('submit-btn');
-        const btnOriginalText = '<i class="fas fa-sync"></i> Update Clearance';
+        const btnOriginalText = '<i class="fas fa-save"></i> Save Profile Changes';
 
         const rules = {
             len: { el: document.getElementById('req-len'), regex: /.{12,}/ },

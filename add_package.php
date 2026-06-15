@@ -1,11 +1,8 @@
 <?php
 session_start();
-
-// 🌟 智慧相容資料庫連線
 if (file_exists('config.php')) { require_once 'config.php'; } 
 else { include 'db_connect.php'; }
 
-// 🌟 安全准入
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
 if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
     header("Location: admin_login.php");
@@ -14,161 +11,221 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
 
 $error = "";
 
-// ==========================================
-// 1. 抓取所有零件，並依照分類分組 (給下拉選單使用)
-// ==========================================
+// 抓取全庫零件字典，供前端選擇
 $components_by_category = [];
 $sql_prod = "SELECT p.product_id, p.product_name, p.price, c.category_name 
-             FROM products p 
-             JOIN categories c ON p.category_id = c.category_id 
+             FROM products p JOIN categories c ON p.category_id = c.category_id 
              ORDER BY c.category_id ASC, p.price DESC";
 $res_prod = $conn->query($sql_prod);
-if ($res_prod) {
-    while($row = $res_prod->fetch_assoc()){
-        $components_by_category[$row['category_name']][] = $row;
-    }
+while($row = $res_prod->fetch_assoc()){
+    $components_by_category[$row['category_name']][] = $row;
 }
 
-// ==========================================
-// 2. 處理表單提交 (ACID Transaction 關聯寫入 + 實體圖片上傳)
-// ==========================================
+// 處理新增邏輯
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $package_name = trim($_POST['package_name']);
     $description = trim($_POST['description']);
     $target_persona = trim($_POST['target_persona']);
     $stock_status = trim($_POST['stock_status']);
-    
-    // 🌟 核心：回歸最穩定的實體檔案上傳
-    $image_url = "image/placeholder_pc.png"; // 預設圖片
+
+    $image_url = ""; 
     $upload_ok = true;
-    
+
+    // 圖片上傳處理
     if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] == UPLOAD_ERR_OK) {
         $file_tmp = $_FILES['image_file']['tmp_name'];
         $ext = strtolower(pathinfo($_FILES["image_file"]["name"], PATHINFO_EXTENSION));
         $valid_extensions = array("jpg", "jpeg", "png", "gif", "webp");
         
         if (!in_array($ext, $valid_extensions)) {
-            $error = "Error: Invalid image format. Only JPG, PNG, GIF, WEBP are allowed.";
+            $error = "⚠️ Error: Invalid image format.";
             $upload_ok = false;
         } else {
-            // 生成獨一無二的檔名防止覆蓋，存入本地 image/ 資料夾
             $new_filename = uniqid("pkg_") . "." . $ext;
             $target_dir = "image/";
             if (!is_dir($target_dir)) { mkdir($target_dir, 0777, true); }
             $target_file = $target_dir . $new_filename;
-            
-            if (move_uploaded_file($file_tmp, $target_file)) {
-                $image_url = $target_file; // 資料庫只存路徑
-            } else {
-                $error = "Error: Failed to save image to local folder.";
-                $upload_ok = false;
+            if (move_uploaded_file($file_tmp, $target_file)) { 
+                $image_url = $target_file; 
+            } else { 
+                $error = "⚠️ Error: Failed to save image."; 
+                $upload_ok = false; 
             }
         }
+    } else {
+        $error = "⚠️ Please upload an image for the new Blueprint.";
+        $upload_ok = false;
     }
-    
-    $score_gamer = intval($_POST['score_gamer']);
-    $score_creator = intval($_POST['score_creator']);
-    $score_student = intval($_POST['score_student']);
-    $score_enthusiast = intval($_POST['score_enthusiast']);
 
     if ($upload_ok && empty($error)) {
-        // 防呆：攔截非法的 AI 分數
-        if ($score_gamer < 0 || $score_gamer > 10 || $score_creator < 0 || $score_creator > 10 || $score_student < 0 || $score_student > 10 || $score_enthusiast < 0 || $score_enthusiast > 10) {
-            $error = "System Error: AI Scores must be strictly between 0 and 10.";
-        } else {
-            // 🌟 開啟資料庫事務
-            $conn->begin_transaction();
-            
-            try {
-                $base_price = 0;
-                $insert_pkg = $conn->prepare("INSERT INTO packages (package_name, description, price, image_url, target_persona, stock_status, score_gamer, score_creator, score_student, score_enthusiast) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $insert_pkg->bind_param("ssdsssiiii", $package_name, $description, $base_price, $image_url, $target_persona, $stock_status, $score_gamer, $score_creator, $score_student, $score_enthusiast);
-                $insert_pkg->execute();
-                
-                $new_package_id = $conn->insert_id;
-                $insert_pkg->close();
-
-                if (isset($_POST['components']) && is_array($_POST['components'])) {
-                    $insert_item = $conn->prepare("INSERT INTO package_items (package_id, product_id, quantity) VALUES (?, ?, 1)");
-                    foreach ($_POST['components'] as $prod_id) {
-                        if (!empty($prod_id)) {
-                            $pid = intval($prod_id);
-                            $insert_item->bind_param("ii", $new_package_id, $pid);
-                            $insert_item->execute();
-                        }
+        // 自動計算所有選中零件總價格
+        $total_price = 0;
+        if (isset($_POST['components']) && is_array($_POST['components'])) {
+            foreach ($_POST['components'] as $prod_id) {
+                if (!empty($prod_id)) {
+                    $pid = intval($prod_id);
+                    $res = $conn->query("SELECT price FROM products WHERE product_id = $pid");
+                    if ($r = $res->fetch_assoc()) {
+                        $total_price += floatval($r['price']);
                     }
-                    $insert_item->close();
                 }
-
-                $conn->commit();
-                header("Location: manage_packages.php?msg=added");
-                exit();
-
-            } catch (Exception $e) {
-                $conn->rollback();
-                $error = "Database Error: Could not save package. " . $e->getMessage();
             }
+        }
+
+        $conn->begin_transaction();
+        try {
+            // 寫入 packages 主表
+            $insert_query = "INSERT INTO packages (package_name, description, price, image_url, target_persona, stock_status) VALUES (?, ?, ?, ?, ?, ?)";
+            $insert_pkg = $conn->prepare($insert_query);
+            
+            if (!$insert_pkg) {
+                throw new Exception("SQL Error: " . $conn->error);
+            }
+
+            $insert_pkg->bind_param("ssdsss", $package_name, $description, $total_price, $image_url, $target_persona, $stock_status);
+            $insert_pkg->execute();
+            $new_package_id = $insert_pkg->insert_id; // 獲取剛剛新增的 Package ID
+            $insert_pkg->close();
+
+            // 寫入 package_items 關聯表
+            if (isset($_POST['components']) && is_array($_POST['components'])) {
+                $insert_item = $conn->prepare("INSERT INTO package_items (package_id, product_id, quantity) VALUES (?, ?, 1)");
+                foreach ($_POST['components'] as $prod_id) {
+                    if (!empty($prod_id)) { 
+                        $pid = intval($prod_id);
+                        $insert_item->bind_param("ii", $new_package_id, $pid);
+                        $insert_item->execute();
+                    }
+                }
+                $insert_item->close();
+            }
+
+            $conn->commit();
+
+            // 🌟 记录动作到 Security Logs
+            $log_admin_id = $_SESSION['admin_id'];
+            $log_username = $_SESSION['admin_username'];
+            $log_role = $_SESSION['admin_role'];
+            $log_ip = $_SERVER['REMOTE_ADDR'];
+            if ($log_ip == '::1') { $log_ip = '127.0.0.1'; }
+            $action_event = "Created Blueprint: " . $package_name; 
+            @$conn->query("INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES ('$log_admin_id', '$log_username', '$log_role', '$action_event', '$log_ip')");
+
+            header("Location: manage_packages.php?msg=added");
+            exit();
+        } catch (Exception $e) {
+            $conn->rollback();
+            $error = "Creation Failed: " . $e->getMessage();
         }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Create Build Package - Admin</title>
+    <title>Forge New Blueprint - Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
+    <style>
+        /* 🌟 终极滚动修复 (The Ultimate Scroll Fix) */
+        html, body {
+            height: auto; 
+            min-height: 100vh;
+            margin: 0;
+            overflow-y: auto; 
+            background-color: var(--bg-main); 
+        }
+        
+        .admin-container {
+            display: flex;
+            min-height: 100vh; 
+            width: 100%;
+        }
+
+        .admin-sidebar {
+            position: fixed; 
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .admin-content {
+            margin-left: 250px; 
+            flex: 1;
+            padding: 30px !important;
+            padding-bottom: 120px !important; /* 底部留白，防止按钮被吃掉 */
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        
+        .blueprint-form {
+            background: rgba(0,0,0,0.5); 
+            padding: 30px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.05);
+            overflow: visible; 
+            display: block;
+        }
+    </style>
 </head>
 <body>
     <div class="admin-container">
         <nav class="admin-sidebar">
             <div class="sidebar-header">
                 <h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3>
-                <p style="color: #888; font-size: 12px; margin-top: 5px;">Build Architecture V4.0</p>
+                <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
-                <?php 
-                $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
-                if (strtolower($sidebar_role) === 'superadmin'): 
-                ?>
-                    <li><a href="manage_staff.php" style="color: var(--accent-warning);" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_staff.php') echo 'class="active"'; ?>><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_users.php') echo 'class="active"'; ?>>Manage Customers</a></li>
+                <li><a href="admin_dashboard.php">Dashboard</a></li>
+                <?php if (strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '') === 'superadmin'): ?>
+                    <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                    <li><a href="manage_users.php">Manage Customers</a></li>
                 <?php endif; ?>
-                <li><a href="manage_categories.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_categories.php') echo 'class="active"'; ?>>Categories</a></li>
-                <li><a href="manage_products.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_products.php') echo 'class="active"'; ?>>Products</a></li> 
-                <li><a href="manage_packages.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_packages.php') echo 'class="active"'; ?>>Packages</a></li>
-                <li><a href="manage_orders.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_orders.php') echo 'class="active"'; ?>>Orders</a></li>
+                <li><a href="manage_categories.php">Categories</a></li>
+                <li><a href="manage_products.php">Products</a></li> 
+                <li><a href="manage_packages.php" class="active">Packages</a></li>
+                <li><a href="manage_orders.php">Orders</a></li>
                 <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
             </ul>
         </nav>
 
-        <div class="admin-content" style="padding: 30px;">
+        <div class="admin-content">
             <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
                 <h2 style="color: #00f2fe; margin: 0;"><i class="fas fa-hammer"></i> Forge New Package</h2>
-                <a href="manage_packages.php" class="btn-action" style="color: #888; border-color: #555; text-decoration:none;">&larr; Back to Packages</a>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="background: rgba(0,242,254,0.1); border: 1px solid rgba(0,242,254,0.3); padding: 8px 15px; border-radius: 6px; color: #00f2fe; font-weight: bold; font-size: 18px;">
+                        Total: <span id="live-price">RM 0.00</span>
+                    </div>
+                    <a href="manage_packages.php" class="btn-action" style="color: #888; border-color: #555; text-decoration:none;">&larr; Abort</a>
+                </div>
             </header>
 
             <?php if ($error): ?>
-                <div style="background: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.3); color: #ff4d4d; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="background: rgba(255,77,77,0.1); border: 1px solid #ff4d4d; color: #ff4d4d; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                     <i class="fas fa-exclamation-triangle"></i> <?php echo $error; ?>
                 </div>
             <?php endif; ?>
 
-            <form method="POST" enctype="multipart/form-data" style="background: rgba(0,0,0,0.5); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+            <form method="POST" enctype="multipart/form-data" class="blueprint-form">
+                
                 <div style="background: rgba(0,242,254,0.05); padding: 20px; border-radius: 8px; border: 1px solid rgba(0,242,254,0.2); margin-bottom: 30px;">
-                    <h3 style="color: #00f2fe; margin-top: 0; margin-bottom: 10px;"><i class="fas fa-microchip"></i> Select Package Components</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <h3 style="color: #00f2fe; margin-top: 0; margin-bottom: 15px;"><i class="fas fa-microchip"></i> Select Package Components</h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
                         <?php foreach ($components_by_category as $cat_name => $products): ?>
-                            <div>
-                                <label style="display: block; color: var(--text-muted); font-size: 12px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;"><?php echo htmlspecialchars($cat_name); ?></label>
-                                <select name="components[]" class="form-control" style="width: 100%; padding: 10px; font-size: 13px; background: rgba(0,0,0,0.6);">
-                                    <option value="">-- Skip / None --</option>
+                            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                                <label style="display: block; color: #00f2fe; font-size: 12px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">
+                                    <i class="fas fa-caret-right" style="margin-right: 5px; opacity: 0.5;"></i> <?php echo htmlspecialchars($cat_name); ?>
+                                </label>
+                                <select name="components[]" class="form-control component-select" style="width: 100%; padding: 10px; font-size: 13px; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                                    <option value="" data-price="0">-- Skip / None --</option>
                                     <?php foreach ($products as $p): ?>
-                                        <option value="<?php echo $p['product_id']; ?>"><?php echo htmlspecialchars($p['product_name']); ?> (+RM <?php echo number_format($p['price'], 2); ?>)</option>
+                                        <option value="<?php echo $p['product_id']; ?>" data-price="<?php echo $p['price']; ?>">
+                                            <?php echo htmlspecialchars($p['product_name']); ?> (+RM <?php echo number_format($p['price'], 2); ?>)
+                                        </option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -179,19 +236,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
                         <label>Package Name</label>
-                        <input type="text" name="package_name" class="form-control" required style="width: 100%;">
+                        <input type="text" name="package_name" class="form-control" placeholder="e.g. The Quantum Striker" required style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
                     </div>
+                    
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
                         <label>Description & Marketing Pitch</label>
-                        <textarea name="description" class="form-control" rows="3" required style="width: 100%;"></textarea>
+                        <textarea name="description" class="form-control" rows="4" placeholder="Describe the strength of this build..." required style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; resize: vertical;"></textarea>
                     </div>
+                    
                     <div class="form-group">
                         <label>Target Persona</label>
-                        <input type="text" name="target_persona" class="form-control" style="width: 100%;">
+                        <select name="target_persona" class="form-control" style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                            <option value="Gamers">Gamers</option>
+                            <option value="Professionals">Professionals</option>
+                            <option value="Enthusiasts">Enthusiasts</option>
+                            <option value="Valuable">Valuable (性价比)</option>
+                        </select>
                     </div>
+                    
                     <div class="form-group">
                         <label>Stock Status</label>
-                        <select name="stock_status" class="form-control" style="width: 100%;">
+                        <select name="stock_status" class="form-control" style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
                             <option value="Available">Available</option>
                             <option value="Pre-order">Pre-order</option>
                             <option value="Out of Stock">Out of Stock</option>
@@ -199,41 +264,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
 
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
-                        <label style="color: #00e676;"><i class="fas fa-image"></i> Insert Photo (Upload Package Image)</label>
-                        <input type="file" name="image_file" accept="image/*" class="form-control" style="width: 100%; padding: 10px; background: rgba(0,230,118,0.05); color: #fff; border: 1px dashed rgba(0,230,118,0.4); cursor: pointer;">
-                        <p style="color: #888; font-size: 11px; margin-top: 5px;">* Saved securely in local folder. Formats: JPG, PNG, GIF, WEBP.</p>
-                    </div>
-
-                    <div class="form-group full-width" style="grid-column: 1 / -1; margin-top: 10px;">
-                        <label style="color: #a855f7;"><i class="fas fa-brain"></i> AI Recommendation Radar (Scores 0-10)</label>
-                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div>
-                                <label style="font-size: 12px; color: var(--text-muted);">Gamer Score</label>
-                                <input type="number" min="0" max="10" name="score_gamer" class="form-control" value="0" style="width: 100%;">
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: var(--text-muted);">Creator Score</label>
-                                <input type="number" min="0" max="10" name="score_creator" class="form-control" value="0" style="width: 100%;">
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: var(--text-muted);">Student Score</label>
-                                <input type="number" min="0" max="10" name="score_student" class="form-control" value="0" style="width: 100%;">
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: var(--text-muted);">Enthusiast Score</label>
-                                <input type="number" min="0" max="10" name="score_enthusiast" class="form-control" value="0" style="width: 100%;">
-                            </div>
-                        </div>
+                        <label style="color: #00e676;"><i class="fas fa-image"></i> Upload Photo *</label>
+                        <input type="file" name="image_file" accept="image/*" class="form-control" required style="width: 100%; padding: 12px; background: rgba(0,230,118,0.05); color: #fff; border: 1px dashed rgba(0,230,118,0.4); cursor: pointer;">
                     </div>
                 </div>
 
-                <div class="form-group full-width" style="margin-top: 30px;">
-                    <button type="submit" style="width: 100%; background: linear-gradient(135deg, #8a2be2, #00f2fe); color: #fff; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s;">
-                        <i class="fas fa-save"></i> Forge Package & Link Components
+                <div class="form-group full-width" style="margin-top: 40px; margin-bottom: 20px;">
+                    <button type="submit" style="width: 100%; background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; border: none; padding: 18px; border-radius: 8px; font-weight: 900; font-size: 16px; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 10px 20px rgba(0,242,254,0.2);">
+                        <i class="fas fa-hammer" style="margin-right: 8px;"></i> Forge Blueprint
                     </button>
                 </div>
             </form>
         </div>
     </div>
+
+    <script>
+        function calculateTotal() {
+            let total = 0;
+            document.querySelectorAll('.component-select').forEach(select => {
+                let selectedOption = select.options[select.selectedIndex];
+                if(selectedOption.value !== "") {
+                    total += parseFloat(selectedOption.getAttribute('data-price') || 0);
+                }
+            });
+            document.getElementById('live-price').innerText = 'RM ' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        document.querySelectorAll('.component-select').forEach(select => {
+            select.addEventListener('change', calculateTotal);
+        });
+        
+        window.addEventListener('load', calculateTotal);
+    </script>
 </body>
 </html>
