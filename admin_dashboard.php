@@ -333,10 +333,9 @@ $js_m_pen = implode(',', array_values($m_pending));
                 <table style="width:100%; border-collapse: collapse; text-align: left;">
                     <thead>
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; white-space: nowrap; width: 20%;">Timestamp</th>
-                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; width: 20%;">Personnel</th>
-                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; width: 45%;">Event / Action Taken</th>
-                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; white-space: nowrap; width: 15%;">IP Address</th>
+                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; white-space: nowrap; width: 33.33%;">Timestamp</th>
+                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; width: 33.33%;">Personnel</th>
+                            <th style="padding: 12px 15px; color:#64748b; font-size: 12px; text-transform: uppercase; width: 33.33%;">Event / Action Taken</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -348,26 +347,22 @@ $js_m_pen = implode(',', array_values($m_pending));
                             while ($log = $log_res->fetch_assoc()) {
                                 $role_color = (strtolower($log['role']) == 'superadmin') ? '#a855f7' : '#00f2fe';
                                 
-                                // 🌟 区分登入动作和系统修改动作的颜色
                                 $event = htmlspecialchars($log['action_event'] ?? 'System Login');
                                 $event_color = ($event == 'System Login') ? '#00e676' : '#facc15';
                                 if (strpos(strtolower($event), 'Delete') !== false) { $event_color = '#ff4d4d'; } 
 
                                 echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.03);'>";
                                 
-                                // 🌟 这里也加上了 white-space: nowrap 强制时间永远在一行显示
                                 echo "<td style='padding: 15px; color:#64748b; font-size:12px; white-space: nowrap;'><i class='far fa-clock'></i> " . htmlspecialchars($log['login_time']) . "</td>";
                                 
                                 echo "<td style='padding: 15px; color:#fff; font-weight:bold; white-space: nowrap;'>" . htmlspecialchars($log['username']) . " <span style='color:{$role_color}; background:rgba(255,255,255,0.05); padding:2px 4px; border-radius:4px; font-size:9px; border:1px solid {$role_color}; margin-left:5px;'>" . strtoupper(htmlspecialchars($log['role'])) . "</span></td>";
                                 
                                 echo "<td style='padding: 15px; color:{$event_color}; font-size:12px; font-weight:600;'>{$event}</td>";
                                 
-                                // 🌟 IP 地址也不允许换行
-                                echo "<td style='padding: 15px; color:#cbd5e1; font-size:12px; white-space: nowrap;'><i class='fas fa-network-wired' style='color:#64748b;'></i> " . htmlspecialchars($log['ip_address']) . "</td>";
                                 echo "</tr>";
                             }
                         } else {
-                            echo "<tr><td colspan='4' style='padding: 20px; text-align: center; color: #64748b;'>No logs recorded.</td></tr>";
+                            echo "<tr><td colspan='3' style='padding: 20px; text-align: center; color: #64748b;'>No logs recorded.</td></tr>";
                         }
                         ?>
                     </tbody>
@@ -399,21 +394,34 @@ $js_m_pen = implode(',', array_values($m_pending));
                     </ul>
                 </div>
 
-                <div style="background:rgba(11,11,18,0.4); padding:25px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); position: relative; transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='none'">
+                <div style="background:rgba(11,11,18,0.4); padding:25px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); transition: transform 0.3s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='none'">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                        <h3 style="color:#ffd700; margin:0; font-size:15px; text-transform:uppercase;"><i class="fas fa-satellite-communicate"></i> Team Comm-Link</h3>
-                        <div style="display:flex; flex-direction: row-reverse;">
-                            <img src="image/placeholder.jpg" style="width: 25px; height: 25px; border-radius: 50%; border: 2px solid #141414; margin-left: -10px; z-index: 1;" title="Admin 2 Online">
-                            <div style="width: 25px; height: 25px; border-radius: 50%; border: 2px solid #141414; background: #00f2fe; color: #000; font-size: 10px; font-weight: bold; display:flex; justify-content:center; align-items:center; margin-left: -10px; z-index: 2;" title="You">ME</div>
-                        </div>
+                        <h3 style="color:#00f2fe; margin:0; font-size:15px; text-transform:uppercase;"><i class="fas fa-fire"></i> Trending Hardware</h3>
+                        <span style="background:rgba(0,242,254,0.1); color:#00f2fe; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; border:1px solid rgba(0,242,254,0.3);">TOP 4</span>
                     </div>
-                    <div style="background: rgba(255,215,0,0.05); border: 1px dashed rgba(255,215,0,0.3); padding: 15px; border-radius: 8px; height: 90px; overflow-y: auto;">
-                        <p style="margin:0; font-size: 12px; color: #cbd5e1; line-height: 1.5;">
-                            <strong style="color: #ffd700;">[System Bot]:</strong> Reminder: Perform monthly DB backup by Friday. <br>
-                            <strong style="color: #00f2fe;">[SuperAdmin]:</strong> Whoever handles Order #00021, please verify the payment receipt.
-                        </p>
-                    </div>
-                    <input type="text" placeholder="Transmit message to team..." style="width: 100%; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px; font-size: 12px; box-sizing: border-box; outline: none;">
+                    <ul style="list-style:none; padding:0; margin:0;">
+                        <?php
+                        $top_sql = "SELECT p.product_name, SUM(od.quantity) as total_sold 
+                                    FROM order_details od 
+                                    JOIN products p ON od.product_id = p.product_id 
+                                    JOIN orders o ON od.order_id = o.order_id
+                                    WHERE o.order_status != 'Cancelled'
+                                    GROUP BY p.product_id 
+                                    ORDER BY total_sold DESC LIMIT 4";
+                        $top_res = @$conn->query($top_sql);
+                        
+                        if($top_res && $top_res->num_rows > 0) {
+                            while($item = $top_res->fetch_assoc()) {
+                                echo "<li style='display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.03); font-size:13px;'>
+                                        <span style='white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 75%; color:#cbd5e1;'><i class='fas fa-arrow-trend-up' style='color:#00f2fe; margin-right:8px;'></i> " . htmlspecialchars($item['product_name']) . "</span>
+                                        <span style='color:#00f2fe; font-weight:bold; font-family:\"JetBrains Mono\"; font-size:12px;'>" . $item['total_sold'] . " Sold</span>
+                                      </li>";
+                            }
+                        } else {
+                            echo "<li style='color:#64748b; padding:15px; text-align:center; font-size:13px;'>Not enough data to analyze trends.</li>";
+                        }
+                        ?>
+                    </ul>
                 </div>
 
                 <div style="background:rgba(11,11,18,0.4); padding:25px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:12px; justify-content:center;">
@@ -566,7 +574,6 @@ $js_m_pen = implode(',', array_values($m_pending));
             modal.style.display = "none";
         }
 
-        // 点击外部空白处关闭弹窗和通知下拉菜单
         window.onclick = function(event) {
             if (event.target == modal) {
                 closeDetailModal();

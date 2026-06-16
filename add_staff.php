@@ -35,6 +35,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
                 $stmt = $conn->prepare("INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)");
                 $stmt->bind_param("ssss", $username, $password, $email, $role);
                 if ($stmt->execute()) {
+                    
+                    // 🌟 记录动作到 Security Logs
+                    $log_admin_id = $_SESSION['admin_id'];
+                    $log_username = $_SESSION['admin_username'];
+                    $log_role = $_SESSION['admin_role'];
+                    $log_ip = $_SERVER['REMOTE_ADDR'];
+                    if ($log_ip == '::1') { $log_ip = '127.0.0.1'; }
+                    $action_event = "Added New Staff: " . $username; 
+                    @$conn->query("INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES ('$log_admin_id', '$log_username', '$log_role', '$action_event', '$log_ip')");
+
                     header("Location: manage_staff.php?msg=added");
                     exit();
                 } else {
@@ -56,6 +66,65 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
+        /* 🌟 终极滚动修复 */
+        html, body {
+            height: auto; 
+            min-height: 100vh;
+            margin: 0;
+            overflow-y: auto; 
+            background-color: var(--bg-main); 
+        }
+        
+        .admin-container {
+            display: flex;
+            min-height: 100vh; 
+            width: 100%;
+        }
+
+        .admin-sidebar {
+            position: fixed; 
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .admin-content {
+            margin-left: 250px; 
+            flex: 1;
+            padding: 30px !important;
+            padding-bottom: 120px !important; /* 给底部按钮留足空间 */
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        
+        /* 表单卡片移除绝对定位 */
+        .form-card {
+            background: rgba(0,0,0,0.5); 
+            padding: 30px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.05);
+            overflow: visible; 
+            display: block;
+            margin-bottom: 30px;
+        }
+
+        .form-control {
+            width: 100%;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 12px;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #ff4d4d;
+            box-shadow: 0 0 10px rgba(255, 77, 77, 0.2);
+        }
+
         /* 🌟 动态密码提示框的专属 CSS */
         .pwd-rules {
             display: none;
@@ -118,22 +187,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
             </header>
 
             <div class="form-card">
-                <?php if ($error) echo "<div style='color:#ff4d4d; background:rgba(255,77,77,0.1); padding:15px; border-radius:6px; margin-bottom:20px;'>$error</div>"; ?>
+                <?php if ($error) echo "<div style='color:#ff4d4d; background:rgba(255,77,77,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid #ff4d4d;'>$error</div>"; ?>
 
                 <form method="POST">
-                    <div class="form-grid">
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
                         <div class="form-group full-width">
-                            <label style="color: #ff4d4d;">Username *</label>
+                            <label style="color: #ff4d4d; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Username *</label>
                             <input type="text" name="username" class="form-control" required>
                         </div>
                         
                         <div class="form-group full-width">
-                            <label style="color: #ff4d4d;">Email</label>
+                            <label style="color: #ff4d4d; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Email</label>
                             <input type="email" name="email" class="form-control">
                         </div>
 
                         <div class="form-group full-width">
-                            <label style="color: #ff4d4d;">High-Security Password *</label>
+                            <label style="color: #ff4d4d; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">High-Security Password *</label>
                             <div style="position: relative;">
                                 <input type="password" name="password" id="pwd-input" class="form-control" required style="padding-right: 40px; margin-bottom:0;">
                                 <i class="fas fa-eye" id="toggle-pwd" style="position: absolute; right: 15px; top: 15px; color: #888; cursor: pointer; transition: 0.2s;"></i>
@@ -149,7 +218,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
                         </div>
 
                         <div class="form-group full-width" style="margin-top: 15px;">
-                            <label style="color: #ff4d4d;">Role Level *</label>
+                            <label style="color: #ff4d4d; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Role Level *</label>
                             <select name="role" class="form-control" required style="cursor:pointer;">
                                 <option value="Admin">Admin (Standard)</option>
                                 <option value="SuperAdmin">SuperAdmin (Alpha)</option>
@@ -157,7 +226,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
                         </div>
                     </div>
 
-                    <button type="submit" name="add_staff" id="submit-btn" disabled style="width: 100%; margin-top:30px; background: linear-gradient(135deg, #ff4d4d, #f39c12); color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: 900; font-size: 16px; transition: 0.3s;">
+                    <button type="submit" name="add_staff" id="submit-btn" disabled style="width: 100%; margin-top:40px; background: linear-gradient(135deg, #ff4d4d, #f39c12); color: #000; border: none; padding: 18px; border-radius: 8px; font-weight: 900; font-size: 16px; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;">
                         <i class="fas fa-lock"></i> Authorize Clearance
                     </button>
                 </form>
@@ -184,7 +253,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
             const type = pwdInput.getAttribute('type') === 'password' ? 'text' : 'password';
             pwdInput.setAttribute('type', type);
             this.classList.toggle('fa-eye-slash');
-            this.style.color = type === 'text' ? '#00f2fe' : '#888';
+            this.style.color = type === 'text' ? '#ff4d4d' : '#888';
         });
 
         // 聚焦时显示规则框
