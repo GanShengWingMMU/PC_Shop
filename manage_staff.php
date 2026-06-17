@@ -4,110 +4,118 @@ if (file_exists('config.php')) { require_once 'config.php'; }
 else { include 'db_connect.php'; }
 
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
-if (empty($current_role) || strtolower($current_role) !== 'superadmin') {
-    die("<div style='background:#000; color:#ff4d4d; padding:50px; text-align:center; font-family:monospace;'>ACCESS DENIED: ALPHA REQUIRED.</div>");
+$current_admin_id = $_SESSION['admin_id'] ?? 0;
+
+// 🌟 核心防线：只有 SuperAdmin 能进入员工列表！Admin 会被直接送去 Dashboard
+if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
+    header("Location: admin_dashboard.php");
+    exit();
 }
 
-$message = "";
-if (isset($_GET['delete_id'])) {
-    $delete_id = intval($_GET['delete_id']);
-    if ($delete_id == ($_SESSION['admin_id'] ?? 0)) {
-        $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'>⚠️ Cannot revoke your own access!</div>";
-    } else {
-        $stmt_del = $conn->prepare("DELETE FROM admins WHERE admin_id = ?");
-        $stmt_del->bind_param("i", $delete_id);
-        if ($stmt_del->execute()) { header("Location: manage_staff.php?deleted=1"); exit(); }
-        $stmt_del->close();
-    }
-}
-// 各种成功提示信息
-if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'>✅ Access revoked successfully.</div>";
-if (isset($_GET['msg']) && $_GET['msg'] == 'updated') $message = "<div style='color: #00f2fe; background: rgba(0,242,254,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,242,254,0.3);'>✅ Staff profile updated.</div>";
-if (isset($_GET['msg']) && $_GET['msg'] == 'added') $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(0,230,118,0.3);'>✅ New personnel authorized.</div>";
+$msg = $_GET['msg'] ?? '';
+$alert = '';
+if($msg == 'updated') $alert = "<div style='background:rgba(0,242,254,0.1); color:#00f2fe; padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(0,242,254,0.3);'><i class='fas fa-check-circle'></i> Profile updated successfully.</div>";
+if($msg == 'deleted') $alert = "<div style='background:rgba(255,77,77,0.1); color:#ff4d4d; padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(255,77,77,0.3);'><i class='fas fa-trash'></i> Personnel access terminated.</div>";
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Manage Staff - Admin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
+    <style>
+        html, body { height: auto; min-height: 100vh; margin: 0; overflow-y: auto; background-color: var(--bg-main); }
+        .admin-container { display: flex; min-height: 100vh; width: 100%; }
+        .admin-sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+        .admin-content { margin-left: 250px; flex: 1; padding: 30px !important; padding-bottom: 120px !important; min-height: 100vh; box-sizing: border-box; }
+        
+        .cyber-table { width: 100%; border-collapse: collapse; text-align: left; background: rgba(0,0,0,0.5); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+        .cyber-table th { padding: 15px; color:#64748b; font-size: 12px; text-transform: uppercase; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .cyber-table td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        
+        .btn-recruit { background: linear-gradient(135deg, #ff4d4d, #f39c12); color: #000; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; transition: 0.3s; }
+        .btn-recruit:hover { box-shadow: 0 0 15px rgba(255,77,77,0.5); transform: translateY(-2px); }
+    </style>
 </head>
 <body>
     <div class="admin-container">
         <nav class="admin-sidebar">
-            <div class="sidebar-header">
-                <h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3>
-                <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
+            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3>
+            <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
-           <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
+         <ul class="sidebar-menu">
+                <li><a href="admin_dashboard.php">Dashboard</a></li>
                 
                 <?php 
-                $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
-                if (strtolower($sidebar_role) === 'superadmin'): 
+                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
                 ?>
-                    <li><a href="manage_staff.php" style="color: var(--accent-warning);" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_staff.php') echo 'class="active"'; ?>><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_users.php') echo 'class="active"'; ?>>Manage Customers</a></li>
+
+                <?php if ($role === 'superadmin'): ?>
+                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
                 <?php endif; ?>
+
+                <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
                 
-                <li><a href="manage_categories.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_categories.php') echo 'class="active"'; ?>>Categories</a></li>
-                <li><a href="manage_products.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_products.php') echo 'class="active"'; ?>>Products</a></li> 
-                <li><a href="manage_packages.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_packages.php') echo 'class="active"'; ?>>Packages</a></li>
-                <li><a href="manage_orders.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_orders.php') echo 'class="active"'; ?>>Orders</a></li>
-                
+                <li><a href="manage_categories.php">Categories</a></li>
+                <li><a href="manage_products.php">Products</a></li> 
+                <li><a href="manage_packages.php">Packages</a></li>
+                <li><a href="manage_orders.php">Orders</a></li>
                 <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
             </ul>
         </nav>
 
-        <div class="admin-content" style="padding: 30px;">
-            <header class="admin-header" style="margin-bottom: 30px; display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="color: #ff4d4d; margin:0;"><i class="fas fa-user-shield"></i> Security Roster</h2>
-                <a href="add_staff.php" class="btn-action" style="background: rgba(255,77,77,0.1); color:#ff4d4d; border-color:#ff4d4d; padding:10px 20px; border-radius:6px; text-decoration:none;"><i class="fas fa-plus"></i> Add Staff</a>
+        <div class="admin-content">
+            <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h2 style="color: #facc15; margin: 0;"><i class="fas fa-users-cog"></i> Security Personnel List</h2>
+                <a href="add_staff.php" class="btn-recruit"><i class="fas fa-user-plus"></i> Recruit Personnel</a>
             </header>
-            <?php echo $message; ?>
-            <div class="table-container" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                <table style="width:100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid rgba(255,77,77,0.2);">
-                            <th style="padding:15px; color:#ff4d4d;">ID</th>
-                            <th style="padding:15px; color:#ff4d4d;">Username / Email</th>
-                            <th style="padding:15px; color:#ff4d4d;">Role</th>
-                            <th style="padding:15px; color:#ff4d4d; text-align:right;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        $sql = "SELECT * FROM admins ORDER BY admin_id ASC";
-                        $res = $conn->query($sql);
-                        while ($row = $res->fetch_assoc()) {
-                            $aid = $row['admin_id'];
-                            $is_me = ($aid == ($_SESSION['admin_id'] ?? 0));
-                            echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
-                            echo "<td style='padding:15px; color:#888; font-family:\"JetBrains Mono\";'>STAFF-$aid</td>";
-                            
-                            // 显示 Email 避免表格太空旷
-                            echo "<td style='padding:15px;'><strong>".htmlspecialchars($row['username'])."</strong><br><span style='font-size:12px; color:#64748b;'>".htmlspecialchars($row['email'] ?? 'No Email')."</span></td>";
-                            
-                            echo "<td style='padding:15px;'><span style='color:".($row['role']=='SuperAdmin'?'#ff007f':'#00f2fe')."; font-weight:bold;'>".strtoupper($row['role'])."</span></td>";
-                            
-                            echo "<td style='padding:15px; text-align:right;'>";
-                            
-                            // 🌟 加上了蓝色的 Modify 按钮！
-                            echo "<a href='edit_staff.php?id=$aid' class='btn-action' style='color:#00f2fe; border-color:#00f2fe; padding:6px 12px; font-size:12px; margin-right:8px; text-decoration:none;'>Modify</a>";
-                            
-                            if (!$is_me) {
-                                echo "<a href='manage_staff.php?delete_id=$aid' class='btn-action' style='color:#ff4d4d; border-color:#ff4d4d; padding:6px 12px; font-size:12px; text-decoration:none;' onclick='return confirm(\"Revoke access for this personnel?\");'>Revoke</a>";
-                            } else {
-                                echo "<span style='color:#64748b; font-size:12px; padding:6px 12px;'>You</span>";
-                            }
-                            echo "</td></tr>";
-                        }
-                        ?>
-                    </tbody>
-                </table>
-            </div>
+
+            <?php echo $alert; ?>
+
+            <table class="cyber-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Personnel</th>
+                        <th>Email Contact</th>
+                        <th>Clearance Level</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $res = $conn->query("SELECT * FROM admins ORDER BY role DESC, admin_id ASC");
+                    while($row = $res->fetch_assoc()):
+                        $is_self = ($row['admin_id'] == $current_admin_id);
+                        $role_color = (strtolower($row['role']) === 'superadmin') ? '#a855f7' : '#00f2fe';
+                        $role_bg = (strtolower($row['role']) === 'superadmin') ? 'rgba(168,85,247,0.1)' : 'rgba(0,242,254,0.1)';
+                    ?>
+                    <tr>
+                        <td style="color:#fff; font-family: 'JetBrains Mono';">#<?php echo str_pad($row['admin_id'], 3, '0', STR_PAD_LEFT); ?></td>
+                        <td style="color:#fff; font-weight:bold;">
+                            <?php echo htmlspecialchars($row['username']); ?>
+                            <?php if($is_self): ?>
+                                <span style="color:#00e676; font-size:10px; margin-left:5px;"><i class="fas fa-check-circle"></i> YOU</span>
+                            <?php endif; ?>
+                        </td>
+                        <td style="color:#cbd5e1; font-size: 13px;"><?php echo htmlspecialchars($row['email'] ?: 'N/A'); ?></td>
+                        <td>
+                            <span style="background:<?php echo $role_bg; ?>; color:<?php echo $role_color; ?>; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; border:1px solid <?php echo $role_color; ?>50;">
+                                <i class="fas <?php echo (strtolower($row['role']) === 'superadmin') ? 'fa-star' : 'fa-user-shield'; ?>"></i> <?php echo strtoupper($row['role']); ?>
+                            </span>
+                        </td>
+                        <td style="text-align: right;">
+                            <a href="edit_staff.php?id=<?php echo $row['admin_id']; ?>" style="background:rgba(0,242,254,0.1); color:#00f2fe; border:1px solid rgba(0,242,254,0.3); padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; margin-right:5px; transition:0.3s;"><i class="fas fa-edit"></i> Edit</a>
+                            <?php if (!$is_self): ?>
+                                <a href="delete_staff.php?id=<?php echo $row['admin_id']; ?>" onclick="return confirm('Terminate this personnel?');" style="background:rgba(255,77,77,0.1); color:#ff4d4d; border:1px solid rgba(255,77,77,0.3); padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; transition:0.3s;"><i class="fas fa-trash-alt"></i></a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </body>

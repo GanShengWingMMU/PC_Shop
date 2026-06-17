@@ -87,7 +87,7 @@ $js_m_pen = implode(',', array_values($m_pending));
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - GridCity PC Admin Explorer</title>
+    <title>Dashboard - GridCity PC Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
@@ -111,10 +111,12 @@ $js_m_pen = implode(',', array_values($m_pending));
         .stat-card .value { font-size: 1.8rem; font-weight: 900; margin-top: 15px; font-family: 'Inter', sans-serif; z-index: 2; }
         .chart-sparkline { position: absolute; bottom: 0; left: 0; width: 100%; z-index: 1; pointer-events: none; }
         
+        /* 1. Modal Hover CSS Updates */
         .cyber-modal {
             display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px);
+            background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
             align-items: center; justify-content: center;
+            pointer-events: none; /* 允许鼠标穿透背景，触发卡片的hover */
         }
         .cyber-modal-content {
             background: rgba(11,11,18,0.95); border: 1px solid #333; border-radius: 12px;
@@ -122,12 +124,11 @@ $js_m_pen = implode(',', array_values($m_pending));
             box-shadow: 0 0 40px rgba(0,0,0,1);
             animation: modalFadeIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transition: border-color 0.3s, box-shadow 0.3s;
+            pointer-events: auto; /* 图表区域恢复鼠标交互 */
         }
         .close-modal {
-            position: absolute; right: 20px; top: 15px; color: #64748b; font-size: 24px; 
-            font-weight: bold; cursor: pointer; transition: 0.3s; z-index: 10;
+            display: none; /* Hover触发不再需要手动关闭按钮 */
         }
-        .close-modal:hover { color: #fff; transform: scale(1.1); }
         @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         
         .recent-order-items { font-size: 12px; color: #cbd5e1; max-height: 60px; overflow-y: auto; padding-right: 5px; }
@@ -155,15 +156,19 @@ $js_m_pen = implode(',', array_values($m_pending));
                 <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
             
-            <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php" class="active">Dashboard</a></li>
+          <ul class="sidebar-menu">
+                <li><a href="admin_dashboard.php">Dashboard</a></li>
+                
                 <?php 
-                $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
-                if (strtolower($sidebar_role) === 'superadmin'): 
+                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
                 ?>
-                    <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php">Manage Customers</a></li>
+
+                <?php if ($role === 'superadmin'): ?>
+                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
                 <?php endif; ?>
+
+                <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                
                 <li><a href="manage_categories.php">Categories</a></li>
                 <li><a href="manage_products.php">Products</a></li> 
                 <li><a href="manage_packages.php">Packages</a></li>
@@ -174,6 +179,7 @@ $js_m_pen = implode(',', array_values($m_pending));
 
         <div class="admin-content" style="padding: 30px;">
             <header class="admin-header" style="margin-bottom: 30px; display:flex; justify-content:space-between; align-items:center; background: rgba(11,11,18,0.4); padding: 20px 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                
                 <a href="edit_staff.php?id=<?php echo $_SESSION['admin_id'] ?? 0; ?>" style="display: flex; align-items: center; gap: 20px; text-decoration: none; cursor: pointer; transition: 0.3s;" onmouseover="this.style.transform='translateX(5px)'; this.style.opacity='0.8';" onmouseout="this.style.transform='none'; this.style.opacity='1';" title="Edit Profile">
                     <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #00f2fe, #4facfe); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: #000; box-shadow: 0 0 15px rgba(0,242,254,0.4);">
                         <?php echo strtoupper(substr($_SESSION['admin_username'] ?? 'C', 0, 1)); ?>
@@ -229,7 +235,7 @@ $js_m_pen = implode(',', array_values($m_pending));
             </header>
 
             <div class="grid-stats">
-                <div class="stat-card card-revenue" style="border-left: 4px solid #00e676;" onclick="openDetailModal('revenue')" title="Click to view Monthly Trend">
+                <div class="stat-card card-revenue" style="border-left: 4px solid #00e676;" onmouseenter="handleMouseEnter('revenue')" onmouseleave="handleMouseLeave()" title="Hover to view Monthly Trend">
                     <div class="stat-card-header">
                         <h4>Gross Revenue <i class="fas fa-external-link-alt" style="font-size: 10px; margin-left: 5px; color:#00e676;"></i></h4>
                         <span class="badge" style="background:rgba(0,230,118,0.1); color:#00e676;">TOTAL</span>
@@ -238,7 +244,7 @@ $js_m_pen = implode(',', array_values($m_pending));
                     <div id="spark1" class="chart-sparkline"></div>
                 </div>
 
-                <div class="stat-card card-orders" style="border-left: 4px solid #00f2fe;" onclick="openDetailModal('orders')" title="Click to view Monthly Trend">
+                <div class="stat-card card-orders" style="border-left: 4px solid #00f2fe;" onmouseenter="handleMouseEnter('orders')" onmouseleave="handleMouseLeave()" title="Hover to view Monthly Trend">
                     <div class="stat-card-header">
                         <h4>Fulfillment Velocity <i class="fas fa-external-link-alt" style="font-size: 10px; margin-left: 5px; color:#00f2fe;"></i></h4>
                         <span class="badge" style="background:rgba(0,242,254,0.1); color:#00f2fe;">ALL TIME</span>
@@ -247,7 +253,7 @@ $js_m_pen = implode(',', array_values($m_pending));
                     <div id="spark2" class="chart-sparkline"></div>
                 </div>
 
-                <div class="stat-card card-users" style="border-left: 4px solid #ffd700;" onclick="openDetailModal('users')" title="Click to view Monthly Trend">
+                <div class="stat-card card-users" style="border-left: 4px solid #ffd700;" onmouseenter="handleMouseEnter('users')" onmouseleave="handleMouseLeave()" title="Hover to view Monthly Trend">
                     <div class="stat-card-header">
                         <h4>Active Citizens <i class="fas fa-external-link-alt" style="font-size: 10px; margin-left: 5px; color:#ffd700;"></i></h4>
                         <span class="badge" style="background:rgba(255,215,0,0.1); color:#ffd700;">REGISTERED</span>
@@ -256,7 +262,7 @@ $js_m_pen = implode(',', array_values($m_pending));
                     <div id="spark3" class="chart-sparkline"></div>
                 </div>
 
-                <div class="stat-card card-pending" style="border-left: 4px solid #ff4d4d;" onclick="openDetailModal('pending')" title="Click to view Monthly Trend">
+                <div class="stat-card card-pending" style="border-left: 4px solid #ff4d4d;" onmouseenter="handleMouseEnter('pending')" onmouseleave="handleMouseLeave()" title="Hover to view Monthly Trend">
                     <div class="stat-card-header">
                         <h4>Pending Telemetry <i class="fas fa-external-link-alt" style="font-size: 10px; margin-left: 5px; color:#ff4d4d;"></i></h4>
                         <span class="badge" style="background:rgba(255,77,77,0.1); color:#ff4d4d;">ACTION REQ</span>
@@ -352,13 +358,9 @@ $js_m_pen = implode(',', array_values($m_pending));
                                 if (strpos(strtolower($event), 'Delete') !== false) { $event_color = '#ff4d4d'; } 
 
                                 echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.03);'>";
-                                
                                 echo "<td style='padding: 15px; color:#64748b; font-size:12px; white-space: nowrap;'><i class='far fa-clock'></i> " . htmlspecialchars($log['login_time']) . "</td>";
-                                
                                 echo "<td style='padding: 15px; color:#fff; font-weight:bold; white-space: nowrap;'>" . htmlspecialchars($log['username']) . " <span style='color:{$role_color}; background:rgba(255,255,255,0.05); padding:2px 4px; border-radius:4px; font-size:9px; border:1px solid {$role_color}; margin-left:5px;'>" . strtoupper(htmlspecialchars($log['role'])) . "</span></td>";
-                                
                                 echo "<td style='padding: 15px; color:{$event_color}; font-size:12px; font-weight:600;'>{$event}</td>";
-                                
                                 echo "</tr>";
                             }
                         } else {
@@ -438,8 +440,8 @@ $js_m_pen = implode(',', array_values($m_pending));
     </div>
 
     <div id="detailModal" class="cyber-modal">
-        <div class="cyber-modal-content" id="modalBox">
-            <span class="close-modal" onclick="closeDetailModal()">&times;</span>
+        <div class="cyber-modal-content" id="modalBox" onmouseenter="clearHoverTimeout()" onmouseleave="handleMouseLeave()">
+            <span class="close-modal">&times;</span>
             <h3 id="modalTitle" style="margin-top: 0; display: flex; align-items: center; gap: 10px; font-size: 20px;"></h3>
             <p id="modalSubtitle" style="color: #64748b; font-size: 13px; margin-bottom: 20px;"></p>
             <div id="modalChart" style="min-height: 350px;"></div>
@@ -465,6 +467,27 @@ $js_m_pen = implode(',', array_values($m_pending));
                 dropdown.style.display = "block";
             } else {
                 dropdown.style.display = "none";
+            }
+        }
+
+        // --- Hover 触发延迟防闪烁逻辑 ---
+        let hoverTimeout;
+
+        function handleMouseEnter(type) {
+            clearHoverTimeout(); // 马上清除关闭倒计时
+            openDetailModal(type); // 呼出图表
+        }
+
+        function handleMouseLeave() {
+            // 延迟 200 毫秒关闭，避免卡片移向图表时闪退
+            hoverTimeout = setTimeout(function() {
+                closeDetailModal();
+            }, 200); 
+        }
+
+        function clearHoverTimeout() {
+            if (hoverTimeout) {
+                clearTimeout(hoverTimeout);
             }
         }
 
@@ -574,10 +597,8 @@ $js_m_pen = implode(',', array_values($m_pending));
             modal.style.display = "none";
         }
 
+        // --- 仅保留通知下拉的外部点击关闭逻辑 ---
         window.onclick = function(event) {
-            if (event.target == modal) {
-                closeDetailModal();
-            }
             if (!event.target.closest('.notification-wrapper')) {
                 var dropdown = document.getElementById("notifDropdown");
                 if (dropdown && dropdown.style.display === "block") {

@@ -75,7 +75,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     // 防止在 localhost 測試時出現奇怪的 IPv6 地址 (::1)，將其轉換為標準的 127.0.0.1
                     if ($ip_address == '::1') { $ip_address = '127.0.0.1'; }
                     
-                    $log_sql = "INSERT INTO admin_logs (admin_id, username, role, ip_address) VALUES (?, ?, ?, ?)";
+                    $log_sql = "INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES (?, ?, ?, 'System Login', ?)";
                     $log_stmt = $conn->prepare($log_sql);
                     if ($log_stmt) {
                         $log_stmt->bind_param("isss", $admin_pk, $user['username'], $user['role'], $ip_address);
@@ -113,141 +113,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Admin Login - GridCity PC</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-    /* 🌟 全屏背景设置 */
     body {
-        margin: 0;
-        padding: 0;
-        font-family: 'Inter', 'JetBrains Mono', sans-serif;
-        /* 这里加了一层半透明的黑色遮罩，防止背景太亮盖住文字 */
+        margin: 0; padding: 0; font-family: 'Inter', 'JetBrains Mono', sans-serif;
         background-image: linear-gradient(rgba(10, 10, 15, 0.6), rgba(10, 10, 15, 0.8)), url('image/Login_background.png');
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
+        background-size: cover; background-position: center; background-repeat: no-repeat;
+        background-attachment: fixed; display: flex; justify-content: center; align-items: center; height: 100vh;
     }
-
-    /* 🌟 登录框的毛玻璃特效 (Glassmorphism) */
     .login-container {
-        background: rgba(15, 15, 20, 0.65); /* 半透明深色背景 */
-        backdrop-filter: blur(12px); /* 核心：背景高斯模糊 */
-        -webkit-backdrop-filter: blur(12px); /* 兼容 Safari */
-        padding: 40px;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 242, 254, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-top: 1px solid rgba(0, 242, 254, 0.3); /* 顶部青色霓虹边框 */
-        width: 100%;
-        max-width: 400px;
-        text-align: center;
+        background: rgba(15, 15, 20, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        padding: 40px; border-radius: 12px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 242, 254, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1); border-top: 1px solid rgba(0, 242, 254, 0.3);
+        width: 100%; max-width: 400px; text-align: center;
     }
-
-    /* 🌟 登录框大标题 (GridCity PC) - 完美同步按钮的渐变青蓝色 */
     .login-container h1 {
         background: linear-gradient(135deg, #00f2fe, #4facfe) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        margin-top: 0;
-        margin-bottom: 5px;
-        font-weight: 900;
-        letter-spacing: 1px;
-        filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.5));
+        -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important;
+        margin-top: 0; margin-bottom: 5px; font-weight: 900; letter-spacing: 1px; filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.5));
     }
-
-    /* 🌟 副标题样式 (从暗灰色改成明亮的浅灰色) */
-    .login-container p {
-        color: #cccccc !important; 
-        font-size: 12px;
-        margin-bottom: 30px;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-
-    /* 🌟 输入框样式 */
-    .form-group {
-        margin-bottom: 20px;
-        text-align: left;
-    }
-
-    /* 🌟 账号密码的提示字 (改成纯白 + 加粗) */
-    .form-group label {
-        display: block;
-        color: #ffffff !important; 
-        font-weight: bold;
-        font-size: 13px;
-        margin-bottom: 8px;
-    }
-
+    .login-container p { color: #cccccc !important; font-size: 12px; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; }
+    .form-group { margin-bottom: 20px; text-align: left; }
+    .form-group label { display: block; color: #ffffff !important; font-weight: bold; font-size: 13px; margin-bottom: 8px; }
     .form-control {
-        width: 100%;
-        padding: 12px 15px;
-        background: rgba(0, 0, 0, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 6px;
-        color: #ffffff !important; /* 确保用户打字时是白色的 */
-        font-size: 14px;
-        box-sizing: border-box;
-        transition: 0.3s;
+        width: 100%; padding: 12px 15px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px; color: #ffffff !important; font-size: 14px; box-sizing: border-box; transition: 0.3s;
     }
-    
-    /* 🌟 输入框里还没打字时的占位符 (稍微提亮一点) */
-    .form-control::placeholder {
-        color: #999999;
-    }
-
-    .form-control:focus {
-        outline: none;
-        border-color: #00f2fe;
-        box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
-        background: rgba(0, 0, 0, 0.7);
-    }
-
-    /* 🌟 按钮样式 */
+    .form-control::placeholder { color: #999999; }
+    .form-control:focus { outline: none; border-color: #00f2fe; box-shadow: 0 0 10px rgba(0, 242, 254, 0.3); background: rgba(0, 0, 0, 0.7); }
     .btn-login {
-        width: 100%;
-        padding: 12px;
-        background: linear-gradient(135deg, #00f2fe, #4facfe);
-        border: none;
-        border-radius: 6px;
-        color: #000000;
-        font-weight: bold;
-        font-size: 15px;
-        cursor: pointer;
-        transition: 0.3s;
-        margin-top: 10px;
+        width: 100%; padding: 12px; background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; border-radius: 6px;
+        color: #000000; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.3s; margin-top: 10px;
     }
-
-    .btn-login:hover {
-        box-shadow: 0 0 15px rgba(0, 242, 254, 0.6);
-        transform: translateY(-2px);
-    }
-
-    .login-container a {
-        color: #00f2fe !important;
-        text-decoration: none;
-        font-size: 13px;
-        display: inline-block;
-        margin-top: 20px;
-        transition: 0.3s;
-    }
-
-    .login-container a:hover {
-        color: #ffffff !important;
-        text-shadow: 0 0 8px rgba(0, 242, 254, 0.8);
-    }
-    
-    .error-msg {
-        background: rgba(255, 77, 77, 0.1);
-        color: #ff4d4d;
-        border: 1px solid rgba(255, 77, 77, 0.3);
-        padding: 10px;
-        border-radius: 6px;
-        font-size: 13px;
-        margin-bottom: 20px;
-    }
+    .btn-login:hover { box-shadow: 0 0 15px rgba(0, 242, 254, 0.6); transform: translateY(-2px); }
+    .login-container a { color: #00f2fe !important; text-decoration: none; font-size: 13px; display: inline-block; margin-top: 20px; transition: 0.3s; }
+    .login-container a:hover { color: #ffffff !important; text-shadow: 0 0 8px rgba(0, 242, 254, 0.8); }
+    .error-msg { background: rgba(255, 77, 77, 0.1); color: #ff4d4d; border: 1px solid rgba(255, 77, 77, 0.3); padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 20px; }
 </style>
 </head>
 <body>
@@ -266,9 +165,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <input type="text" name="username" class="form-control" required placeholder="Enter admin username">
             </div>
             
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 5px;">
                 <label>Password</label>
                 <input type="password" name="password" class="form-control" required placeholder="Enter password">
+            </div>
+            
+            <div style="text-align: right; margin-bottom: 20px;">
+                <a href="admin_forgot_password.php" style="margin-top: 0; font-size: 12px; color: #888 !important;">Forgot Password?</a>
             </div>
             
             <button type="submit" class="btn-login">Access Dashboard</button>

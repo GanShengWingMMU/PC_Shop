@@ -14,7 +14,6 @@ $message = "";
 // 🌟 删除逻辑
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
-    // 防呆检查：确保订单中没有使用这个 Product
     $check_stmt = $conn->prepare("SELECT product_id FROM order_details WHERE product_id = ? LIMIT 1");
     $check_stmt->bind_param("i", $delete_id);
     $check_stmt->execute();
@@ -30,7 +29,16 @@ if (isset($_GET['delete_id'])) {
 }
 if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'>✅ Node deleted.</div>";
 
+// 🌟 获取搜索和排序参数
 $search = $_GET['search'] ?? '';
+$sort = $_GET['sort'] ?? 'default';
+
+// 🌟 判断排序逻辑
+$order_by = 'p.product_id DESC'; 
+if ($sort === 'price_desc') $order_by = 'p.price DESC';
+elseif ($sort === 'price_asc') $order_by = 'p.price ASC';
+elseif ($sort === 'name_asc') $order_by = 'p.product_name ASC';
+elseif ($sort === 'name_desc') $order_by = 'p.product_name DESC';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -41,45 +49,116 @@ $search = $_GET['search'] ?? '';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
   <style>
-    /* 🌟 强制统一全局字体 */
-    body {
-        font-family: 'Inter', 'JetBrains Mono', sans-serif !important;
-    }
+    body { font-family: 'Inter', 'JetBrains Mono', sans-serif !important; }
 
-    /* 原有的图片缩放样式保持不变 */
     .zoom-img {
         transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        position: relative;
-        z-index: 1;
-        cursor: zoom-in;
+        position: relative; z-index: 1; cursor: zoom-in;
     }
     .zoom-img:hover {
-        transform: scale(3.5);
-        z-index: 999;
+        transform: scale(3.5); z-index: 999;
         box-shadow: 0 15px 35px rgba(0,0,0,0.9), 0 0 15px rgba(0,242,254,0.6);
-        border: 1px solid #00f2fe;
-        border-radius: 8px !important;
+        border: 1px solid #00f2fe; border-radius: 8px !important;
+    }
+
+    /* 🌟 独立干净的搜索栏样式 */
+    .search-form-clean {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        background: rgba(15, 15, 20, 0.6);
+        padding: 15px 20px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        align-items: center;
+        margin-bottom: 25px;
+    }
+    .search-form-clean input,
+    .search-form-clean select,
+    .search-form-clean button,
+    .btn-clear {
+        height: 42px !important; /* 统一小巧的高度 */
+        padding: 0 15px !important;
+        font-size: 14px !important;
+        line-height: normal !important;
+        font-family: 'Inter', sans-serif !important;
+        border-radius: 6px !important;
+        outline: none !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+    }
+    .search-form-clean input {
+        flex: 1;
+        min-width: 200px;
+        background: rgba(0, 0, 0, 0.5) !important;
+        border: 1px solid rgba(0, 242, 254, 0.3) !important;
+        color: #fff !important;
+    }
+    .search-form-clean input:focus {
+        border-color: #00f2fe !important;
+        box-shadow: 0 0 8px rgba(0, 242, 254, 0.2) !important;
+    }
+    .search-form-clean select {
+        width: 180px;
+        background: rgba(0, 0, 0, 0.5) !important;
+        border: 1px solid rgba(0, 242, 254, 0.3) !important;
+        color: #fff !important;
+        cursor: pointer;
+    }
+    .search-form-clean select option {
+        background: #0a0a0a !important;
+        color: #fff !important;
+    }
+    .search-form-clean button {
+        background: linear-gradient(135deg, #00f2fe, #4facfe) !important;
+        color: #000 !important;
+        font-weight: bold !important;
+        border: none !important;
+        cursor: pointer;
+        padding: 0 25px !important;
+        transition: 0.2s !important;
+    }
+    .search-form-clean button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 242, 254, 0.4) !important;
+    }
+    
+    /* 🌟 新增的 Clear 按钮样式 */
+    .btn-clear {
+        display: flex;
+        align-items: center;
+        background: rgba(255,77,77,0.1) !important;
+        color: #ff4d4d !important;
+        border: 1px solid rgba(255,77,77,0.3) !important;
+        font-weight: bold !important;
+        text-decoration: none !important;
+        padding: 0 20px !important;
+        transition: 0.3s !important;
+    }
+    .btn-clear:hover {
+        background: rgba(255,77,77,0.2) !important;
     }
 </style>
 </head>
 <body>
     <div class="admin-container">
         <nav class="admin-sidebar">
+            
             <div class="sidebar-header">
                 <h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3>
                 <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
+            
             <ul class="sidebar-menu">
                 <li><a href="admin_dashboard.php">Dashboard</a></li>
                 <?php 
-                $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
-                if (strtolower($sidebar_role) === 'superadmin'): 
-                ?>
-                    <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php">Manage Customers</a></li>
+                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
+                if ($role === 'superadmin'): ?>
+                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
                 <?php endif; ?>
+                <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
                 <li><a href="manage_categories.php">Categories</a></li>
-                <li><a href="manage_products.php" class="active">Products</a></li> 
+                <li><a href="manage_products.php" class="active" style="color: #00f2fe; border-left-color: #00f2fe;">Products</a></li> 
                 <li><a href="manage_packages.php">Packages</a></li>
                 <li><a href="manage_orders.php">Orders</a></li>
                 <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
@@ -94,10 +173,25 @@ $search = $_GET['search'] ?? '';
             
             <?php echo $message; ?>
 
-            <form method="GET" action="manage_products.php" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                <input type="text" name="search" placeholder="Search by Product Name..." value="<?php echo htmlspecialchars($search); ?>" style="flex: 1; min-width: 250px; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,242,254,0.3); color: #fff; padding: 10px 15px; border-radius: 6px; outline: none;">
-                <button type="submit" style="background: #00f2fe; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer;"><i class="fas fa-search"></i> Search</button>
-            </form>
+            <div class="search-wrapper">
+                <form method="GET" action="manage_products.php" class="search-form-clean">
+                    <input type="text" name="search" placeholder="Search by Product Name..." value="<?php echo htmlspecialchars($search); ?>">
+                    
+                    <select name="sort" onchange="this.form.submit()">
+                        <option value="default" <?php echo $sort == 'default' ? 'selected' : ''; ?>>Sort: Default (Newest)</option>
+                        <option value="price_desc" <?php echo $sort == 'price_desc' ? 'selected' : ''; ?>>Price: High to Low</option>
+                        <option value="price_asc" <?php echo $sort == 'price_asc' ? 'selected' : ''; ?>>Price: Low to High</option>
+                        <option value="name_asc" <?php echo $sort == 'name_asc' ? 'selected' : ''; ?>>Name: A to Z</option>
+                        <option value="name_desc" <?php echo $sort == 'name_desc' ? 'selected' : ''; ?>>Name: Z to A</option>
+                    </select>
+
+                    <button type="submit"><i class="fas fa-search"></i> Search</button>
+                    
+                    <?php if(!empty($search) || $sort !== 'default'): ?>
+                        <a href="manage_products.php" class="btn-clear">Clear</a>
+                    <?php endif; ?>
+                </form>
+            </div>
 
             <div class="table-container" style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                 <table style="width:100%; border-collapse: collapse;">
@@ -112,39 +206,39 @@ $search = $_GET['search'] ?? '';
                     </thead>
                     <tbody>
                         <?php
-                        // 简单的搜索逻辑
                         $sql = "SELECT p.*, c.category_name FROM products p JOIN categories c ON p.category_id = c.category_id";
                         if ($search !== '') {
                             $sql .= " WHERE p.product_name LIKE '%" . $conn->real_escape_string($search) . "%'";
                         }
-                        $sql .= " ORDER BY p.product_id DESC";
+                        
+                        $sql .= " ORDER BY " . $order_by;
                         
                         $res = $conn->query($sql);
                         if ($res && $res->num_rows > 0) {
                             while ($row = $res->fetch_assoc()) {
                                 $img = htmlspecialchars($row['image_url']) ?: 'image/placeholder_pc.png';
-                               // 替换 manage_products.php 中 while 循环里的这一行：
-echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
-    echo "<td style='padding:15px;'><img src='{$img}' class='zoom-img' style='height:40px; width:40px; object-fit:contain; border-radius:6px; background:#000;'></td>";
-    echo "<td style='padding:15px; font-weight:600; color:#fff;'>".htmlspecialchars($row['product_name'])."</td>";
-    echo "<td style='padding:15px; color:#00e676;'>RM ".number_format($row['price'], 2)."</td>";
-    echo "<td style='padding:15px;'>{$row['stock_quantity']} UNITS</td>";
-// 🌟 替换 manage_products.php 中 while 循环里的按钮部分：
-echo "<td style='padding:15px; text-align:right;'>
-        <a href='edit_product.php?product_id={$row['product_id']}' 
-           style='background: transparent; color: #00f2fe; border: 1px solid #00f2fe; padding: 6px 18px; font-size: 14px; border-radius: 4px; text-decoration: none; margin-right: 8px; font-weight: 600; display: inline-block;'>
-           Modify
-        </a>
-        <a href='manage_products.php?delete_id={$row['product_id']}' 
-           style='background: transparent; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 6px 18px; font-size: 14px; border-radius: 4px; text-decoration: none; font-weight: 600; display: inline-block;' 
-           onclick='return confirm(\"Delete node?\");'>
-           Delete
-        </a>
-      </td>";
-echo "</tr>";
+                                
+                                echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
+                                echo "<td style='padding:15px;'><img src='{$img}' class='zoom-img' style='height:40px; width:40px; object-fit:contain; border-radius:6px; background:#000;'></td>";
+                                echo "<td style='padding:15px; font-weight:600; color:#fff;'>".htmlspecialchars($row['product_name'])."</td>";
+                                echo "<td style='padding:15px; color:#00e676;'>RM ".number_format($row['price'], 2)."</td>";
+                                echo "<td style='padding:15px;'>{$row['stock_quantity']} UNITS</td>";
+                                
+                                echo "<td style='padding:15px; text-align:right; white-space:nowrap;'>
+                                        <a href='edit_product.php?product_id={$row['product_id']}' 
+                                           style='background: transparent; color: #00f2fe; border: 1px solid #00f2fe; padding: 6px 18px; font-size: 14px; border-radius: 4px; text-decoration: none; margin-right: 8px; font-weight: 600; display: inline-block;'>
+                                            Modify
+                                        </a>
+                                        <a href='manage_products.php?delete_id={$row['product_id']}' 
+                                           style='background: transparent; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 6px 18px; font-size: 14px; border-radius: 4px; text-decoration: none; font-weight: 600; display: inline-block;' 
+                                           onclick='return confirm(\"Delete node?\");'>
+                                            Delete
+                                        </a>
+                                      </td>";
+                                echo "</tr>";
                             }
                         } else {
-                            echo "<tr><td colspan='5' style='padding:20px; text-align:center; color:#888;'>No products match your search.</td></tr>";
+                            echo "<tr><td colspan='5' style='padding:30px; text-align:center; color:#888; font-size: 16px;'>No products match your search.</td></tr>";
                         }
                         ?>
                     </tbody>

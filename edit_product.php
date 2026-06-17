@@ -186,17 +186,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     <div class="admin-container">
         <nav class="admin-sidebar">
             <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3></div>
-            <ul class="sidebar-menu">
+         <ul class="sidebar-menu">
                 <li><a href="admin_dashboard.php">Dashboard</a></li>
+                
                 <?php 
-                $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
-                if (strtolower($sidebar_role) === 'superadmin'): 
+                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
                 ?>
-                    <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php">Manage Customers</a></li>
+
+                <?php if ($role === 'superadmin'): ?>
+                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
                 <?php endif; ?>
+
+                <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                
                 <li><a href="manage_categories.php">Categories</a></li>
-                <li><a href="manage_products.php" class="active">Products</a></li> 
+                <li><a href="manage_products.php">Products</a></li> 
                 <li><a href="manage_packages.php">Packages</a></li>
                 <li><a href="manage_orders.php">Orders</a></li>
                 <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 

@@ -9,9 +9,18 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
     exit();
 }
 
-// 🌟 1. 捕捉排序参数 (默认为 desc - Newest to Oldest)
-$current_sort = (isset($_GET['sort']) && strtolower($_GET['sort']) === 'asc') ? 'asc' : 'desc';
-$db_sort = $current_sort === 'asc' ? 'ASC' : 'DESC';
+// 🌟 核心自动逻辑：实时检测 Processing 订单，超过 4 分钟自动改为 Shipped
+$conn->query("UPDATE orders SET order_status = 'Shipped' 
+              WHERE order_status = 'Processing' 
+              AND order_date < NOW() - INTERVAL 4 MINUTE");
+
+// 🌟 1. 捕捉排序参数
+$current_sort = $_GET['sort'] ?? 'desc';
+// 确定 SQL 的 ORDER BY 部分
+$order_by = 'o.order_id DESC'; // 默认：最新订单
+if ($current_sort === 'asc') $order_by = 'o.order_id ASC';
+elseif ($current_sort === 'price_desc') $order_by = 'o.total_amount DESC';
+elseif ($current_sort === 'price_asc') $order_by = 'o.total_amount ASC';
 
 // 🌟 更新訂單狀態
 if (isset($_POST['update_status'])) {
@@ -19,14 +28,12 @@ if (isset($_POST['update_status'])) {
     $new_status = trim($_POST['new_status']);
     $allowed = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled'];
     
-    // 记住更新前的排序状态
     $saved_sort = isset($_POST['current_sort']) ? $_POST['current_sort'] : 'desc';
     
     if (in_array($new_status, $allowed)) {
         $stmt = $conn->prepare("UPDATE orders SET order_status = ? WHERE order_id = ?");
         $stmt->bind_param("si", $new_status, $order_id);
         if ($stmt->execute()) {
-            // 🌟 更新成功后带上当前的排序参数一起跳转
             header("Location: manage_orders.php?updated=1&sort=" . urlencode($saved_sort));
             exit();
         }
@@ -43,48 +50,7 @@ if (isset($_POST['update_status'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 🌟 订单专属悬浮黑科技面板 */
-        .order-tooltip-container { position: relative; cursor: help; }
-        .order-tooltip {
-            position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(10px);
-            background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(10px);
-            border: 1px solid #00f2fe; border-radius: 8px; padding: 15px;
-            width: max-content; max-width: 320px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,242,254,0.2);
-            opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 100; pointer-events: none; text-align: left;
-        }
-        .order-tooltip::after {
-            content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px;
-            border-width: 6px; border-style: solid; border-color: #00f2fe transparent transparent transparent;
-        }
-        .order-tooltip-container:hover .order-tooltip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-10px); }
-        .tt-title { color: #00f2fe; font-size: 11px; text-transform: uppercase; font-weight: 800; margin-bottom: 5px; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 5px; letter-spacing: 1px;}
-        .tt-info { color: #fff; font-size: 13px; margin-bottom: 4px; line-height: 1.5; font-family: 'JetBrains Mono', monospace; }
-        .qty-badge { background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 3px; color: var(--accent-blue); font-weight: bold; margin-right: 5px; }
-        .item-row { margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed rgba(255,255,255,0.1); }
-        
-        /* 🌟 下拉排序菜单样式 */
-        .admin-sort-dropdown {
-            background: rgba(0,0,0,0.6); 
-            color: #00f2fe; 
-            border: 1px solid rgba(0,242,254,0.3); 
-            padding: 8px 15px; 
-            border-radius: 6px; 
-            outline: none; 
-            cursor: pointer; 
-            font-family: 'Inter', sans-serif; 
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        .admin-sort-dropdown:hover {
-            border-color: #00f2fe;
-            box-shadow: 0 0 10px rgba(0,242,254,0.2);
-        }
-        .admin-sort-dropdown option {
-            background: #0b0b12;
-            color: #fff;
-        }
+        .admin-sort-dropdown { background: rgba(0,0,0,0.6); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); padding: 8px 15px; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -95,18 +61,17 @@ if (isset($_POST['update_status'])) {
                 <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php" <?php if(basename($_SERVER['PHP_SELF']) == 'admin_dashboard.php') echo 'class="active"'; ?>>Dashboard</a></li>
+                <li><a href="admin_dashboard.php">Dashboard</a></li>
                 <?php 
-                $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
-                if (strtolower($sidebar_role) === 'superadmin'): 
-                ?>
-                    <li><a href="manage_staff.php" style="color: var(--accent-warning);" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_staff.php') echo 'class="active"'; ?>><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_users.php') echo 'class="active"'; ?>>Manage Customers</a></li>
+                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
+                if ($role === 'superadmin'): ?>
+                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
                 <?php endif; ?>
-                <li><a href="manage_categories.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_categories.php') echo 'class="active"'; ?>>Categories</a></li>
-                <li><a href="manage_products.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_products.php') echo 'class="active"'; ?>>Products</a></li> 
-                <li><a href="manage_packages.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_packages.php') echo 'class="active"'; ?>>Packages</a></li>
-                <li><a href="manage_orders.php" <?php if(basename($_SERVER['PHP_SELF']) == 'manage_orders.php') echo 'class="active"'; ?>>Orders</a></li>
+                <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                <li><a href="manage_categories.php">Categories</a></li>
+                <li><a href="manage_products.php">Products</a></li> 
+                <li><a href="manage_packages.php">Packages</a></li>
+                <li><a href="manage_orders.php">Orders</a></li>
                 <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
             </ul>
         </nav>
@@ -115,13 +80,13 @@ if (isset($_POST['update_status'])) {
             <header class="admin-header" style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;">
                 <div>
                     <h2 style="color: #00f2fe; margin:0;"><i class="fas fa-box-open"></i> Global Order Fulfillment Center</h2>
-                    <p style="color: #64748b; margin-top:5px;">Hover over Date to see precise timestamps and shipping coordinates.</p>
                 </div>
-                
-                <form method="GET" action="manage_orders.php" id="sortForm" style="margin:0;">
+                <form method="GET" action="manage_orders.php" id="sortForm">
                     <select name="sort" class="admin-sort-dropdown" onchange="document.getElementById('sortForm').submit();">
-                        <option value="desc" <?php echo $current_sort == 'desc' ? 'selected' : ''; ?>>Sort: Newest to Oldest</option>
-                        <option value="asc" <?php echo $current_sort == 'asc' ? 'selected' : ''; ?>>Sort: Oldest to Newest</option>
+                        <option value="desc" <?php echo $current_sort == 'desc' ? 'selected' : ''; ?>>Newest First</option>
+                        <option value="asc" <?php echo $current_sort == 'asc' ? 'selected' : ''; ?>>Oldest First</option>
+                        <option value="price_desc" <?php echo $current_sort == 'price_desc' ? 'selected' : ''; ?>>Price: High to Low</option>
+                        <option value="price_asc" <?php echo $current_sort == 'price_asc' ? 'selected' : ''; ?>>Price: Low to High</option>
                     </select>
                 </form>
             </header>
@@ -135,7 +100,7 @@ if (isset($_POST['update_status'])) {
                             <th style="padding:15px;">ID</th>
                             <th style="padding:15px;">Customer</th>
                             <th style="padding:15px;">Date</th>
-                            <th style="padding:15px;">Items Purchased</th>
+                            <th style="padding:15px;">Items</th>
                             <th style="padding:15px;">Total</th>
                             <th style="padding:15px;">Status</th>
                             <th style="padding:15px;">Update</th>
@@ -143,11 +108,10 @@ if (isset($_POST['update_status'])) {
                     </thead>
                     <tbody>
                         <?php
-                        // 🌟 3. 在 SQL 语句中应用排序变量 $db_sort
-                        $sql = "SELECT o.*, c.username FROM orders o JOIN customers c ON o.customer_id = c.customer_id ORDER BY o.order_id $db_sort";
+                        // 🌟 使用动态的 $order_by
+                        $sql = "SELECT o.*, c.username FROM orders o JOIN customers c ON o.customer_id = c.customer_id ORDER BY $order_by";
                         $res = $conn->query($sql);
                         while ($row = $res->fetch_assoc()) {
-                            $order_id = $row['order_id'];
                             $status = $row['order_status'];
                             $status_color = "#facc15";
                             if ($status == 'Processing') $status_color = "#00f2fe";
@@ -156,42 +120,23 @@ if (isset($_POST['update_status'])) {
                             elseif ($status == 'Cancelled') $status_color = "#ff4d4d";
 
                             echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
-                            echo "<td style='padding:15px;'>#$order_id</td>";
-                            echo "<td style='padding:15px;'><strong>" . htmlspecialchars($row['username']) . "</strong></td>";
-                            
-                            // 🌟 Hover 日期列
-                            echo "<td style='padding:15px;' class='order-tooltip-container'>
-                                    <span style='border-bottom: 1px dotted #00f2fe; color:#cbd5e1;'>" . date('d M, Y', strtotime($row['order_date'])) . "</span>
-                                    <div class='order-tooltip'>
-                                        <div class='tt-title'><i class='fas fa-clock'></i> Exact Order Time</div>
-                                        <div class='tt-info' style='color: #00e676;'>" . date('d M Y, h:i:s A', strtotime($row['order_date'])) . "</div>
-                                        <div class='tt-title' style='margin-top: 10px;'><i class='fas fa-map-marker-alt'></i> Shipping Address</div>
-                                        <div class='tt-info' style='color:#aaa; font-size:12px; font-family:Inter; white-space:pre-wrap;'>" . htmlspecialchars($row['shipping_address']) . "</div>
-                                    </div>
-                                  </td>";
-                            
-                            echo "<td><div style='font-size: 12px; color: #fff;'>";
-                            $sql_items = "SELECT od.quantity, p.product_name, pkg.package_name, sb.build_name FROM order_details od LEFT JOIN products p ON od.product_id = p.product_id LEFT JOIN packages pkg ON od.package_id = pkg.package_id LEFT JOIN saved_builds sb ON od.pc_build = sb.pc_build WHERE od.order_id = $order_id";
-                            $res_items = $conn->query($sql_items);
-                            while($item = $res_items->fetch_assoc()) {
-                                $name = $item['product_name'] ?: ($item['package_name'] ? "[PKG] ".$item['package_name'] : "[DIY] ".$item['build_name']);
-                                echo "<div class='item-row'><span class='qty-badge'>{$item['quantity']}x</span> ".htmlspecialchars($name)."</div>";
-                            }
-                            echo "</div></td>";
-                            echo "<td style='padding:15px; color:#00e676; font-weight:bold;'>RM ".number_format($row['total_amount'], 2)."</td>";
+                            echo "<td style='padding:15px;'>#{$row['order_id']}</td>";
+                            echo "<td style='padding:15px;'>" . htmlspecialchars($row['username']) . "</td>";
+                            echo "<td style='padding:15px;'>" . date('d M, Y', strtotime($row['order_date'])) . "</td>";
+                            echo "<td style='padding:15px;'>...</td>"; 
+                            echo "<td style='padding:15px; color:#00e676; font-weight:bold;'>RM " . number_format($row['total_amount'], 2) . "</td>";
                             echo "<td style='padding:15px; font-weight:bold; color:$status_color'>$status</td>";
                             echo "<td style='padding:15px;'>
-                                    <form method='POST' style='display:flex; gap:5px;'>
-                                        <input type='hidden' name='order_id' value='$order_id'>
+                                    <form method='POST'>
+                                        <input type='hidden' name='order_id' value='{$row['order_id']}'>
                                         <input type='hidden' name='current_sort' value='$current_sort'>
-                                        <select name='new_status' style='background:#000; color:#fff; border:1px solid #333; padding:5px; border-radius:4px; font-size:12px;'>
+                                        <select name='new_status' style='background:#000; color:#fff; border:1px solid #333; padding:5px; border-radius:4px;'>
                                             <option value='Pending' ".($status=='Pending'?'selected':'').">Pending</option>
                                             <option value='Processing' ".($status=='Processing'?'selected':'').">Processing</option>
                                             <option value='Shipped' ".($status=='Shipped'?'selected':'').">Shipped</option>
                                             <option value='Completed' ".($status=='Completed'?'selected':'').">Completed</option>
-                                            <option value='Cancelled' ".($status=='Cancelled'?'selected':'').">Cancelled</option>
                                         </select>
-                                        <button type='submit' name='update_status' class='btn-action' style='padding:5px 10px; font-size:12px; background:#00f2fe; color:#000; cursor:pointer;'>Go</button>
+                                        <button type='submit' name='update_status' style='background:#00f2fe; color:#000; border:none; padding:5px 10px; cursor:pointer;'>Go</button>
                                     </form>
                                   </td>";
                             echo "</tr>";

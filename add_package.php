@@ -178,15 +178,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3>
                 <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
             </div>
-            <ul class="sidebar-menu">
+          <ul class="sidebar-menu">
                 <li><a href="admin_dashboard.php">Dashboard</a></li>
-                <?php if (strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '') === 'superadmin'): ?>
-                    <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php">Manage Customers</a></li>
+                
+                <?php 
+                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
+                ?>
+
+                <?php if ($role === 'superadmin'): ?>
+                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
                 <?php endif; ?>
+
+                <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                
                 <li><a href="manage_categories.php">Categories</a></li>
                 <li><a href="manage_products.php">Products</a></li> 
-                <li><a href="manage_packages.php" class="active">Packages</a></li>
+                <li><a href="manage_packages.php">Packages</a></li>
                 <li><a href="manage_orders.php">Orders</a></li>
                 <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
             </ul>

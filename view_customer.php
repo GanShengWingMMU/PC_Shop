@@ -5,7 +5,10 @@ else { include 'db_connect.php'; }
 
 // 🌟 权限验证
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
-if (empty($current_role) || strtolower($current_role) !== 'superadmin') {
+
+if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
+    header("Location: admin_dashboard.php");
+    exit();
     die("<div style='background:#000; color:#ff4d4d; padding:50px; text-align:center; font-family:monospace;'>ACCESS DENIED: ALPHA REQUIRED.</div>");
 }
 
@@ -98,15 +101,19 @@ if (!empty($customer['birthday']) && $customer['birthday'] !== '0000-00-00') {
     <div class="admin-container" style="display: flex; min-height: 100vh; width: 100%;">
         <nav class="admin-sidebar">
             <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
-            <ul class="sidebar-menu">
+             <ul class="sidebar-menu">
                 <li><a href="admin_dashboard.php">Dashboard</a></li>
+                
                 <?php 
-                $sidebar_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
-                if (strtolower($sidebar_role) === 'superadmin'): 
+                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
                 ?>
-                    <li><a href="manage_staff.php" style="color: var(--accent-warning);"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                    <li><a href="manage_users.php" class="active"><i class="fas fa-users"></i> Manage Customers</a></li>
+
+                <?php if ($role === 'superadmin'): ?>
+                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
                 <?php endif; ?>
+
+                <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                
                 <li><a href="manage_categories.php">Categories</a></li>
                 <li><a href="manage_products.php">Products</a></li> 
                 <li><a href="manage_packages.php">Packages</a></li>
