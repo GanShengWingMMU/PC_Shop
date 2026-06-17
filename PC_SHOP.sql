@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 15, 2026 at 10:04 AM
+-- Generation Time: Jun 17, 2026 at 02:40 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -33,6 +33,8 @@ CREATE TABLE `admins` (
   `password` varchar(255) NOT NULL,
   `email` varchar(100) NOT NULL,
   `role` varchar(20) DEFAULT 'SuperAdmin',
+  `reset_token` varchar(255) DEFAULT NULL,
+  `reset_token_expire` datetime DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -40,9 +42,10 @@ CREATE TABLE `admins` (
 -- Dumping data for table `admins`
 --
 
-INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `created_at`) VALUES
-(1, 'Alvis', 'Alvis@100884', 'chenweishen8733@gmail.com', 'SuperAdmin', '2026-04-29 21:17:21'),
-(4, 'admin', 'Admin@@12345', 'admin123@gmail.com', 'Admin', '2026-05-19 14:19:02');
+INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `reset_token`, `reset_token_expire`, `created_at`) VALUES
+(1, 'Alvis', 'Alvis@100884', 'chenweishen8733@gmail.com', 'SuperAdmin', NULL, NULL, '2026-04-29 21:17:21'),
+(6, 'admin', '$2y$10$eEJCvFMxRls.uVHpHNhmE.RfF/tCcUAzzEO1j8tv9anwNH2UqEpje', 'admin123@gmail.com', 'Admin', NULL, NULL, '2026-06-16 17:19:24'),
+(7, 'OC alvis', '$2y$10$FRlZ4BIls3e9qOk49vx1xe.IN8qveQxwVmYiJGeNi384ieZVBuDn6', 'ocalvis88@gmail.com', 'Admin', NULL, NULL, '2026-06-17 16:24:45');
 
 -- --------------------------------------------------------
 
@@ -143,7 +146,31 @@ INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_even
 (76, 1, 'Alvis', 'SuperAdmin', 'Modified Product ID: 3', '127.0.0.1', '2026-06-15 15:45:33'),
 (77, 1, 'Alvis', 'SuperAdmin', 'Modified Product ID: 3', '127.0.0.1', '2026-06-15 15:45:39'),
 (78, 1, 'Alvis', 'SuperAdmin', 'Modified Product ID: 2', '127.0.0.1', '2026-06-15 15:45:43'),
-(79, 1, 'Alvis', 'SuperAdmin', 'Modified Product ID: 1', '127.0.0.1', '2026-06-15 15:45:47');
+(79, 1, 'Alvis', 'SuperAdmin', 'Modified Product ID: 1', '127.0.0.1', '2026-06-15 15:45:47'),
+(80, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-16 16:40:18'),
+(81, 1, 'Alvis', 'SuperAdmin', 'Modified Product ID: 19', '127.0.0.1', '2026-06-16 16:42:59'),
+(82, 1, 'Alvis', 'SuperAdmin', 'Added New Staff: admin', '127.0.0.1', '2026-06-16 17:19:24'),
+(83, 6, 'admin', 'Admin', 'System Login', '127.0.0.1', '2026-06-16 17:19:33'),
+(84, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-16 17:27:17'),
+(85, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 13:48:38'),
+(86, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 16:24:13'),
+(87, 1, 'Alvis', 'SuperAdmin', 'Added New Staff: OC alvis', '127.0.0.1', '2026-06-17 16:24:45'),
+(88, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 16:25:03'),
+(89, 7, 'OC alvis', 'Admin', 'System Login', '127.0.0.1', '2026-06-17 16:25:24'),
+(90, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 16:28:03'),
+(91, 7, 'OC alvis', 'Admin', 'System Login', '127.0.0.1', '2026-06-17 16:28:32'),
+(92, 7, 'OC alvis', 'Admin', 'Modified Staff Profile ID: 7', '127.0.0.1', '2026-06-17 16:33:23'),
+(93, 6, 'admin', 'Admin', 'System Login', '127.0.0.1', '2026-06-17 16:36:41'),
+(94, 7, 'OC alvis', 'Admin', 'System Login', '127.0.0.1', '2026-06-17 16:42:25'),
+(95, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 17:04:03'),
+(96, 1, 'Alvis', 'SuperAdmin', 'Modified Staff Profile ID: 6', '127.0.0.1', '2026-06-17 17:04:30'),
+(97, 6, 'admin', 'Admin', 'System Login', '127.0.0.1', '2026-06-17 17:04:49'),
+(98, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 17:12:46'),
+(99, 6, 'admin', 'Admin', 'System Login', '127.0.0.1', '2026-06-17 17:16:59'),
+(100, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 17:18:07'),
+(101, 7, 'OC alvis', 'Admin', 'System Login', '127.0.0.1', '2026-06-17 17:33:01'),
+(102, 7, 'OC alvis', 'Admin', 'Modified Staff Profile ID: 7', '127.0.0.1', '2026-06-17 17:39:44'),
+(103, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 17:43:34');
 
 -- --------------------------------------------------------
 
@@ -169,7 +196,7 @@ CREATE TABLE `bank` (
 INSERT INTO `bank` (`id`, `bank_name`, `cardholder_name`, `card_number`, `cvc`, `fpx_username`, `fpx_password`, `balance`) VALUES
 (1, 'Maybank', 'Ali Bin Abu', '1111222233334444', '123', NULL, NULL, 8303.00),
 (2, 'Maybank', 'Gan Sheng Wing', '9999888877776666', '999', NULL, NULL, 42300.00),
-(3, 'Maybank', 'FPX User 1', '0000', '000', 'ganshengwing', '123456', 76601.00);
+(3, 'Maybank', 'FPX User 1', '0000', '000', 'ganshengwing', '123456', 76101.00);
 
 -- --------------------------------------------------------
 
@@ -586,7 +613,7 @@ INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `
 (5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 100455.00, 10000, 'VIP', '2026-06-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14'),
 (6, 'kskbl', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', '+60122222620', '2025-11-17', 1000.00, 50, 'VIP', '2026-06-08 15:33:29', 0, NULL, 'Active', NULL, NULL, 27, 44, 13, 0, '2026-05-09 21:32:45'),
 (7, 'XUANMING0126', NULL, NULL, 'chenweishen8733@gmail.com', '$2y$10$t1mb1tQakaIxjZZJG/2/RurpbpIpkGQ9mObmsvcM9AFz.I0ZskP3.', '', '2026-05-18', 0.00, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-18 16:39:41'),
-(8, 'Alvis', NULL, NULL, 'ocalvis88@gmail.com', '$2y$10$JHAUBkQ2sgoDKHebVWIvNe7uUqsr3XUVHonZzXlpWy83oOcnjen4W', '', '2005-10-07', 0.00, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-21 22:15:47');
+(8, 'Alvis', NULL, NULL, 'ocalvis88@gmail.com', '$2y$10$JHAUBkQ2sgoDKHebVWIvNe7uUqsr3XUVHonZzXlpWy83oOcnjen4W', '', '2005-10-07', 455.00, 50, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-21 22:15:47');
 
 -- --------------------------------------------------------
 
@@ -680,15 +707,16 @@ INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `to
 (14, 'My Custom Order', 1, '2026-04-11 17:41:34', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
 (15, 'My Custom Order', 1, '2026-04-19 23:30:46', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
 (16, 'My Custom Order', 5, '2026-05-02 22:30:30', 74860.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Completed'),
-(17, 'My Custom Order', 5, '2026-05-02 22:31:55', 6427.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending'),
+(17, 'My Custom Order', 5, '2026-05-02 22:31:55', 6427.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Shipped'),
 (18, 'My Custom Order', 5, '2026-05-09 16:55:10', 10204.00, 550, 55.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending'),
 (19, 'My Custom Order', 5, '2026-05-09 21:03:11', 45.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending'),
 (20, 'My Custom Order', 6, '2026-05-17 23:43:50', 10727.00, 0, 0.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
-(21, 'My Custom Order', 6, '2026-05-18 00:13:55', 10727.00, 0, 0.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Processing'),
+(21, 'My Custom Order', 6, '2026-05-18 00:13:55', 10727.00, 0, 0.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Shipped'),
 (22, 'My Custom Order', 6, '2026-05-18 00:28:23', 10672.00, 550, 55.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Shipped'),
 (23, 'My Custom Order', 6, '2026-05-18 00:31:22', 11787.00, 0, 0.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Shipped'),
-(24, 'My Custom Order', 5, '2026-05-18 16:45:44', 33750.00, 0, 0.00, 'YYEYY | 0123456789\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', NULL, 'Processing'),
-(25, 'My Custom Order', 8, '2026-05-22 21:44:38', 2550.00, 0, 0.00, 'Alvis | +601158534889\n2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', NULL, 'Completed');
+(24, 'My Custom Order', 5, '2026-05-18 16:45:44', 33750.00, 0, 0.00, 'YYEYY | 0123456789\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', NULL, 'Shipped'),
+(25, 'My Custom Order', 8, '2026-05-22 21:44:38', 2550.00, 0, 0.00, 'Alvis | +601158534889\n2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', NULL, 'Completed'),
+(26, 'My Custom Order', 8, '2026-06-17 19:18:59', 45.00, 0, 0.00, 'Alvis | +601158534889\n2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', NULL, 'Shipped');
 
 -- --------------------------------------------------------
 
@@ -738,7 +766,8 @@ INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_bu
 (24, 22, NULL, NULL, NULL, NULL, 1, 10727.00),
 (25, 23, NULL, NULL, NULL, NULL, 1, 11787.00),
 (26, 24, 48, NULL, NULL, NULL, 25, 1350.00),
-(27, 25, 44, NULL, NULL, NULL, 1, 2550.00);
+(27, 25, 44, NULL, NULL, NULL, 1, 2550.00),
+(28, 26, 24, NULL, NULL, NULL, 1, 45.00);
 
 -- --------------------------------------------------------
 
@@ -950,7 +979,8 @@ INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `reference_n
 (15, 22, 'Credit Card ending in 6666', NULL, 'Paid', '2026-05-18 00:28:23'),
 (16, 23, 'FPX - Maybank2U', NULL, 'Paid', '2026-05-18 00:31:22'),
 (17, 24, 'Visa ending in 6666', NULL, 'Paid', '2026-05-18 16:45:44'),
-(18, 25, 'Visa ending in 6666', NULL, 'Paid', '2026-05-22 21:44:38');
+(18, 25, 'Visa ending in 6666', NULL, 'Paid', '2026-05-22 21:44:38'),
+(19, 26, 'E-Wallet', NULL, 'Paid', '2026-06-17 19:18:59');
 
 -- --------------------------------------------------------
 
@@ -1003,7 +1033,7 @@ INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `descriptio
 (21, 9, 'Microsoft Windows 11 Home 64-bit', 'Standard edition for gamers and home users. USB Flash Drive included.', 549.00, 6, 'Connectivity & Setup: Setting up Windows 11 Home for personal use strictly requires an active internet connection and a Microsoft Account.\r\nSecurity & Authentication: TPM 2.0 is mandatory for next-gen hardware tampering prevention. Windows Hello is supported for biometric logins (fingerprint or facial recognition)\r\nAdvanced Networking: Native support for Hyper-V, Firewall, and modern protocols including Wi-Fi 6, Wi-Fi 7 (when hardware is supported), and Bluetooth 5.3.\r\nAI Enhancements: Access to AI-powered features like Copilot, and for compatible Copilot+ PCs, enhanced hardware-accelerated NPU tasks', 'image/prod_6a26b977c660c.jpg', 'Available', 0, 0, '', '', 6),
 (22, 9, 'Microsoft Windows 11 Pro 64-bit', 'Advanced features for professionals and developers. BitLocker included.', 899.00, 8, 'Security: BitLocker device encryption and Windows Information Protection (WIP).\r\nManagement & Remote Access: Domain join, Azure Active Directory, Group Policy, and Remote Desktop support.\r\nVirtualization: Hyper-V and Windows Sandbox for secure, virtualized environments.', 'image/prod_6a26b96a0432e.jpg', 'Available', 0, 0, '', '', 7),
 (23, 10, 'Corsair iCUE AR120 RGB 120mm (3-Pack)', 'High performance cooling fans with customizable RGB lighting sync.', 229.00, 6, 'Fan Size: 120mm × 25mm\r\nBearing Type: Hydraulic bearing\r\nLighting: 8 Individually addressable RGB LEDs per fan\r\nRGB Control: Motherboard 3-pin ARGB header (adapter included) or Corsair iCUE controller\r\nFan Speed: 400 – 1,850 RPM (PWM Controlled)\r\nAirflow: Up to 59 CFM\r\nStatic Pressure: 2.83 mm H₂O\r\nNoise Level: 10.26 dBA to 27.3 dBA\r\nZero RPM Mode: Supported\r\nPower Connector: 4-pin PWM\r\nLighting Header: 3-pin +5V ARGB', 'image/prod_6a26b913d2ffa.jpg', 'Available', 5, 0, '', '', 7),
-(24, 10, 'ARCTIC P12 PWM PST 120mm', 'Pressure-optimized quiet fan for excellent airflow and low noise.', 45.00, 9, '- Dimensions: 120 × 120 × 25 mm (Standard)\r\n- Fan Speed: 200 – 1,800 RPM (PWM controlled)\r\n- Zero RPM Mode: Yes (Stops spinning when PWM signal is < 5%)\r\n- Airflow: 56.3 CFM (95.7 m³/h)\r\n- Static Pressure: 2.20 mm H₂O\r\n- Noise Level: 0.3 Sone (extremely quiet)\r\n- Bearing Type: Fluid Dynamic Bearing (FDB)\r\n- Connector: 4-Pin Connector + 4-Pin Socket (for daisy-chaining)\r\n- Current / Voltage: 0.08 A / 12 V DC\r\n- Cable Length: 400 mm\r\n- Weight: 139g – 145g', 'image/prod_6a26b9081110e.jpg', 'Available', 2, 0, '', '', 7),
+(24, 10, 'ARCTIC P12 PWM PST 120mm', 'Pressure-optimized quiet fan for excellent airflow and low noise.', 45.00, 8, '- Dimensions: 120 × 120 × 25 mm (Standard)\r\n- Fan Speed: 200 – 1,800 RPM (PWM controlled)\r\n- Zero RPM Mode: Yes (Stops spinning when PWM signal is < 5%)\r\n- Airflow: 56.3 CFM (95.7 m³/h)\r\n- Static Pressure: 2.20 mm H₂O\r\n- Noise Level: 0.3 Sone (extremely quiet)\r\n- Bearing Type: Fluid Dynamic Bearing (FDB)\r\n- Connector: 4-Pin Connector + 4-Pin Socket (for daisy-chaining)\r\n- Current / Voltage: 0.08 A / 12 V DC\r\n- Cable Length: 400 mm\r\n- Weight: 139g – 145g', 'image/prod_6a26b9081110e.jpg', 'Available', 2, 0, '', '', 7),
 (25, 11, 'ASUS TUF Gaming VG27AQ 27\" 165Hz', '27-inch WQHD (2560x1440) IPS gaming monitor with ultrafast 165Hz refresh rate.', 1299.00, 8, '- Screen Size: 27 inch\r\n- Resolution: WQHD (2560 x 1440)\r\n- Refresh Rate: 165Hz\r\n- Color Accuracy: 100% sRGB color space', 'image/prod_6a26b8fe98825.png', 'Available', 0, 0, '', '', 6),
 (26, 11, 'AOC 24G2SP 24\" 165Hz IPS', '24-inch Full HD (1920x1080) gaming monitor, perfect for esports.', 649.00, 10, '- Screen size (inch): 23.8\r\n- Panel resolution: 1920x1080\r\n- Panel type: IPS\r\n- Blue Light Technology: Yes', 'image/prod_6a26b8f22a7d0.png', 'Available', 0, 0, '', '', 4),
 (27, 1, 'AMD Ryzen 7 7800X3D', 'The undisputed king of gaming CPUs. 3D V-Cache technology. Keyword: AM5', 1850.00, 24, 'Cores/Threads: 8 Cores / 16 Threads\r\nClock Speeds: 4.2 GHz Base / up to 5.0 GHz Boost\r\nCache: 96 MB L3 Cache\r\nSocket & Architecture: AM5, Zen 4 (TSMC 5nm)\r\nTDP: 120W (requires a capable cooler)\r\nMemory Support: Dual-channel DDR5', 'image/prod_6a26b8e5871c9.jpg', 'Available', 120, 0, 'AM5', '', 9),
@@ -1261,7 +1291,9 @@ INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amo
 (9, 5, 'Payment', -45.00, 0, '2026-05-09 21:03:11'),
 (10, 5, 'Top-up', 100000.00, 10000, '2026-05-09 21:04:18'),
 (11, 6, 'Top-up', 500.00, 50, '2026-05-17 10:58:30'),
-(12, 6, 'Top-up', 500.00, 50, '2026-05-18 00:32:41');
+(12, 6, 'Top-up', 500.00, 50, '2026-05-18 00:32:41'),
+(13, 8, 'Top-up', 500.00, 50, '2026-06-17 19:18:22'),
+(14, 8, 'Payment', -45.00, 0, '2026-06-17 19:18:59');
 
 --
 -- Indexes for dumped tables
@@ -1471,13 +1503,13 @@ ALTER TABLE `wallet_transactions`
 -- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
-  MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `admin_logs`
 --
 ALTER TABLE `admin_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=80;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=104;
 
 --
 -- AUTO_INCREMENT for table `bank`
@@ -1543,13 +1575,13 @@ ALTER TABLE `fpx_accounts`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `order_details`
 --
 ALTER TABLE `order_details`
-  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT for table `packages`
@@ -1567,7 +1599,7 @@ ALTER TABLE `package_items`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -1609,7 +1641,7 @@ ALTER TABLE `saved_cards`
 -- AUTO_INCREMENT for table `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
-  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
 
 --
 -- AUTO_INCREMENT for table `used_vouchers`
@@ -1621,7 +1653,7 @@ ALTER TABLE `used_vouchers`
 -- AUTO_INCREMENT for table `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- Constraints for dumped tables
