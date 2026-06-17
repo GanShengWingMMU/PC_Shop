@@ -58,7 +58,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])
         $_SESSION['pc_build'] = []; 
         $id_list = implode(',', array_map('intval', $backup_ids));
         
-        // 抓取所有配件及其兼容性属性
         $res = $conn->query("SELECT product_id, category_id, socket_type, ram_type FROM products WHERE product_id IN ($id_list) AND stock_quantity > 0 ORDER BY category_id ASC");
         
         $temp_build = [];
@@ -69,21 +68,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])
         while ($row = $res->fetch_assoc()) {
             $cat_id = $row['category_id'];
             
-            // 兼容性防呆检查核心
             if ($cat_id == 1 && !empty($row['socket_type'])) {
                 $check_socket = $row['socket_type'];
             }
             if ($cat_id == 2) {
                 if (!empty($check_socket) && !empty($row['socket_type']) && $check_socket !== $row['socket_type']) {
                     $conflict_found = true;
-                    continue; // 发现主板与CPU不兼容，直接丢弃主板
+                    continue; 
                 }
                 if (!empty($row['ram_type'])) $check_ram = $row['ram_type'];
             }
             if ($cat_id == 3) {
                 if (!empty($check_ram) && !empty($row['ram_type']) && $check_ram !== $row['ram_type']) {
                     $conflict_found = true;
-                    continue; // 发现RAM与主板不兼容，直接丢弃RAM
+                    continue; 
                 }
             }
             $temp_build[$cat_id] = (int)$row['product_id'];
@@ -92,9 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])
         $_SESSION['pc_build'] = $temp_build;
 
         if ($conflict_found) {
-            $_SESSION['error_msg'] = "Session recovered partially. Some incompatible or modified parts were automatically removed for safety.";
+            $_SESSION['error_msg'] = "We restored your build, but removed some incompatible parts to keep your system safe.";
         } else {
-            $_SESSION['success_msg'] = "Session recovered! Valid blueprint has been restored.";
+            $_SESSION['success_msg'] = "Welcome back! Your previous PC build has been successfully restored.";
         }
         header("Location: builder.php");
         exit();
@@ -102,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])
 }
 
 // ==========================================
-// 💎 4. 核心数据水合引擎 (Hydration Engine) - 后端真理原则
+// 💎 4. 核心数据水合引擎 (Hydration Engine)
 // ==========================================
 $cart = []; 
 $total_price = 0; 
@@ -142,14 +140,13 @@ if (!empty($_SESSION['pc_build'])) {
             $total_wattage += $row['tdp_wattage']; 
         }
 
-        // 🛡️ 属性嗅探：完全废弃正则，直接读取物理字段！
         if ($cat_id == 1 && !empty($row['socket_type'])) $socket_param = $row['socket_type'];
         if ($cat_id == 2 && !empty($row['ram_type'])) $ram_type_param = $row['ram_type'];
     }
 }
 
 if ($stock_issue_detected) {
-    $_SESSION['error_msg'] = "Some items went out of stock and were automatically removed.";
+    $_SESSION['error_msg'] = "Some items are currently out of stock and have been removed from your build.";
 }
 
 if ($total_wattage > 0) $total_wattage += 50; 
@@ -176,9 +173,9 @@ $bottleneck_warning = "";
 $bottleneck_color = "";
 
 if (isset($cart[1], $cart[2], $cart[4], $cart[6])) {
-    if ($total_price >= 8000) { $system_tier = "GOD TIER (Enthusiast)"; $tier_color = "#ff007f"; } 
-    elseif ($total_price >= 4000) { $system_tier = "HIGH-END (Pro Gaming)"; $tier_color = "#00e676"; } 
-    else { $system_tier = "MAINSTREAM (Entry)"; $tier_color = "#00f2fe"; }
+    if ($total_price >= 8000) { $system_tier = "PERFORMANCE CLASS: ENTHUSIAST"; $tier_color = "#ff007f"; } 
+    elseif ($total_price >= 4000) { $system_tier = "PERFORMANCE CLASS: PRO GAMING"; $tier_color = "#00e676"; } 
+    else { $system_tier = "PERFORMANCE CLASS: MAINSTREAM"; $tier_color = "#00f2fe"; }
 }
 
 if (isset($cart[1]) && isset($cart[4])) {
@@ -228,47 +225,80 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 <link rel="stylesheet" href="css/builder.css">
 
 <style>
-    :root { --accent: #00f2fe; --dark-card: rgba(255,255,255,0.03); }
+    :root { --accent: #00f2fe; --dark-card: rgba(255,255,255,0.02); }
     body { background-color: #030305; color: #fff; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
     
-    .builder-dashboard { max-width: 1400px; margin: 40px auto 80px; padding: 0 20px; display: grid; grid-template-columns: 1fr 360px; gap: 40px; align-items: start; }
+    .cyber-grid-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-image: linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px); background-size: 40px 40px; z-index: -2; pointer-events: none;}
+
+    .builder-dashboard { max-width: 1400px; margin: 40px auto 80px; padding: 0 20px; display: grid; grid-template-columns: 1fr 380px; gap: 40px; align-items: start; position: relative; z-index: 1;}
     .builder-main-column { display: flex; flex-direction: column; }
-    .builder-sidebar-column { position: sticky; top: 100px; background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 16px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+    
+    /* 🌟 对齐 Packages 的高级毛玻璃侧边栏 */
+    .builder-sidebar-column { position: sticky; top: 100px; background: rgba(10, 10, 15, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 16px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
 
     @media (max-width: 1024px) {
         .builder-dashboard { grid-template-columns: 1fr; }
         .builder-sidebar-column { position: static; }
     }
 
-    .phase-title { margin: 40px 0 15px; color: var(--accent); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; font-size: 0.85rem; border-bottom: 1px solid rgba(0,242,254,0.2); padding-bottom: 8px; }
-    .slot-card { background: var(--dark-card); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px 25px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s; }
-    .slot-card:hover { transform: translateY(-3px); }
-    .slot-locked { opacity: 0.35; filter: grayscale(1) blur(1px); pointer-events: none; user-select: none; background: rgba(0,0,0,0.2); }
-    .slot-filled { border-color: var(--accent) !important; background: rgba(0,242,254,0.04); box-shadow: 0 4px 15px rgba(0,242,254,0.05); }
+    .phase-title { margin: 40px 0 15px; color: var(--accent); font-weight: 900; letter-spacing: 2px; text-transform: uppercase; font-size: 0.9rem; border-bottom: 1px dashed rgba(0,242,254,0.2); padding-bottom: 10px; display: flex; align-items: center; gap: 10px;}
     
-    .btn-action { padding: 8px 20px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; text-decoration: none; transition: 0.3s; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; box-sizing: border-box; }
-    .btn-select { background: transparent !important; color: #00f2fe !important; border: 1px solid #00f2fe !important; font-family: 'Inter', sans-serif; }
-    .btn-select:hover { background: #00f2fe !important; color: #000 !important; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4) !important; }
-    .btn-change { background: rgba(255,255,255,0.03) !important; color: #cbd5e1 !important; border: 1px solid rgba(255,255,255,0.08) !important; font-family: 'Inter', sans-serif; }
-    .btn-change:hover { background: rgba(255,255,255,0.08) !important; color: #fff !important; border-color: rgba(255,255,255,0.3) !important; }
+    /* 🌟 核心修复 2：统一卡片高度与高级交互 */
+    .slot-card { 
+        background: var(--dark-card); 
+        border: 1px solid rgba(255,255,255,0.08); 
+        border-radius: 12px; 
+        padding: 20px 25px; 
+        margin-bottom: 15px; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        transition: 0.3s ease; 
+        min-height: 110px; /* 强制统一最小高度，防止坍塌变窄 */
+        box-sizing: border-box;
+    }
+    .slot-card:hover:not(.slot-locked) { 
+        transform: translateY(-5px); 
+        border-color: rgba(0, 242, 254, 0.4); 
+        box-shadow: 0 15px 30px rgba(0,0,0,0.4), inset 0 0 15px rgba(0,242,254,0.05); 
+    }
+    .slot-locked { 
+        opacity: 0.5; 
+        background: rgba(0,0,0,0.3); 
+        border: 1px dashed rgba(255,255,255,0.1); 
+        pointer-events: none; 
+        user-select: none; 
+    }
+    .slot-filled { 
+        border-color: var(--accent) !important; 
+        background: rgba(0,242,254,0.04); 
+        box-shadow: 0 4px 15px rgba(0,242,254,0.05); 
+    }
+    
+    /* 🌟 对齐 Packages 的按钮样式 */
+    .btn-action { padding: 10px 24px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; text-decoration: none; transition: 0.3s; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; text-transform: uppercase; letter-spacing: 1px; }
+    .btn-select { background: rgba(0,242,254,0.1) !important; color: #00f2fe !important; border: 1px solid #00f2fe !important; }
+    .btn-select:hover { background: #00f2fe !important; color: #000 !important; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4) !important; transform: translateY(-2px); }
+    .btn-change { background: rgba(255,255,255,0.05) !important; color: #cbd5e1 !important; border: 1px solid rgba(255,255,255,0.2) !important; }
+    .btn-change:hover { background: rgba(255,255,255,0.1) !important; color: #fff !important; border-color: rgba(255,255,255,0.5) !important; }
     .btn-out-of-stock { background: rgba(239, 68, 68, 0.05); color: #ef4444; border: 1px dashed #ef4444; cursor: not-allowed; user-select: none; }
-    .lock-badge { background: #ff4d4d; color: #fff; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; font-weight: 800; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;}
+    
+    .lock-badge { background: rgba(255, 77, 77, 0.15); color: #ff4d4d; border: 1px solid rgba(255,77,77,0.3); font-size: 0.7rem; padding: 4px 10px; border-radius: 4px; font-weight: 800; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;}
 
-    .perf-hub { width: 100%; margin: 40px 0 0; background: rgba(10,10,10,0.8); border: 1px solid rgba(0,242,254,0.2); border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .perf-hub { width: 100%; margin: 40px 0 0; background: rgba(10, 10, 15, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(0,242,254,0.2); border-radius: 16px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .hub-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; }
-    .hub-title { font-size: 1.1rem; color: #fff; font-weight: 900; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
-    .bot-badge { padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; font-family: 'Inter', sans-serif; }
+    .hub-title { font-size: 1.2rem; color: #fff; font-weight: 900; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+    .bot-badge { padding: 8px 15px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; font-family: 'Inter', sans-serif; }
+    
     .persona-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-    .persona-col { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); }
+    .persona-col { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); }
     .p-title { font-size: 0.85rem; color: #888; font-weight: 800; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; }
-    .metric-row { margin-bottom: 12px; }
-    .metric-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: #cbd5e1; margin-bottom: 4px; font-weight: 600; }
-    .metric-bar-bg { width: 100%; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+    .metric-row { margin-bottom: 15px; }
+    .metric-label { display: flex; justify-content: space-between; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 6px; font-weight: 600; }
+    .metric-bar-bg { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
     .metric-bar-fill { height: 100%; border-radius: 3px; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
 
-    /* ==============================================================
-       🌟 全息透视装机线框图 (Holographic Wireframe) V4.0 精准防切断版 🌟
-       ============================================================== */
+    /* 全息透视装机线框图 */
     .blueprint-wrapper {
         position: relative; width: 100%; height: 320px;
         background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 242, 254, 0.2);
@@ -334,12 +364,14 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     .bp-psu span, .bp-gpu span, .bp-cooler span { margin-top: 0; }
 </style>
 
+<div class="cyber-grid-bg"></div>
+
 <div class="builder-dashboard">
     <div class="builder-main-column">
         
         <?php if (isset($_SESSION['error_msg'])): ?>
             <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; line-height: 1.5; font-family: 'Inter', sans-serif;">
-                <?php echo $_SESSION['error_msg']; unset($_SESSION['error_msg']); ?>
+                <i class="fas fa-exclamation-triangle"></i> <?php echo $_SESSION['error_msg']; unset($_SESSION['error_msg']); ?>
             </div>
         <?php endif; ?>
         <?php if (isset($_SESSION['success_msg'])): ?>
@@ -349,18 +381,18 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         <?php endif; ?>
 
         <div>
-            <h1 style="font-size: 2.8rem; font-weight: 900; margin: 0; letter-spacing: -1px; color: #fff;">SYSTEM <span style="color:var(--accent); text-shadow: 0 0 20px rgba(0,242,254,0.4);">ARCHITECT</span></h1>
-            <p style="color: #888; font-size: 1.1rem; margin-top: 5px;">Smart topological dependency engine & bottleneck AI active.</p>
+            <h1 style="font-size: 3rem; font-weight: 900; margin: 0; letter-spacing: -1px; color: #fff;">SYSTEM <span style="color:var(--accent); text-shadow: 0 0 20px rgba(0,242,254,0.4);">ARCHITECT</span></h1>
+            <p style="color: #888; font-size: 1.1rem; margin-top: 5px;">Topological build engine & Bottleneck AI Analysis active.</p>
             
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 25px; font-size: 0.85rem; color: #aaa; font-weight: 600;">
-                <span>BUILD PROGRESS</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; font-size: 0.85rem; color: #aaa; font-weight: 600;">
+                <span>SYSTEM INTEGRATION STATUS</span>
                 <div>
                     <?php if ($progress > 0): ?>
-                        <a href="builder.php?action=clear" onclick="return confirm('WARNING: This will obliterate your current blueprint. Are you absolute sure?');" style="color: #ff4d4d; text-decoration: none; margin-right: 15px; padding: 5px 10px; border: 1px dashed rgba(255,77,77,0.3); border-radius: 5px; transition: 0.3s;" onmouseover="this.style.background='rgba(255,77,77,0.1)'; this.style.boxShadow='0 0 10px rgba(255,77,77,0.2)';" onmouseout="this.style.background='transparent'; this.style.boxShadow='none';">
-                            <i class="fas fa-trash-alt"></i> WIPE LOADOUT
+                        <a href="javascript:void(0);" onclick="cyberConfirm('Are you sure you want to clear your current PC build? This action cannot be undone.', function() { localStorage.removeItem('gridcity_backup_build'); window.location.href='builder.php?action=clear'; }, null, true);" style="color: #ff4d4d; text-decoration: none; margin-right: 15px; padding: 6px 12px; border: 1px dashed rgba(255,77,77,0.3); border-radius: 6px; transition: 0.3s;" onmouseover="this.style.background='rgba(255,77,77,0.1)'; this.style.borderColor='#ff4d4d';" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(255,77,77,0.3)';">
+                        <i class="fas fa-trash-alt"></i> WIPE LOADOUT
                         </a>
                     <?php endif; ?>
-                    <span style="color: var(--accent); font-size: 1.4rem; font-family: 'JetBrains Mono', monospace; text-shadow: 0 0 10px rgba(0,242,254,0.5);"><?php echo $progress; ?>%</span>
+                    <span style="color: var(--accent); font-size: 1.6rem; font-family: 'JetBrains Mono', monospace; text-shadow: 0 0 15px rgba(0,242,254,0.5);"><?php echo $progress; ?>%</span>
                 </div>
             </div>
             <div style="background: rgba(255,255,255,0.05); height: 8px; margin-top: 8px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(0,242,254,0.1);">
@@ -369,7 +401,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         </div>
 
         <?php foreach ($workflow as $phase_name => $slots): ?>
-            <div class="phase-title"><?php echo $phase_name; ?></div>
+            <div class="phase-title"><i class="fas fa-layer-group" style="margin-right: 8px;"></i> <?php echo $phase_name; ?></div>
             
             <?php foreach ($slots as $slot): 
                 $cid = $slot['id'];
@@ -384,36 +416,36 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
             ?>
                 <div class="slot-card <?php echo $is_filled ? 'slot-filled' : ''; ?> <?php echo $is_locked ? 'slot-locked' : ''; ?>">
                     <div style="display: flex; align-items: center; gap: 20px;">
-                        <div style="width: 40px; text-align: center; font-size: 1.8rem; color: <?php echo $is_filled ? 'var(--accent)' : '#475569'; ?>;">
+                        <div style="width: 50px; text-align: center; font-size: 2rem; color: <?php echo $is_filled ? 'var(--accent)' : '#475569'; ?>;">
                             <i class="fas <?php echo $slot['icon']; ?>"></i>
                         </div>
                         <div>
-                            <h3 style="margin: 0 0 4px 0; font-size: 1.1rem; color: #fff; font-weight: 800;"><?php echo $slot['name']; ?></h3>
+                            <h3 style="margin: 0 0 6px 0; font-size: 1.2rem; color: #fff; font-weight: 800;"><?php echo $slot['name']; ?></h3>
                             
                             <?php if ($is_locked): ?>
                                 <span class="lock-badge"><i class="fas fa-lock"></i> LOCKED</span>
-                                <span style="color: #ff4d4d; font-size: 0.8rem; margin-left: 8px;"><?php echo $slot['lock_msg']; ?></span>
+                                <span style="color: #ff4d4d; font-size: 0.85rem; margin-left: 8px;"><?php echo $slot['lock_msg']; ?></span>
                             <?php elseif ($is_filled): ?>
-                                <div style="color: var(--accent); font-weight: 700; font-size: 1rem;"><?php echo htmlspecialchars($cart[$cid]['name']); ?></div>
-                                <div style="color: #00e676; font-size: 0.85rem; font-weight: 600; margin-top: 3px; font-family: 'JetBrains Mono', monospace;">RM <?php echo number_format($cart[$cid]['price'], 2); ?></div>
+                                <div style="color: var(--accent); font-weight: 700; font-size: 1.05rem;"><?php echo htmlspecialchars($cart[$cid]['name']); ?></div>
+                                <div style="color: #00e676; font-size: 0.95rem; font-weight: 800; margin-top: 5px; font-family: 'JetBrains Mono', monospace;">RM <?php echo number_format($cart[$cid]['price'], 2); ?></div>
                             <?php elseif (!$has_stock): ?>
                                 <div style="color: #ef4444; font-size: 0.85rem; font-weight: bold;"><i class="fas fa-times-circle"></i> Currently depleted from database.</div>
                             <?php else: ?>
-                                <div style="color: #64748b; font-size: 0.85rem;"><?php echo $slot['desc']; ?></div>
+                                <div style="color: #64748b; font-size: 0.9rem;"><?php echo $slot['desc']; ?></div>
                             <?php endif; ?>
                         </div>
                     </div>
 
                     <div style="display: flex; align-items: center;">
                         <?php if ($is_locked): ?>
-                            <div style="color: #475569; font-weight: 800; letter-spacing: 2px;">LOCKED</div>
+                            <div style="color: #475569; font-weight: 800; letter-spacing: 2px; opacity: 0.5;">LOCKED</div>
                         <?php elseif ($is_filled): ?>
-                            <a href="select_part.php?category_id=<?php echo $cid . $slot['params']; ?>" class="btn-action btn-change">REPLACE</a>
-                            <a href="builder.php?action=remove&cat_id=<?php echo $cid; ?>" style="color: #ef4444; margin-left: 15px; font-size: 1.2rem; transition: 0.2s;" onmouseover="this.style.color='#fff'; this.style.textShadow='0 0 10px #ef4444';" onmouseout="this.style.color='#ef4444'; this.style.textShadow='none';"><i class="fas fa-times-circle"></i></a>
+                            <a href="select_part.php?category_id=<?php echo $cid . $slot['params']; ?>" class="btn-action btn-change"><i class="fas fa-sync-alt" style="margin-right: 6px;"></i> REPLACE</a>
+                            <a href="builder.php?action=remove&cat_id=<?php echo $cid; ?>" style="color: #ef4444; margin-left: 20px; font-size: 1.4rem; transition: 0.2s;" onmouseover="this.style.color='#fff'; this.style.textShadow='0 0 10px #ef4444';" onmouseout="this.style.color='#ef4444'; this.style.textShadow='none';"><i class="fas fa-times-circle"></i></a>
                         <?php elseif (!$has_stock): ?>
                             <span class="btn-action btn-out-of-stock">NO STOCK</span>
                         <?php else: ?>
-                            <a href="select_part.php?category_id=<?php echo $cid . $slot['params']; ?>" class="btn-action btn-select">SELECT <i class="fas fa-crosshairs" style="margin-left: 5px; font-size: 0.75rem;"></i></a>
+                            <a href="select_part.php?category_id=<?php echo $cid . $slot['params']; ?>" class="btn-action btn-select"><i class="fas fa-crosshairs" style="margin-right: 6px;"></i> SELECT</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -503,7 +535,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     </div> 
         
     <div class="builder-sidebar-column">
-        <h3 style="margin: 0; color: #fff; font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 10px;">
+        <h3 style="margin: 0; color: #fff; font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">
             <i class="fas fa-receipt" style="color: var(--accent);"></i> SYSTEM SUMMARY
         </h3>
 
@@ -563,7 +595,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                 </div>
                 
                 <?php if($bottleneck_warning): ?>
-                    <div style="color: <?php echo $bottleneck_color; ?>; font-size: 0.8rem; font-weight: normal; margin-top: 10px; line-height: 1.5; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; border-left: 4px solid <?php echo $bottleneck_color; ?>;">
+                    <div style="color: <?php echo $bottleneck_color; ?>; font-size: 0.85rem; font-weight: normal; margin-top: 10px; line-height: 1.5; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; border-left: 4px solid <?php echo $bottleneck_color; ?>;">
                         <?php echo $bottleneck_warning; ?>
                     </div>
                 <?php endif; ?>
@@ -575,20 +607,20 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                 
                 <?php if (isset($cart[6])): ?>
                     <?php if ($psu_wattage < $total_wattage): ?>
-                        <div style="color: #ff4d4d; font-size: 0.8rem; line-height: 1.4; background: rgba(255,77,77,0.1); padding: 10px; border-radius: 6px; border: 1px dashed #ff4d4d;">
+                        <div style="color: #ff4d4d; font-size: 0.85rem; line-height: 1.4; background: rgba(255,77,77,0.1); padding: 10px; border-radius: 6px; border: 1px dashed #ff4d4d;">
                             <i class="fas fa-radiation"></i> <strong>CRITICAL:</strong> Your PSU (<?php echo $psu_wattage; ?>W) cannot support this system. PC will shut down under load!
                         </div>
                     <?php elseif ($psu_wattage < ($total_wattage * 1.3)): ?>
-                        <div style="color: #f97316; font-size: 0.8rem; line-height: 1.4; background: rgba(249,115,22,0.1); padding: 10px; border-radius: 6px; border: 1px solid #f97316;">
+                        <div style="color: #f97316; font-size: 0.85rem; line-height: 1.4; background: rgba(249,115,22,0.1); padding: 10px; border-radius: 6px; border: 1px solid #f97316;">
                             <i class="fas fa-battery-half"></i> <strong>LOW HEADROOM:</strong> Only <?php echo round((($psu_wattage - $total_wattage) / $psu_wattage) * 100); ?>% upgrade margin. Consider a larger PSU for future-proofing.
                         </div>
                     <?php else: ?>
-                        <div style="color: #00e676; font-size: 0.8rem; line-height: 1.4; background: rgba(0,230,118,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(0,230,118,0.3);">
+                        <div style="color: #00e676; font-size: 0.85rem; line-height: 1.4; background: rgba(0,230,118,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(0,230,118,0.3);">
                             <i class="fas fa-battery-full"></i> <strong>SAFE:</strong> <?php echo round((($psu_wattage - $total_wattage) / $psu_wattage) * 100); ?>% capacity remaining. Excellent upgrade headroom.
                         </div>
                     <?php endif; ?>
                 <?php else: ?>
-                    <div style="color: #64748b; font-size: 0.8rem;"><i class="fas fa-plug"></i> Select a Power Supply to calculate headroom.</div>
+                    <div style="color: #64748b; font-size: 0.85rem;"><i class="fas fa-plug"></i> Select a Power Supply to calculate headroom.</div>
                 <?php endif; ?>
             </div>
             
@@ -600,17 +632,17 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
             <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                 <?php if ($progress == 100): ?>
                     <button type="button" onclick="openProcessModal('checkout')" class="btn-action btn-select" style="text-align: center; font-size: 1.1rem; padding: 15px; width: 100%; box-sizing: border-box; border: none; cursor: pointer;">
-                        CHECKOUT <i class="fas fa-shopping-cart" style="margin-left: 8px;"></i>
+                        DEPLOY SYSTEM <i class="fas fa-shopping-cart" style="margin-left: 8px;"></i>
                     </button>
                 <?php else: ?>
                     <span class="btn-action" style="background: rgba(255,255,255,0.05); color: #64748b; cursor: not-allowed; padding: 15px; border: 1px dashed rgba(255,255,255,0.1); text-align: center; width: 100%; box-sizing: border-box;">
-                        Complete Build to Checkout
+                        Complete Build to Deploy
                     </span>
                 <?php endif; ?>
                 
                 <?php if ($progress > 0): ?>
-                    <button type="button" onclick="openProcessModal('save')" class="btn-action btn-change" style="text-align: center; padding: 12px; width: 100%; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.08); cursor: pointer; background: transparent;">
-                        <i class="fas fa-save" style="margin-right: 8px;"></i> Save Draft
+                    <button type="button" onclick="openProcessModal('save')" class="btn-action btn-change" style="text-align: center; padding: 12px; width: 100%; box-sizing: border-box; cursor: pointer;">
+                        <i class="fas fa-save" style="margin-right: 8px;"></i> ARCHIVE BLUEPRINT
                     </button>
                 <?php endif; ?>
             </div>
@@ -696,7 +728,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (backup) {
             const backupIds = JSON.parse(backup);
             if (backupIds && backupIds.length > 0) {
-                if (confirm("⚠️ SYSTEM ALERT: We detected an unsaved build from your previous session! Do you want to restore your hard work?")) {
+                cyberConfirm("We noticed you have an unfinished PC build from last time. Would you like to restore it?", 
+                function() {
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = 'builder.php';
@@ -707,18 +740,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     form.appendChild(input);
                     document.body.appendChild(form);
                     form.submit();
-                } else {
+                }, 
+                function() {
                     localStorage.removeItem('gridcity_backup_build'); 
-                }
+                });
             }
         }
-    }
-    
-    const clearBtn = document.querySelector('a[href="builder.php?action=clear"]');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', function() {
-            localStorage.removeItem('gridcity_backup_build');
-        });
     }
 });
 </script>

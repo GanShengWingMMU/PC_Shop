@@ -134,13 +134,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn->begin_transaction();
     try {
         $address_id = intval($_POST['shipping_address_id'] ?? 0);
-        if ($address_id <= 0) throw new Exception("Please select a valid shipping address.");
+        if ($address_id <= 0) throw new Exception("[SYSTEM ERROR]Please select a valid shipping address.");
         
         $addr_stmt = $conn->prepare("SELECT * FROM customer_addresses WHERE address_id = ? AND customer_id = ?");
         $addr_stmt->bind_param("ii", $address_id, $customer_id);
         $addr_stmt->execute();
         $addr_res = $addr_stmt->get_result();
-        if ($addr_res->num_rows === 0) throw new Exception("Security Alert: Invalid shipping address selected.");
+        if ($addr_res->num_rows === 0) throw new Exception("[SECURITY ALERT] Invalid shipping address selected.");
         $addr_data = $addr_res->fetch_assoc();
         $addr_stmt->close();
 
@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $final_payment_method = $_POST['payment_method'] ?? '';
-        if (empty($final_payment_method)) throw new Exception("Please select a payment method before checking out.");
+        if (empty($final_payment_method)) throw new Exception("[SYSTEM ERROR] Please select a payment method before checking out.");
 
         $use_coins = isset($_POST['use_coins']) ? true : false;
         $coins_used = 0;
@@ -184,14 +184,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($promo_row = $promo_res->fetch_assoc()) {
                 if ($promo_row['is_vip_only'] == 1 && $current_tier !== 'VIP') {
-                    throw new Exception("The promo code '{$applied_promo_code}' is exclusive to ELITE members only.");
+                    throw new Exception("[ACCESS DENIED] The promo code '{$applied_promo_code}' is exclusive to ELITE members only.");
                 }
                 
                 $target = $promo_row['target_category'];
                 $target_subtotal = ($target === 'Components') ? $sub_comp : (($target === 'Packages') ? $sub_pkg : ($sub_comp + $sub_pkg));
 
                 if ($target_subtotal < $promo_row['min_spend'] || $target_subtotal <= 0) {
-                    throw new Exception("Order does not meet criteria for this promo code.");
+                    throw new Exception("[SYSTEM ERROR] Order does not meet criteria for this promo code.");
                 }
 
                 if ($promo_row['discount_type'] === 'Fixed') {
@@ -205,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $promo_id_to_log = $promo_row['promo_id']; 
             } else {
-                throw new Exception("Invalid, expired, or already used promo code: '{$applied_promo_code}'.");
+                throw new Exception("[SYSTEM ERROR] Invalid, expired, or already used promo code: '{$applied_promo_code}'.");
             }
             $promo_stmt->close();
         }
@@ -261,7 +261,7 @@ if (strpos($card_num, '4') === 0) {
 
                 } else {
                     // 🌟 4. 錯誤訊息也要跟著升級
-                    throw new Exception("Bank Declined: Invalid Card Number, Expiry Date, or CVC. Please try again.");
+                    throw new Exception("[TRANSACTION FAILED] Bank Declined: Invalid Card Number, Expiry Date, or CVC. Please try again.");
                 }
             } else {
                 $card_id = intval($selected_card);
@@ -285,7 +285,7 @@ if (strpos($card_num, '4') === 0) {
                  $bank_account_id_to_deduct = $fpx_data['id']; 
                  $final_payment_method = "FPX - " . ($_POST['selected_bank'] ?? 'Bank');
             } else {
-                 throw new Exception("FPX Login Failed: Invalid username or password.");
+                 throw new Exception("[SYSTEM ERROR] FPX Login Failed: Invalid username or password.");
             }
         }
 
@@ -326,7 +326,7 @@ if (strpos($card_num, '4') === 0) {
             
             if (!$stock_check || $stock_check['stock_quantity'] < $req_qty) {
                 $p_name = $stock_check ? $stock_check['product_name'] : "Unknown Part ID $pid";
-                throw new Exception("Inventory Error: '{$p_name}' only has " . ($stock_check['stock_quantity'] ?? 0) . " left. Order aborted to prevent phantom stock.");
+                throw new Exception("[INVENTORY CONFLICT] Inventory Error: '{$p_name}' only has " . ($stock_check['stock_quantity'] ?? 0) . " left. Order aborted to prevent phantom stock.");
             }
             
             $deduct_stock = $conn->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE product_id = ?");
@@ -339,14 +339,14 @@ if (strpos($card_num, '4') === 0) {
                 $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ? AND balance >= ?");
                 $deduct_stmt->bind_param("did", $final_amount, $bank_account_id_to_deduct, $final_amount);
                 $deduct_stmt->execute();
-                if ($deduct_stmt->affected_rows === 0) throw new Exception("Bank Declined: Insufficient funds in your bank account.");
+                if ($deduct_stmt->affected_rows === 0) throw new Exception("[TRANSACTION FAILED] Bank Declined: Insufficient funds in your bank account.");
             }
 
             if ($final_payment_method === 'E-Wallet') {
                 $deduct_wallet = $conn->prepare("UPDATE customers SET wallet_balance = wallet_balance - ? WHERE customer_id = ? AND wallet_balance >= ?");
                 $deduct_wallet->bind_param("did", $final_amount, $customer_id, $final_amount);
                 $deduct_wallet->execute();
-                if ($deduct_wallet->affected_rows === 0) throw new Exception("Insufficient E-Wallet balance! Please top up.");
+                if ($deduct_wallet->affected_rows === 0) throw new Exception("[TRANSACTION FAILED] Insufficient E-Wallet balance! Please top up.");
                 
                 $insert_trans = $conn->prepare("INSERT INTO wallet_transactions (customer_id, type, amount) VALUES (?, 'Payment', ?)");
                 $neg_amount = -$final_amount; 
@@ -413,7 +413,7 @@ if (strpos($card_num, '4') === 0) {
         $clear_cart->execute();
 
         $conn->commit();
-        $_SESSION['success_msg'] = "Order placed successfully! Your Order ID is #$order_id. Promo saved RM " . number_format($promo_discount, 2) . $cap_triggered_msg;
+        $_SESSION['success_msg'] = "[TRANSMISSION SUCCESS] Order placed successfully! Your Order ID is #$order_id. Promo saved RM " . number_format($promo_discount, 2) . $cap_triggered_msg;
         header("Location: my_orders.php");
         exit();
 

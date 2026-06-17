@@ -223,4 +223,74 @@
             <i class="fa-solid fa-wallet" title="Grid Coins Wallet"></i>
         </div>
     </div>
+    <div id="cyberSystemModal" style="display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); backdrop-filter: blur(8px);">
+    <div id="cyberModalBox" style="background: rgba(10, 10, 15, 0.95); margin: 15vh auto; padding: 0; width: 90%; max-width: 450px; border-radius: 8px; border: 1px solid #00f2fe; overflow: hidden; box-shadow: 0 0 30px rgba(0, 242, 254, 0.2), inset 0 0 15px rgba(0, 242, 254, 0.05); animation: cyberModalFlicker 0.3s forwards;">
+        <div style="padding: 15px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.02); display: flex; align-items: center;">
+            <h3 id="cyberModalTitle" style="margin: 0; color: #fff; font-weight: 800; font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; letter-spacing: 1px;">
+                <i class="fas fa-terminal" style="color: #00f2fe; margin-right: 8px;"></i> SYSTEM PROMPT
+            </h3>
+        </div>
+        <div style="padding: 25px 20px;">
+            <p id="cyberModalMessage" style="color: #cbd5e1; font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; line-height: 1.6; margin: 0 0 25px 0;"></p>
+            <div style="display: flex; gap: 15px; justify-content: flex-end;">
+                <button id="cyberModalCancelBtn" style="background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 4px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-weight: bold; transition: 0.3s;">CANCEL</button>
+                <button id="cyberModalConfirmBtn" style="background: rgba(0, 242, 254, 0.1); color: #00f2fe; border: 1px solid #00f2fe; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-weight: bold; transition: 0.3s;">ACKNOWLEDGE</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes cyberModalFlicker { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+    #cyberModalCancelBtn:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.3); }
+</style>
+
+<script>
+    // 呼叫此函數取代原有的 confirm()
+    // 參數: 訊息內容, 確認後執行的函數, 取消後執行的函數 (可為空), 是否為危險警告(紅色)
+    function cyberConfirm(message, confirmCallback, cancelCallback = null, isWarning = false) {
+        const modal = document.getElementById('cyberSystemModal');
+        const modalBox = document.getElementById('cyberModalBox');
+        const title = document.getElementById('cyberModalTitle');
+        const confirmBtn = document.getElementById('cyberModalConfirmBtn');
+        const cancelBtn = document.getElementById('cyberModalCancelBtn');
+
+        document.getElementById('cyberModalMessage').innerHTML = message;
+        modal.style.display = 'block';
+
+        if (isWarning) {
+            modalBox.style.borderColor = '#ff4d4d';
+            modalBox.style.boxShadow = '0 0 30px rgba(255, 77, 77, 0.2), inset 0 0 15px rgba(255, 77, 77, 0.05)';
+            title.style.color = '#ff4d4d';
+            title.innerHTML = '<i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i> CRITICAL WARNING';
+            confirmBtn.style.borderColor = '#ff4d4d';
+            confirmBtn.style.color = '#ff4d4d';
+            confirmBtn.style.background = 'rgba(255, 77, 77, 0.1)';
+            confirmBtn.innerHTML = 'EXECUTE PURGE';
+            confirmBtn.onmouseover = () => { confirmBtn.style.background = '#ff4d4d'; confirmBtn.style.color = '#000'; confirmBtn.style.boxShadow = '0 0 20px rgba(255, 77, 77, 0.5)'; };
+            confirmBtn.onmouseout = () => { confirmBtn.style.background = 'rgba(255, 77, 77, 0.1)'; confirmBtn.style.color = '#ff4d4d'; confirmBtn.style.boxShadow = 'none'; };
+        } else {
+            modalBox.style.borderColor = '#00f2fe';
+            modalBox.style.boxShadow = '0 0 30px rgba(0, 242, 254, 0.2), inset 0 0 15px rgba(0, 242, 254, 0.05)';
+            title.style.color = '#fff';
+            title.innerHTML = '<i class="fas fa-terminal" style="color: #00f2fe; margin-right:8px;"></i> SYSTEM PROMPT';
+            confirmBtn.style.borderColor = '#00f2fe';
+            confirmBtn.style.color = '#00f2fe';
+            confirmBtn.style.background = 'rgba(0, 242, 254, 0.1)';
+            confirmBtn.innerHTML = 'ACKNOWLEDGE';
+            confirmBtn.onmouseover = () => { confirmBtn.style.background = '#00f2fe'; confirmBtn.style.color = '#000'; confirmBtn.style.boxShadow = '0 0 20px rgba(0, 242, 254, 0.5)'; };
+            confirmBtn.onmouseout = () => { confirmBtn.style.background = 'rgba(0, 242, 254, 0.1)'; confirmBtn.style.color = '#00f2fe'; confirmBtn.style.boxShadow = 'none'; };
+        }
+
+        // 綁定點擊事件
+        confirmBtn.onclick = function() {
+            modal.style.display = 'none';
+            if(confirmCallback) confirmCallback();
+        };
+        cancelBtn.onclick = function() {
+            modal.style.display = 'none';
+            if(cancelCallback) cancelCallback();
+        };
+    }
+</script>
 </footer>

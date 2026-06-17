@@ -15,7 +15,7 @@ $current_tier = 'Standard';
 
 if (isset($_SESSION['customer_id'])) {
     $header_user_id = $_SESSION['customer_id'];
-    $header_stmt = $conn->prepare("SELECT wallet_balance, membership_tier, vip_expiry_date FROM customers WHERE customer_id = ?");
+    $header_stmt = $conn->prepare("SELECT wallet_balance, membership_tier, vip_expiry_date, auto_renew FROM customers WHERE customer_id = ?");
     $header_stmt->bind_param("i", $header_user_id);
     $header_stmt->execute();
     $header_result = $header_stmt->get_result();

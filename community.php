@@ -497,8 +497,8 @@ function getRankBadge($coins, $tier = 'Basic') {
                             </a>
 
                             <?php if ($p['customer_id'] == $customer_id): ?>
-                                <a href="community.php?action=delete&post_id=<?php echo $p['post_id']; ?>" class="action-btn" style="color: #ff4d4d; border-color: rgba(255, 77, 77, 0.3); margin-left:auto;" onclick="return confirm('Delete this post?');">
-                                    <i class="fas fa-trash-alt"></i> Delete
+                                <a href="javascript:void(0);" onclick="cyberConfirm('[WARNING] Purge this signal from the Neural Network? This cannot be undone.', function() { window.location.href='community.php?action=delete&post_id=<?php echo $p['post_id']; ?>'; }, null, true);" class="action-btn" style="color: #ff4d4d; border-color: rgba(255, 77, 77, 0.3); margin-left:auto;">
+                                <i class="fas fa-trash-alt"></i> Delete
                                 </a>
                             <?php endif; ?>
                         </div>

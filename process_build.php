@@ -53,8 +53,7 @@ try {
     }
 
     if (empty($valid_parts)) {
-        throw new Exception("Security Alert: No valid components found in your payload.");
-    }
+        throw new Exception("[SECURITY FAULT] Invalid payload detected. No structural components found.");
 
     // ==========================================
     // 💾 統一寫入裝機庫 (Single Source of Truth)
@@ -115,14 +114,14 @@ try {
     } else {
         // 單純儲存草稿
         $conn->commit();
-        $_SESSION['success_msg'] = "Blueprint '{$build_name}' successfully secured to your armory.";
+        $_SESSION['success_msg'] = "[SUCCESS] Blueprint '{$build_name}' has been encrypted and secured in your armory.";
         header("Location: builder.php");
         exit();
     }
 
 } catch (Exception $e) {
     $conn->rollback();
-    $_SESSION['error_msg'] = "Failed to process blueprint. " . $e->getMessage();
+    $_SESSION['error_msg'] = "[SYSTEM ERROR] Blueprint compilation failed: " . $e->getMessage();
     header("Location: builder.php");
     exit();
 }

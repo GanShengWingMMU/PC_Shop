@@ -4,7 +4,7 @@ require_once 'config.php';
 
 // 如果没有登录，跳去登录页面（带货必须登录才能买）
 if (!isset($_SESSION['customer_id'])) {
-    $_SESSION['error_msg'] = "Please connect to the neural network (login) to load this blueprint.";
+    $_SESSION['error_msg'] = "[ACCESS DENIED] Neural Network connection required. Please authenticate to load this blueprint.";
     header("Location: login.php");
     exit();
 }
@@ -24,7 +24,7 @@ $stmt_check->execute();
 $res_check = $stmt_check->get_result();
 
 if ($res_check->num_rows === 0) {
-    $_SESSION['error_msg'] = "Data corrupted: Blueprint not found in the archives.";
+    $_SESSION['error_msg'] = "[DATA CORRUPTION] Blueprint entity not found in the archives.";
     header("Location: community.php"); 
     exit();
 }
@@ -67,7 +67,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'cart') {
     }
     $check_stmt->close();
     
-    $_SESSION['success_msg'] = "Blueprint [{$build_data['build_name']}] successfully injected into your cart!";
+    $_SESSION['success_msg'] = "[SUCCESS] Blueprint [{$build_data['build_name']}] successfully injected into your cart payload!";
     header("Location: cart.php");
     exit();
 
@@ -106,10 +106,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'cart') {
     $stmt_items->close();
 
     if (!empty($out_of_stock_items)) {
-        $_SESSION['error_msg'] = "Blueprint loaded, but some parts are OUT OF STOCK and were skipped: <br>• " . implode("<br>• ", $out_of_stock_items);
+        $_SESSION['error_msg'] = "[WARNING] Blueprint loaded with modifications. The following components are out of stock and bypassed: <br>• " . implode("<br>• ", $out_of_stock_items);
     } else {
-        $_SESSION['success_msg'] = "Blueprint injected into Builder successfully!";
-    }
+        $_SESSION['success_msg'] = "[SUCCESS] Blueprint sequence injected into Builder.";
 
     header("Location: builder.php");
     exit();

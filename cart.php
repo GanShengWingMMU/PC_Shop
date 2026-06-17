@@ -174,12 +174,9 @@ if ($stmt = $conn->prepare($sql)) {
         </div>
         
         <?php if(!empty($cart_items)): ?>
-            <a href="remove_cart.php?action=clear" 
-               onclick="return confirm('Are you sure you want to remove ALL items from your cart?');" 
-               style="color: #ff4d4d; border: 1px solid #ff4d4d; padding: 8px 15px; text-decoration: none; border-radius: 6px; transition: 0.3s; font-weight: bold; background: rgba(255, 77, 77, 0.05);"
-               onmouseover="this.style.background='rgba(255, 77, 77, 0.15)'" onmouseout="this.style.background='rgba(255, 77, 77, 0.05)'">
-                <i class="fa-solid fa-trash-can"></i> Remove All
-            </a>
+            <a href="javascript:void(0);" onclick="cyberConfirm('[WARNING] Purge all items from your payload? This action cannot be reversed.', function() { window.location.href='remove_cart.php?action=clear'; }, null, true);" style="color: #ff4d4d; border: 1px solid #ff4d4d; padding: 8px 15px; text-decoration: none; border-radius: 6px; transition: 0.3s; font-weight: bold; background: rgba(255, 77, 77, 0.05);" onmouseover="this.style.background='rgba(255, 77, 77, 0.15)'" onmouseout="this.style.background='rgba(255, 77, 77, 0.05)'">
+    <i class="fa-solid fa-trash-can"></i> Remove All
+</a>
         <?php endif; ?>
     </div>
 
