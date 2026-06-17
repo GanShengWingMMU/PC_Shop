@@ -111,7 +111,6 @@ if ($filter_type == 'Showcase') { $where_clause = "WHERE cp.post_type = 'Showcas
 elseif ($filter_type == 'Discussion') { $where_clause = "WHERE cp.post_type IN ('Discussion', 'Question')"; } 
 elseif ($filter_type == 'Trending') { $order_clause = "ORDER BY like_count DESC, cp.created_at DESC"; }
 
-// 🌟 修复点 1：抓取数据时带上 c.membership_tier
 $query_posts = "
     SELECT cp.*, c.username, c.reward_coins, c.membership_tier,
            (SELECT COUNT(*) FROM community_likes WHERE post_id = cp.post_id) AS like_count,
@@ -127,10 +126,8 @@ $query_posts = "
 $posts = $conn->query($query_posts);
 $total_posts = $conn->query("SELECT COUNT(*) FROM community_posts")->fetch_row()[0];
 
-// 🌟 修复点 2：排行榜也带上 c.membership_tier
 $top_builders = $conn->query("SELECT c.username, c.reward_coins, c.membership_tier, COUNT(cp.post_id) as post_count FROM customers c JOIN community_posts cp ON c.customer_id = cp.customer_id GROUP BY c.customer_id ORDER BY post_count DESC LIMIT 3");
 
-// 🌟 修复点 3：算法重写，VIP 拥有最高优先权
 function getRankBadge($coins, $tier = 'Basic') {
     if ($tier === 'VIP') return '<span class="rank-badge elite" title="Elite Subscriber"><i class="fas fa-crown"></i> Elite</span>';
     if ($coins >= 1000) return '<span class="rank-badge elite" title="Elite Architect"><i class="fas fa-crown"></i> Elite</span>';
@@ -211,6 +208,40 @@ function getRankBadge($coins, $tier = 'Basic') {
         .post-title { font-size: 1.5rem; font-weight: 900; margin: 0 0 15px 0; color: #fff; line-height: 1.3;}
         .post-content { color: #cbd5e1; line-height: 1.7; font-size: 1rem; margin-bottom: 25px; white-space: pre-wrap; }
 
+        /* 🌟 补回：PC Builder Showcase 与 Tooltip 的 CSS 样式 */
+        .showcase-box { background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 10px; padding: 20px; margin-bottom: 25px; }
+        .showcase-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px dashed rgba(168, 85, 247, 0.3); padding-bottom: 15px;}
+        .showcase-badge { color: #d8b4fe; font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;}
+        .showcase-price { color: #fff; font-family: 'JetBrains Mono'; font-weight: 800; font-size: 1.4rem; }
+        
+        .specs-preview { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        .spec-tag { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; gap: 8px; position: relative; cursor: crosshair; transition: 0.3s; }
+        .spec-tag i { color: #00f2fe; }
+        .spec-tag:hover { border-color: #00f2fe; background: rgba(0, 242, 254, 0.1); }
+
+        /* Tooltip 悬浮窗本体 */
+        .tech-tooltip {
+            position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%) translateY(10px);
+            background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid #00f2fe; border-radius: 8px; padding: 15px; width: 260px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,242,254,0.2);
+            opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100; pointer-events: none;
+        }
+        .tech-tooltip::after {
+            content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px;
+            border-width: 6px; border-style: solid; border-color: #00f2fe transparent transparent transparent;
+        }
+        /* 鼠标悬浮时触发 Tooltip */
+        .spec-tag:hover .tech-tooltip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+
+        .tt-cat { color: #00f2fe; font-family: 'JetBrains Mono'; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+        .tt-name { color: #fff; font-size: 0.95rem; font-weight: 800; line-height: 1.3; margin-bottom: 15px; }
+        .tt-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; }
+        .tt-price { color: #a855f7; font-family: 'JetBrains Mono'; font-weight: 900; font-size: 1.1rem; }
+        .tt-stock { font-size: 0.75rem; font-weight: bold; }
+
+        /* 图片排版 */
         .fb-image-grid { display: grid; gap: 4px; border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: #000;}
         .grid-img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1; cursor: pointer; transition: opacity 0.2s; }
         .grid-img:hover { opacity: 0.8; }
@@ -373,6 +404,64 @@ function getRankBadge($coins, $tier = 'Basic') {
                         </a>
                         <div class="post-content"><?php echo nl2br(htmlspecialchars($p['content'])); ?></div>
                         
+                        <?php if ($p['post_type'] == 'Showcase' && !empty($p['pc_build_id'])): ?>
+                            <div class="showcase-box">
+                                <div class="showcase-header">
+                                    <div style="flex:1;">
+                                        <span class="showcase-badge"><i class="fas fa-microchip"></i> Hardware Showcase</span>
+                                        <h4 style="margin: 5px 0 0 0; color: #fff; font-size: 1.3rem; font-weight: 900;"><?php echo htmlspecialchars($p['build_name'] ?? 'Custom Build'); ?></h4>
+                                    </div>
+                                    <div class="showcase-price">RM <?php echo number_format($p['total_price'] ?? 0, 2); ?></div>
+                                </div>
+                                
+                                <div class="specs-preview">
+                                    <?php
+                                    $b_id = intval($p['pc_build_id']);
+                                    $specs_sql = "SELECT c.category_name, p.product_name, p.price, p.stock_quantity 
+                                                  FROM build_items bi 
+                                                  JOIN products p ON bi.product_id = p.product_id 
+                                                  JOIN categories c ON p.category_id = c.category_id 
+                                                  WHERE bi.pc_build = $b_id 
+                                                  AND (c.category_name LIKE '%CPU%' OR c.category_name LIKE '%GPU%' OR c.category_name LIKE '%Motherboard%')
+                                                  LIMIT 3";
+                                    $specs_res = $conn->query($specs_sql);
+                                    
+                                    if ($specs_res && $specs_res->num_rows > 0) {
+                                        while ($spec = $specs_res->fetch_assoc()) {
+                                            $icon = 'fa-microchip'; 
+                                            if (stripos($spec['category_name'], 'GPU') !== false) $icon = 'fa-video';
+                                            if (stripos($spec['category_name'], 'Motherboard') !== false) $icon = 'fa-chess-board';
+                                            
+                                            $short_name = strlen($spec['product_name']) > 20 ? substr($spec['product_name'],0,20)."..." : $spec['product_name'];
+                                            
+                                            $stock_color = $spec['stock_quantity'] > 0 ? '#00e676' : '#ff4d4d';
+                                            $stock_text = $spec['stock_quantity'] > 0 ? $spec['stock_quantity'].' In Stock' : 'Out of Stock';
+                                            
+                                            echo "
+                                            <div class='spec-tag'>
+                                                <i class='fas $icon'></i> ".htmlspecialchars($short_name)."
+                                                <div class='tech-tooltip'>
+                                                    <div class='tt-cat'>".htmlspecialchars($spec['category_name'])."</div>
+                                                    <div class='tt-name'>".htmlspecialchars($spec['product_name'])."</div>
+                                                    <div class='tt-footer'>
+                                                        <span class='tt-price'>RM ".number_format($spec['price'], 2)."</span>
+                                                        <span class='tt-stock' style='color: $stock_color;'><i class='fas fa-box'></i> $stock_text</span>
+                                                    </div>
+                                                </div>
+                                            </div>";
+                                        }
+                                    } else {
+                                        echo "<span style='color:#64748b; font-size:0.85rem;'>Full specs available inside.</span>";
+                                    }
+                                    ?>
+                                </div>
+                                
+                                <a href="load_build.php?id=<?php echo $p['pc_build_id']; ?>&action=cart" class="tech-btn" style="width: 100%; text-align: center; display: block; padding: 10px; font-size:0.9rem;">
+                                    <i class="fas fa-cart-plus"></i> Load This Build to Cart
+                                </a>
+                            </div>
+                        <?php endif; ?>
+
                         <?php 
                         $imgs = !empty($p['post_images']) ? json_decode($p['post_images'], true) : [];
                         if (is_array($imgs) && count($imgs) > 0): 
