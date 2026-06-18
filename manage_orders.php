@@ -26,7 +26,9 @@ elseif ($current_sort === 'price_asc') $order_by = 'o.total_amount ASC';
 if (isset($_POST['update_status'])) {
     $order_id = intval($_POST['order_id']);
     $new_status = trim($_POST['new_status']);
-    $allowed = ['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled'];
+    
+    // 🌟 在允许的列表中加入 'Delivered'
+    $allowed = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Completed', 'Cancelled'];
     
     $saved_sort = isset($_POST['current_sort']) ? $_POST['current_sort'] : 'desc';
     
@@ -98,9 +100,12 @@ if (isset($_POST['update_status'])) {
                         $res = $conn->query($sql);
                         while ($row = $res->fetch_assoc()) {
                             $status = $row['order_status'];
-                            $status_color = "#facc15";
+                            $status_color = "#facc15"; // Pending Default
+                            
+                            // 🌟 为 Delivered 添加专属的高亮蓝色
                             if ($status == 'Processing') $status_color = "#00f2fe";
                             elseif ($status == 'Shipped') $status_color = "#a855f7";
+                            elseif ($status == 'Delivered') $status_color = "#3b82f6"; // Royal Blue
                             elseif ($status == 'Completed') $status_color = "#00e676";
                             elseif ($status == 'Cancelled') $status_color = "#ff4d4d";
 
@@ -135,7 +140,8 @@ if (isset($_POST['update_status'])) {
                                             <option value='Pending' ".($status=='Pending'?'selected':'').">Pending</option>
                                             <option value='Processing' ".($status=='Processing'?'selected':'').">Processing</option>
                                             <option value='Shipped' ".($status=='Shipped'?'selected':'').">Shipped</option>
-                                            <option value='Completed' ".($status=='Completed'?'selected':'').">Completed</option>
+                                            <option value='Delivered' ".($status=='Delivered'?'selected':'').">Delivered</option> <option value='Completed' ".($status=='Completed'?'selected':'').">Completed</option>
+                                            <option value='Cancelled' ".($status=='Cancelled'?'selected':'').">Cancelled</option>
                                         </select><br>
                                         <button type='submit' name='update_status' style='background:#00f2fe; color:#000; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer; width:100px;'>Update</button>
                                     </form>
