@@ -142,28 +142,7 @@ elseif ($sort === 'name_desc') $order_by = 'p.product_name DESC';
 </head>
 <body>
     <div class="admin-container">
-        <nav class="admin-sidebar">
-            
-            <div class="sidebar-header">
-                <h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3>
-                <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php">Dashboard</a></li>
-                <?php 
-                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
-                if ($role === 'superadmin'): ?>
-                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
-                <?php endif; ?>
-                <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
-                <li><a href="manage_categories.php">Categories</a></li>
-                <li><a href="manage_products.php" class="active" style="color: #00f2fe; border-left-color: #00f2fe;">Products</a></li> 
-                <li><a href="manage_packages.php">Packages</a></li>
-                <li><a href="manage_orders.php">Orders</a></li>
-                <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-            </ul>
-        </nav>
+         <?php include 'admin_sidebar.php'; ?>
 
         <div class="admin-content" style="padding: 30px;">
             <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">

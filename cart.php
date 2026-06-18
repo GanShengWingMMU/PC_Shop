@@ -282,10 +282,10 @@ if ($stmt = $conn->prepare($sql)) {
                 <span>Subtotal</span>
                 <span style="color: var(--text-main); font-weight: bold;">RM <?php echo number_format($total_price, 2); ?></span>
             </div>
-            <div class="summary-row" style="border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 15px;">
-                <span>Shipping</span>
-                <span style="font-size: 0.85rem; color: var(--accent-blue);">Calculated at checkout</span>
-            </div>
+<div style="display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center;">
+    <span style="color: #888;">Shipping</span>
+    <span style="color: #00e676; font-weight: 900; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;">FREE</span>
+</div>
             <div class="summary-total" style="margin-top: 15px;">
                 <span>Total</span>
                 <span class="amount" style="color: #ffd700; font-size: 1.8rem; text-shadow: 0 0 10px rgba(255,215,0,0.2);">RM <?php echo number_format($total_price, 2); ?></span>
