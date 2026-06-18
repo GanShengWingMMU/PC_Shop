@@ -26,18 +26,7 @@ if (isset($_GET['delete_post'])) {
     header("Location: manage_forum.php?msg=deleted"); exit();
 }
 
-// 🌟 2. 帖子置顶/取消置顶 (Pin/Highlight)
-if (isset($_GET['pin_post'])) {
-    $pid = intval($_GET['pin_post']);
-    $val = intval($_GET['val']); 
-    $conn->query("UPDATE community_posts SET is_pinned = $val WHERE post_id = $pid");
-    
-    $action_msg = ($val == 1) ? "Pinned Post ID: $pid" : "Unpinned Post ID: $pid";
-    $conn->query("INSERT INTO admin_logs (admin_id, username, role, action_event) VALUES ('$admin_id', '$admin_username', '$current_role', '$action_msg')");
-    header("Location: manage_forum.php?msg=pinned"); exit();
-}
-
-// 🌟 3. 移动分区 (Move Section)
+// 🌟 2. 移动分区 (Move Section)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_post'])) {
     $pid = intval($_POST['post_id']);
     $new_type = $_POST['new_type'];
@@ -49,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_post'])) {
     header("Location: manage_forum.php?msg=moved"); exit();
 }
 
-// 🌟 4. 敏感词扫描与净化 (Censor Filter)
+// 🌟 3. 敏感词扫描与净化 (Censor Filter)
 if (isset($_GET['scan_post'])) {
     $pid = intval($_GET['scan_post']);
     $bad_words = array('fuck', 'shit', 'scam', 'bitch', 'asshole');
@@ -68,15 +57,25 @@ if (isset($_GET['scan_post'])) {
     header("Location: manage_forum.php?msg=censored"); exit();
 }
 
-// 🌟 5. 封号/禁言 (Mute/Ban User)
+// 🌟 4. 封号/禁言 (Ban User)
 if (isset($_GET['ban_user'])) {
     $uid = intval($_GET['ban_user']);
-    $status = $_GET['status']; 
-    $conn->query("UPDATE customers SET account_status = '$status' WHERE customer_id = $uid");
+    $conn->query("UPDATE customers SET account_status = 'Banned' WHERE customer_id = $uid");
     
-    $action_msg = "Changed User ID: $uid status to $status";
+    $action_msg = "Banned User ID: $uid";
     $conn->query("INSERT INTO admin_logs (admin_id, username, role, action_event) VALUES ('$admin_id', '$admin_username', '$current_role', '$action_msg')");
     header("Location: manage_forum.php?msg=banned"); exit();
+}
+
+// 🌟 5. 独立出来的 解封功能 (Unban User)
+if (isset($_GET['unban_user'])) {
+    $uid = intval($_GET['unban_user']);
+    // 将状态改回 Active
+    $conn->query("UPDATE customers SET account_status = 'Active' WHERE customer_id = $uid");
+    
+    $action_msg = "Unbanned User ID: $uid";
+    $conn->query("INSERT INTO admin_logs (admin_id, username, role, action_event) VALUES ('$admin_id', '$admin_username', '$current_role', '$action_msg')");
+    header("Location: manage_forum.php?msg=unbanned"); exit();
 }
 ?>
 <!DOCTYPE html>
@@ -130,11 +129,17 @@ if (isset($_GET['ban_user'])) {
         .rank-standard { color: #00f2fe; background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0,242,254,0.4); }
         .banned-badge { color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255, 77, 77, 0.4); }
         
+        /* 🌟 配套拥有者专属徽章 CSS */
+        .badge-package { color: #10b981; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.4); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px; margin-top: 5px; display: inline-block; margin-left: 5px; }
+
         .action-group { display: flex; flex-direction: column; gap: 6px; min-width: 110px; }
         .action-btn { display:flex; align-items: center; justify-content: center; gap: 6px; padding:6px 10px; border-radius:4px; text-decoration:none; font-size:11px; font-weight:bold; transition:0.3s; cursor: pointer; border: 1px solid transparent; width: 100%; box-sizing: border-box; }
         .btn-purge { color:#ff4d4d; border-color:rgba(255,77,77,0.4); background: rgba(255,77,77,0.05); } .btn-purge:hover { background:rgba(255,77,77,0.2); }
-        .btn-pin { color:#facc15; border-color:rgba(250,204,21,0.4); background: rgba(250,204,21,0.05); } .btn-pin:hover { background:rgba(250,204,21,0.2); }
         .btn-scan { color:#00e676; border-color:rgba(0,230,118,0.4); background: rgba(0,230,118,0.05); } .btn-scan:hover { background:rgba(0,230,118,0.2); }
+        
+        /* 🌟 新增的 Ban 和 Unban 按钮样式 */
+        .btn-ban { color:#ff9800; border-color:rgba(255,152,0,0.4); background: rgba(255,152,0,0.05); } .btn-ban:hover { background:rgba(255,152,0,0.2); }
+        .btn-unban { color:#00f2fe; border-color:rgba(0,242,254,0.4); background: rgba(0,242,254,0.05); } .btn-unban:hover { background:rgba(0,242,254,0.2); }
         
         .report-warning { color: #ff9800; font-weight: bold; font-size: 11px; margin-top: 5px; display: flex; align-items: center; gap: 5px;}
         .pinned-row { background: rgba(250, 204, 21, 0.05); }
@@ -212,11 +217,13 @@ if (isset($_GET['ban_user'])) {
                 $msg = $_GET['msg'];
                 $text = "";
                 if ($msg == 'deleted') $text = "Signal Purged Successfully.";
-                if ($msg == 'pinned') $text = "Post Pin Status Updated.";
                 if ($msg == 'moved') $text = "Post successfully migrated to new section.";
                 if ($msg == 'censored') $text = "Anomalies cleansed from post content.";
-                if ($msg == 'banned') $text = "Citizen access protocol updated.";
-                echo "<div style='color:#00e676; background:rgba(0,230,118,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(0,230,118,0.3);'><i class='fas fa-check-circle'></i> $text</div>";
+                // 为 Ban 和 Unban 定制了不同的成功提示语
+                if ($msg == 'banned') $text = "Citizen access revoked (Banned).";
+                if ($msg == 'unbanned') $text = "Citizen access restored (Unbanned).";
+                
+                if ($text != "") echo "<div style='color:#00e676; background:rgba(0,230,118,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(0,230,118,0.3);'><i class='fas fa-check-circle'></i> $text</div>";
             }
             ?>
             
@@ -236,7 +243,8 @@ if (isset($_GET['ban_user'])) {
                                        COALESCE(p.is_pinned, 0) as is_pinned, COALESCE(p.report_count, 0) as report_count, COALESCE(p.is_flagged, 0) as is_flagged,
                                        c.username, c.membership_tier, c.account_status,
                             (SELECT COUNT(*) FROM community_likes cl WHERE cl.post_id = p.post_id) AS likes_count,
-                            (SELECT COUNT(*) FROM community_comments cc WHERE cc.post_id = p.post_id) AS comments_count
+                            (SELECT COUNT(*) FROM community_comments cc WHERE cc.post_id = p.post_id) AS comments_count,
+                            (SELECT COUNT(*) FROM orders o JOIN order_details od ON o.order_id = od.order_id WHERE o.customer_id = p.customer_id AND od.package_id IS NOT NULL AND o.order_status != 'Cancelled') AS package_count
                             FROM community_posts p 
                             LEFT JOIN customers c ON p.customer_id = c.customer_id 
                             ORDER BY p.is_pinned DESC, p.created_at DESC";
@@ -255,6 +263,8 @@ if (isset($_GET['ban_user'])) {
                                 $title_class = ($tier === 'VIP') ? 'rank-vip' : 'rank-standard';
                                 $title_icon = ($tier === 'VIP') ? '<i class="fas fa-crown"></i> Elite Citizen' : '<i class="fas fa-user"></i> Standard';
                                 
+                                $package_badge = ($row['package_count'] > 0) ? "<div class='badge-package' title='This user purchased a PC Package'><i class='fas fa-cube'></i> Pack Owner</div>" : "";
+                                
                                 $is_banned = ($row['account_status'] === 'Banned' || $row['account_status'] === 'Muted');
                                 $row_bg = ($row['is_pinned'] == 1) ? 'pinned-row' : '';
 
@@ -262,12 +272,9 @@ if (isset($_GET['ban_user'])) {
                                 
                                 echo "<td>
                                         <div style='font-weight:bold; color:#fff; font-size: 14px;'>{$row['username']}</div>
-                                        <div class='rank-title $title_class'>$title_icon</div><br>";
+                                        <div class='rank-title $title_class'>$title_icon</div>{$package_badge}<br>";
                                         if ($is_banned) {
-                                            echo "<span class='banned-badge' style='margin-top:5px; display:inline-block;'><i class='fas fa-lock'></i> ACCESS DENIED</span> <br>";
-                                            echo "<a href='manage_forum.php?ban_user={$cid}&status=Active' style='color:#00e676; font-size:10px; text-decoration:none; display:inline-block; margin-top:3px;'>[Unban User]</a>";
-                                        } else {
-                                            echo "<a href='manage_forum.php?ban_user={$cid}&status=Banned' style='color:#ff4d4d; font-size:10px; text-decoration:none; margin-top:5px; display:inline-block;' onclick=\"return confirm('Revoke this citizen\'s access to the Nexus?');\">[Ban / Mute User]</a>";
+                                            echo "<span class='banned-badge' style='margin-top:5px; display:inline-block;'><i class='fas fa-lock'></i> ACCESS DENIED</span>";
                                         }
                                 echo "</td>";
                                 
@@ -306,9 +313,14 @@ if (isset($_GET['ban_user'])) {
                                 
                                 echo "<td style='text-align: center; vertical-align: middle;'>
                                         <div class='action-group'>";
-                                    $pin_val = ($row['is_pinned'] == 1) ? 0 : 1;
-                                    $pin_text = ($row['is_pinned'] == 1) ? "Unpin Post" : "Pin Post";
-                                    echo "<a href='manage_forum.php?pin_post={$pid}&val={$pin_val}' class='action-btn btn-pin'><i class='fas fa-thumbtack'></i> {$pin_text}</a>";
+                                    
+                                    // 🌟 独立调用的 Ban 与 Unban 按钮
+                                    if ($is_banned) {
+                                        echo "<a href='manage_forum.php?unban_user={$cid}' class='action-btn btn-unban' onclick=\"return confirm('Restore this citizen\'s access?');\"><i class='fas fa-unlock'></i> Unban User</a>";
+                                    } else {
+                                        echo "<a href='manage_forum.php?ban_user={$cid}' class='action-btn btn-ban' onclick=\"return confirm('Revoke this citizen\'s access to the Nexus?');\"><i class='fas fa-user-slash'></i> Ban / Mute</a>";
+                                    }
+
                                     echo "<a href='manage_forum.php?scan_post={$pid}' class='action-btn btn-scan' onclick=\"return confirm('Scan and replace sensitive words?');\"><i class='fas fa-search'></i> Filter Scan</a>";
                                     echo "<a href='manage_forum.php?delete_post={$pid}' onclick=\"return confirm('CRITICAL ACTION: Purge this post permanently?');\" class='action-btn btn-purge'><i class='fas fa-trash'></i> Purge</a>";
                                 echo "    </div>

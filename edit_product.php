@@ -24,8 +24,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     $category_id = intval($_POST['category_id']); 
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
-    $specs = trim($_POST['specs']); // JS 会处理成整齐的格式
-    $description = trim($_POST['description'] ?? '');
+    
+    // 🌟 魔法转换区：兼容前台代码
+    $specs_raw = trim($_POST['specs']); 
+    $description_input = trim($_POST['description'] ?? '');
+
+    $final_desc_parts = [];
+    if (!empty($description_input)) {
+        $desc_clean = str_replace('|', ' ', $description_input);
+        $final_desc_parts[] = "Overview: " . $desc_clean;
+    }
+    if (!empty($specs_raw)) {
+        $final_desc_parts[] = $specs_raw;
+    }
+    $formatted_description = implode(' | ', $final_desc_parts);
 
     $image_url = $prod['image_url']; 
     $upload_ok = true;
@@ -50,10 +62,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     if ($upload_ok) {
         $sql = "UPDATE products SET product_name=?, category_id=?, price=?, stock_quantity=?, specifications=?, description=?, image_url=? WHERE product_id=?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sidisssi", $name, $category_id, $price, $stock_quantity, $specs, $description, $image_url, $product_id);
+        $stmt->bind_param("sidisssi", $name, $category_id, $price, $stock_quantity, $specs_raw, $formatted_description, $image_url, $product_id);
         
         if ($stmt->execute()) {
-            // 记录动作到 Security Logs
             $log_admin_id = $_SESSION['admin_id'];
             $log_username = $_SESSION['admin_username'];
             $log_role = $_SESSION['admin_role'];
@@ -70,6 +81,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
         $stmt->close();
     }
 }
+
+// 🌟 解析数据库中存储的数据，分离回表单供 Admin 方便编辑
+$db_desc = $prod['description'] ?? '';
+$marketing_text = '';
+$specs_text = '';
+
+if (strpos($db_desc, '|') !== false) {
+    // 处理我们之前组合进去的 "Overview: xxx | spec: xxx" 格式
+    $pieces = explode('|', $db_desc);
+    $spec_lines = [];
+    foreach ($pieces as $piece) {
+        $piece = trim($piece);
+        if (stripos($piece, 'Overview:') === 0) {
+            $marketing_text = trim(substr($piece, 9));
+        } else {
+            $spec_lines[] = $piece;
+        }
+    }
+    $specs_text = implode("\n", $spec_lines);
+} else {
+    // 兼容历史遗留的旧数据
+    $marketing_text = $db_desc;
+    $old_specs = $prod['specifications'] ?? '';
+    if(!empty($old_specs)) {
+        // 去除旧数据中的换行前面的 "- "
+        $specs_text = str_replace('- ', '', $old_specs);
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -80,106 +119,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 终极滚动修复 */
-        html, body {
-            height: auto; 
-            min-height: 100vh;
-            margin: 0;
-            overflow-y: auto; 
-            background-color: var(--bg-main); 
-        }
+        html, body { height: auto; min-height: 100vh; margin: 0; overflow-y: auto; background-color: var(--bg-main); }
+        .admin-container { display: flex; min-height: 100vh; width: 100%; }
+        .admin-sidebar { position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+        .admin-content { margin-left: 250px; flex: 1; padding: 30px !important; padding-bottom: 120px !important; min-height: 100vh; box-sizing: border-box; }
+        .product-form { background: rgba(0,0,0,0.5); padding: 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); overflow: visible; display: block; }
+        .form-control { width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px; border-radius: 6px; box-sizing: border-box; }
+        .form-control:focus { outline: none; border-color: #00f2fe; box-shadow: 0 0 10px rgba(0, 242, 254, 0.2); }
+        .form-control::placeholder { color: rgba(255,255,255,0.3); }
         
-        .admin-container {
-            display: flex;
-            min-height: 100vh; 
-            width: 100%;
-        }
-
-        .admin-sidebar {
-            position: fixed; 
-            top: 0;
-            left: 0;
-            height: 100vh;
-            z-index: 100;
-        }
-
-        .admin-content {
-            margin-left: 250px; 
-            flex: 1;
-            padding: 30px !important;
-            padding-bottom: 120px !important; 
-            min-height: 100vh;
-            box-sizing: border-box;
-        }
-        
-        .product-form {
-            background: rgba(0,0,0,0.5); 
-            padding: 30px; 
-            border-radius: 12px; 
-            border: 1px solid rgba(255,255,255,0.05);
-            overflow: visible; 
-            display: block;
-        }
-
-        .form-control {
-            width: 100%;
-            background: rgba(0,0,0,0.6);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #fff;
-            padding: 12px;
-            border-radius: 6px;
-            box-sizing: border-box;
-        }
-        
-        .form-control:focus {
-            outline: none;
-            border-color: #00f2fe;
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
-        }
-        
-        .form-control::placeholder {
-            color: rgba(255,255,255,0.3);
-        }
-
-        /* 🌟 升级的动态规格行 CSS排版 */
-        .spec-row {
-            display: grid;
-            /* 1fr 给分类名称, 3fr 给具体的参数内容, 45px 给垃圾桶 */
-            grid-template-columns: 1fr 3fr 45px; 
-            gap: 12px;
-            margin-bottom: 12px;
-            /* 为了配合多行 textarea，这里改用 stretch 或者 start 来对齐 */
-            align-items: stretch;
-        }
-        .del-spec-btn {
-            background: rgba(255,77,77,0.1);
-            border: 1px solid rgba(255,77,77,0.3);
-            color: #ff4d4d;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /* 设定一个最小高度，不然会被 textarea 撑得很难看 */
-            min-height: 45px;
-        }
-        .del-spec-btn:hover {
-            background: rgba(255,77,77,0.8);
-            color: #fff;
-        }
-        #add-spec-btn:hover {
-            background: rgba(0,242,254,0.15);
-            border-style: solid;
-        }
-        /* 针对规格里的 textarea 做微调 */
-        textarea.spec-val {
-            resize: vertical;
-            min-height: 45px; 
-            padding: 12px;
-            font-family: inherit; /* 跟系统字型一致，不用等宽字体了，更漂亮 */
-            line-height: 1.5;
-        }
+        .spec-row { display: grid; grid-template-columns: 1fr 3fr 45px; gap: 12px; margin-bottom: 12px; align-items: stretch; }
+        .del-spec-btn { background: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.3); color: #ff4d4d; border-radius: 6px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; min-height: 45px; }
+        .del-spec-btn:hover { background: rgba(255,77,77,0.8); color: #fff; }
+        #add-spec-btn:hover { background: rgba(0,242,254,0.15); border-style: solid; }
+        textarea.spec-val { resize: vertical; min-height: 45px; padding: 12px; font-family: inherit; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -234,10 +187,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
                         <label style="color: #00f2fe; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;"><i class="fas fa-list-ul"></i> Detailed Specifications</label>
                         <p style="font-size: 11px; color: #888; margin-top: -5px; margin-bottom: 15px;">Add specifications row by row. If the details are long, the box will automatically adjust.</p>
                         
-                        <textarea name="specs" id="hidden-specs" style="display: none;"><?php echo htmlspecialchars($prod['specifications']); ?></textarea>
+                        <textarea name="specs" id="hidden-specs" style="display: none;"><?php echo htmlspecialchars($specs_text); ?></textarea>
                         
                         <div id="specs-builder" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                            </div>
+                        </div>
                         
                         <button type="button" id="add-spec-btn" style="margin-top: 10px; width: 100%; background: rgba(0,242,254,0.05); border: 1px dashed rgba(0,242,254,0.4); color: #00f2fe; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;">
                             <i class="fas fa-plus"></i> Add New Specification
@@ -246,7 +199,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
                     
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
                         <label style="color: #cbd5e1; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Marketing Description (Optional)</label>
-                        <textarea name="description" class="form-control" rows="3" style="resize: vertical;"><?php echo htmlspecialchars($prod['description'] ?? ''); ?></textarea>
+                        <textarea name="description" class="form-control" rows="3" style="resize: vertical;"><?php echo htmlspecialchars($marketing_text); ?></textarea>
                     </div>
                 </div>
                 
@@ -270,8 +223,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
 
             existingData.forEach(line => {
                 if (line.trim() !== '') {
-                    let cleanLine = line.replace(/^- /, ''); 
-                    let parts = cleanLine.split(':');
+                    // 读取 PHP 丢过来的 Key: Val
+                    let parts = line.split(':');
                     let key = parts[0] ? parts[0].trim() : '';
                     let val = parts.slice(1).join(':').trim(); 
                     
@@ -288,7 +241,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
                 const row = document.createElement('div');
                 row.className = 'spec-row';
                 
-                // 🌟 将右侧参数的输入框换成了 <textarea>，并且取消了它的固定高度，让它可以自由拉长
                 row.innerHTML = `
                     <input type="text" class="spec-key form-control" placeholder="e.g. MB Support" value="${key}" style="margin:0; height: 45px;">
                     <textarea class="spec-val form-control" placeholder="e.g. Button / Mic*1 / Audio*1... (You can type long text here)" style="margin:0;">${val}</textarea>
@@ -301,7 +253,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
                     syncSpecs(); 
                 });
 
-                // 绑定输入事件，实时更新
                 row.querySelectorAll('input, textarea').forEach(inp => {
                     inp.addEventListener('input', syncSpecs);
                 });
@@ -318,14 +269,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
                     let k = row.querySelector('.spec-key').value.trim();
                     let v = row.querySelector('.spec-val').value.trim();
                     
-                    // 把可能含有的多余回车符换掉，确保拼成一行
-                    v = v.replace(/[\r\n]+/g, ' '); 
+                    v = v.replace(/[\r\n\|]+/g, ' '); 
+                    k = k.replace(/[\r\n\|:]+/g, ' '); 
                     
                     if (k || v) {
-                        lines.push(`- ${k || 'Spec'}: ${v || 'N/A'}`);
+                        lines.push(`${k || 'Spec'}: ${v || 'N/A'}`);
                     }
                 });
-                hiddenSpecs.value = lines.join('\n');
+                hiddenSpecs.value = lines.join(' | ');
             }
         });
     </script>
