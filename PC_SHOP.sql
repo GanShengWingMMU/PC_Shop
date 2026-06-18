@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 17, 2026 at 02:40 PM
+-- Generation Time: Jun 18, 2026 at 09:01 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -170,7 +170,11 @@ INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_even
 (100, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 17:18:07'),
 (101, 7, 'OC alvis', 'Admin', 'System Login', '127.0.0.1', '2026-06-17 17:33:01'),
 (102, 7, 'OC alvis', 'Admin', 'Modified Staff Profile ID: 7', '127.0.0.1', '2026-06-17 17:39:44'),
-(103, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 17:43:34');
+(103, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-17 17:43:34'),
+(104, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-18 11:32:34'),
+(105, 6, 'admin', 'Admin', 'System Login', '127.0.0.1', '2026-06-18 11:36:26'),
+(106, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-18 11:39:20'),
+(107, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-18 13:45:13');
 
 -- --------------------------------------------------------
 
@@ -1075,19 +1079,6 @@ INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `descriptio
 -- --------------------------------------------------------
 
 --
--- Table structure for table `product_specifications`
---
-
-CREATE TABLE `product_specifications` (
-  `spec_id` int(11) NOT NULL,
-  `product_id` int(11) NOT NULL,
-  `spec_name` varchar(100) NOT NULL,
-  `spec_value` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `promo_codes`
 --
 
@@ -1433,14 +1424,6 @@ ALTER TABLE `products`
   ADD KEY `idx_builder_tier` (`performance_tier`);
 
 --
--- Indexes for table `product_specifications`
---
-ALTER TABLE `product_specifications`
-  ADD PRIMARY KEY (`spec_id`),
-  ADD KEY `product_id` (`product_id`),
-  ADD KEY `idx_spec_search` (`spec_name`,`spec_value`);
-
---
 -- Indexes for table `promo_codes`
 --
 ALTER TABLE `promo_codes`
@@ -1509,7 +1492,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `admin_logs`
 --
 ALTER TABLE `admin_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=104;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=108;
 
 --
 -- AUTO_INCREMENT for table `bank`
@@ -1606,12 +1589,6 @@ ALTER TABLE `payments`
 --
 ALTER TABLE `products`
   MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
-
---
--- AUTO_INCREMENT for table `product_specifications`
---
-ALTER TABLE `product_specifications`
-  MODIFY `spec_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `promo_codes`
@@ -1731,12 +1708,6 @@ ALTER TABLE `payments`
 --
 ALTER TABLE `products`
   ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `product_specifications`
---
-ALTER TABLE `product_specifications`
-  ADD CONSTRAINT `product_specifications_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `reviews`
