@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error_msg = "Please write a comment.";
     } else {
         // 使用 Prepared Statement 写入数据库
-        $insert_review = $conn->prepare("INSERT INTO product_reviews (product_id, customer_id, rating, comment) VALUES (?, ?, ?, ?)");
+        $insert_review = $conn->prepare("INSERT INTO reviews (product_id, customer_id, rating, comment) VALUES (?, ?, ?, ?)");
         $insert_review->bind_param("iiis", $product_id, $customer_id, $rating, $comment);
         
         if ($insert_review->execute()) {
@@ -75,6 +75,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Leave Feedback - GridCitY PC</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        /* 隱藏原生圓形單選框 */
+        .star-rating input[type="radio"] {
+            display: none; 
+        }
+
+        /* 讓星星水平排列，並支援反向選取 */
+        .star-rating {
+            display: flex;
+            flex-direction: row-reverse; 
+            justify-content: flex-end;
+            margin-bottom: 20px;
+        }
+
+        /* 預設星星顏色與大小 */
+        .star-rating label i {
+            color: #475569; /* 預設的暗灰色 */
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0 5px;
+            transition: color 0.2s;
+        }
+
+        /* 當被選中、或滑鼠懸停時，讓星星變成亮黃色 */
+        .star-rating input[type="radio"]:checked ~ label i,
+        .star-rating label:hover i,
+        .star-rating label:hover ~ label i {
+            color: #ffd700; 
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+    </style>
+    
 </head>
 <body>
 

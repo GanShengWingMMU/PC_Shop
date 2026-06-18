@@ -9,6 +9,7 @@ if (!isset($_SESSION['customer_id'])) {
 }
 $customer_id = $_SESSION['customer_id'];
 $sys_msg = $sys_err = "";
+$form_open = false; // 控制发帖面板是否保持打开
 
 if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['post_id'])) {
     $del_post_id = intval($_GET['post_id']);
@@ -52,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
     $content = htmlspecialchars(trim($_POST['content'])); 
     $post_type = isset($_POST['post_type']) ? $_POST['post_type'] : 'Discussion';
     $pc_build_id = null;
+    $form_open = true; // 发帖动作触发，面板保持开启以防报错
 
     if ($post_type == 'Showcase' && !empty($_POST['pc_build_id'])) {
         $submitted_build_id = intval($_POST['pc_build_id']);
@@ -64,6 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
             $sys_err = "Error: You can only showcase your own blueprints.";
         }
         $verify_owner->close();
+    } elseif ($post_type == 'Showcase' && empty($_POST['pc_build_id'])) {
+        $sys_err = "Please select a Blueprint to showcase.";
     }
 
     $uploaded_images = [];
@@ -94,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
         $stmt->bind_param("iissss", $customer_id, $pc_build_id, $title, $content, $post_type, $images_json);
         if ($stmt->execute()) {
             $sys_msg = "Post published successfully!";
+            $form_open = false; // 成功后关闭面板
         } else {
             $sys_err = "System error: Failed to publish post.";
         }
@@ -125,7 +130,6 @@ $query_posts = "
 ";
 $posts = $conn->query($query_posts);
 $total_posts = $conn->query("SELECT COUNT(*) FROM community_posts")->fetch_row()[0];
-
 $top_builders = $conn->query("SELECT c.username, c.reward_coins, c.membership_tier, COUNT(cp.post_id) as post_count FROM customers c JOIN community_posts cp ON c.customer_id = cp.customer_id GROUP BY c.customer_id ORDER BY post_count DESC LIMIT 3");
 
 function getRankBadge($coins, $tier = 'Basic') {
@@ -148,7 +152,7 @@ function getRankBadge($coins, $tier = 'Basic') {
     
     <style>
         body { background: #030305; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        .cyber-grid-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-image: linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px); background-size: 40px 40px; z-index: -2; }
+        .cyber-grid-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-image: linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px); background-size: 40px 40px; z-index: -2; pointer-events: none; }
         .cyber-glow-bg { position: fixed; top: -10vh; right: -10vw; width: 60vw; height: 60vh; background: radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, transparent 70%); filter: blur(80px); z-index: -1; pointer-events: none; }
         
         .dashboard-container { max-width: 1300px; margin: 40px auto; padding: 0 20px; position: relative; z-index: 1; }
@@ -161,7 +165,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         .tech-btn:hover { background: #00f2fe; color: #000; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); transform: translateY(-2px);}
         .tech-btn-primary { background: #00f2fe; color: #000; }
 
-        .post-form-container { display: none; background: #0b0f16; border: 1px solid #00f2fe; padding: 30px; border-radius: 12px; margin-bottom: 30px; animation: slideDown 0.3s ease; box-shadow: 0 20px 40px rgba(0, 242, 254, 0.1);}
+        .post-form-container { <?php echo $form_open ? 'display: block;' : 'display: none;'; ?> background: #0b0f16; border: 1px solid #00f2fe; padding: 30px; border-radius: 12px; margin-bottom: 30px; animation: slideDown 0.3s ease; box-shadow: 0 20px 40px rgba(0, 242, 254, 0.1);}
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
         .type-selector-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -172,9 +176,25 @@ function getRankBadge($coins, $tier = 'Basic') {
         .type-desc { font-size: 0.8rem; color: #94a3b8; line-height: 1.4; display: block; }
         .type-card.selected { border-color: #00f2fe; background: rgba(0, 242, 254, 0.05); box-shadow: 0 0 15px rgba(0,242,254,0.1); }
 
+        /* 🌟 核心增补：高级 Blueprint 卡片选择器样式 */
+        .build-selector-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; max-height: 250px; overflow-y: auto; padding-right: 10px; margin-bottom: 20px; }
+        .build-selector-grid::-webkit-scrollbar { width: 6px; }
+        .build-selector-grid::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 4px; }
+        .build-selector-grid::-webkit-scrollbar-thumb { background: #00f2fe; border-radius: 4px; }
+        
+        .build-option { position: relative; cursor: pointer; }
+        .build-option input[type="radio"] { display: none; }
+        .build-card { background: rgba(0,0,0,0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center; transition: 0.3s; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
+        .build-card:hover { border-color: #d8b4fe; background: rgba(168, 85, 247, 0.05); }
+        .build-option input:checked + .build-card { border-color: #d8b4fe; background: rgba(168, 85, 247, 0.1); box-shadow: inset 0 0 15px rgba(168,85,247,0.2); }
+        
+        .build-card i { font-size: 2rem; color: #d8b4fe; margin-bottom: 12px; }
+        .build-name { color: #fff; font-weight: 800; font-size: 0.95rem; margin-bottom: 6px; line-height: 1.3; }
+        .build-price { color: #00e676; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: bold; }
+
         .tech-input { width: 100%; background: #111827; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 15px; border-radius: 8px; font-size: 1rem; font-family: 'Inter', sans-serif; margin-bottom: 20px; box-sizing: border-box; transition: 0.3s;}
         .tech-input:focus { outline: none; border-color: #00f2fe; box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.1); }
-        .tech-label { color: #cbd5e1; font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; display: block; }
+        .tech-label { color: #cbd5e1; font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; display: block; text-transform: uppercase; letter-spacing: 1px;}
 
         .image-upload-wrapper { border: 2px dashed rgba(0,242,254,0.3); border-radius: 8px; padding: 25px; text-align: center; cursor: pointer; transition: 0.3s; background: rgba(0,0,0,0.3); margin-bottom: 20px;}
         .image-upload-wrapper:hover { border-color: #00f2fe; background: rgba(0,242,254,0.05); }
@@ -208,40 +228,6 @@ function getRankBadge($coins, $tier = 'Basic') {
         .post-title { font-size: 1.5rem; font-weight: 900; margin: 0 0 15px 0; color: #fff; line-height: 1.3;}
         .post-content { color: #cbd5e1; line-height: 1.7; font-size: 1rem; margin-bottom: 25px; white-space: pre-wrap; }
 
-        /* 🌟 补回：PC Builder Showcase 与 Tooltip 的 CSS 样式 */
-        .showcase-box { background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 10px; padding: 20px; margin-bottom: 25px; }
-        .showcase-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px dashed rgba(168, 85, 247, 0.3); padding-bottom: 15px;}
-        .showcase-badge { color: #d8b4fe; font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;}
-        .showcase-price { color: #fff; font-family: 'JetBrains Mono'; font-weight: 800; font-size: 1.4rem; }
-        
-        .specs-preview { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
-        .spec-tag { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; color: #e2e8f0; display: flex; align-items: center; gap: 8px; position: relative; cursor: crosshair; transition: 0.3s; }
-        .spec-tag i { color: #00f2fe; }
-        .spec-tag:hover { border-color: #00f2fe; background: rgba(0, 242, 254, 0.1); }
-
-        /* Tooltip 悬浮窗本体 */
-        .tech-tooltip {
-            position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%) translateY(10px);
-            background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(10px);
-            border: 1px solid #00f2fe; border-radius: 8px; padding: 15px; width: 260px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,242,254,0.2);
-            opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 100; pointer-events: none;
-        }
-        .tech-tooltip::after {
-            content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px;
-            border-width: 6px; border-style: solid; border-color: #00f2fe transparent transparent transparent;
-        }
-        /* 鼠标悬浮时触发 Tooltip */
-        .spec-tag:hover .tech-tooltip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
-
-        .tt-cat { color: #00f2fe; font-family: 'JetBrains Mono'; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
-        .tt-name { color: #fff; font-size: 0.95rem; font-weight: 800; line-height: 1.3; margin-bottom: 15px; }
-        .tt-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; }
-        .tt-price { color: #a855f7; font-family: 'JetBrains Mono'; font-weight: 900; font-size: 1.1rem; }
-        .tt-stock { font-size: 0.75rem; font-weight: bold; }
-
-        /* 图片排版 */
         .fb-image-grid { display: grid; gap: 4px; border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: #000;}
         .grid-img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1; cursor: pointer; transition: opacity 0.2s; }
         .grid-img:hover { opacity: 0.8; }
@@ -256,7 +242,8 @@ function getRankBadge($coins, $tier = 'Basic') {
 
         #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
         #lightbox-img { max-width: 90vw; max-height: 85vh; object-fit: contain; border-radius: 4px; box-shadow: 0 0 30px rgba(0,242,254,0.2); }
-        .lb-close { position: absolute; top: 20px; right: 30px; font-size: 2rem; color: #fff; cursor: pointer; }
+        .lb-close { position: absolute; top: 20px; right: 30px; font-size: 2rem; color: #fff; cursor: pointer; transition: 0.3s; }
+        .lb-close:hover { color: #ef4444; }
         .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); font-size: 2.5rem; color: #00f2fe; cursor: pointer; padding: 20px; transition: 0.3s; }
         .lb-nav:hover { color: #fff; text-shadow: 0 0 15px #00f2fe; }
         .lb-prev { left: 20px; }
@@ -267,7 +254,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         .action-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
         .action-btn.liked { background: rgba(255, 0, 127, 0.1); border-color: rgba(255, 0, 127, 0.3); color: #ff007f; }
 
-        .sidebar { display: flex; flex-direction: column; gap: 25px; }
+        .sidebar { display: flex; flex-direction: column; gap: 25px; position: sticky; top: 100px; }
         .widget-cta { background: linear-gradient(135deg, rgba(0,242,254,0.1), rgba(168,85,247,0.1)); border: 1px solid #00f2fe; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 10px 20px rgba(0,242,254,0.1);}
         .widget-cta h3 { color: #fff; margin: 0 0 10px 0; font-size: 1.2rem; font-weight: 800;}
         .widget-cta p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5;}
@@ -285,18 +272,19 @@ function getRankBadge($coins, $tier = 'Basic') {
         .top-avatar { width: 40px; height: 40px; border-radius: 10px; background: #1f2937; border: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; font-weight: 900; font-size: 1rem;}
     </style>
 </head>
-<body>
+<body style="display: flex; flex-direction: column; min-height: 100vh; margin: 0; background-color: #030305;">
 
 <?php include 'includes/header.php'; ?>
 <div class="cyber-grid-bg"></div>
 <div class="cyber-glow-bg"></div>
 
+<div class="main-wrapper">
 <div class="dashboard-container">
     
     <div class="community-header">
         <div>
             <p><i class="fas fa-users"></i> GridCitY Community</p> 
-            <h1>FORUM & SHOWCASE</h1> 
+            <h1>Forum & Showcase</h1> 
         </div>
         <button class="tech-btn tech-btn-primary" onclick="togglePostForm()"><i class="fas fa-pen"></i> Create Post</button> 
     </div>
@@ -311,44 +299,56 @@ function getRankBadge($coins, $tier = 'Basic') {
             <label class="tech-label">Select Category</label> 
             <div class="type-selector-grid">
                 <div class="type-card selected" onclick="selectPostType(this, 'Discussion')">
-                    <input type="radio" name="post_type" value="Discussion" checked>
+                    <input type="radio" name="post_type" value="Discussion" <?php echo (!isset($_POST['post_type']) || $_POST['post_type'] == 'Discussion') ? 'checked' : ''; ?>>
                     <span class="type-title"><i class="fas fa-comments" style="color:#00f2fe;"></i> Discussion</span>
                     <span class="type-desc">General talk, opinions, or debates.</span>
                 </div>
                 <div class="type-card" onclick="selectPostType(this, 'Question')">
-                    <input type="radio" name="post_type" value="Question">
+                    <input type="radio" name="post_type" value="Question" <?php echo (isset($_POST['post_type']) && $_POST['post_type'] == 'Question') ? 'checked' : ''; ?>>
                     <span class="type-title"><i class="fas fa-question-circle" style="color:#ffb74d;"></i> Question</span>
                     <span class="type-desc">Troubleshooting or part advice.</span>
                 </div>
                 <div class="type-card" onclick="selectPostType(this, 'Showcase')">
-                    <input type="radio" name="post_type" value="Showcase">
+                    <input type="radio" name="post_type" value="Showcase" <?php echo (isset($_POST['post_type']) && $_POST['post_type'] == 'Showcase') ? 'checked' : ''; ?>>
                     <span class="type-title"><i class="fas fa-desktop" style="color:#d8b4fe;"></i> Showcase</span>
                     <span class="type-desc">Attach a blueprint to show off your build.</span>
                 </div>
             </div>
 
-            <div id="build_select_container" style="display: none;">
-                <label class="tech-label">Select Your Saved Build</label>
-                <select name="pc_build_id" class="tech-input">
-                    <option value="">-- Choose a Build --</option>
-                    <?php 
-                    if ($my_builds->num_rows > 0) {
+            <div id="build_select_container" style="display: <?php echo (isset($_POST['post_type']) && $_POST['post_type'] == 'Showcase') ? 'block' : 'none'; ?>;">
+                <label class="tech-label">Select Your Saved Blueprint</label>
+                
+                <?php if ($my_builds->num_rows > 0): ?>
+                    <div class="build-selector-grid" id="blueprint-radios">
+                        <?php 
                         $my_builds->data_seek(0);
-                        while($mb = $my_builds->fetch_assoc()) {
-                            echo "<option value='{$mb['pc_build']}'>".htmlspecialchars($mb['build_name'])." (RM " . number_format($mb['total_price'], 2) . ")</option>";
-                        }
-                    } else {
-                        echo "<option value='' disabled>No builds found. Use PC Builder first.</option>";
-                    }
-                    ?>
-                </select>
+                        while($mb = $my_builds->fetch_assoc()): 
+                        ?>
+                            <label class="build-option">
+                                <input type="radio" name="pc_build_id" value="<?php echo $mb['pc_build']; ?>" class="blueprint-radio" <?php echo (isset($_POST['pc_build_id']) && $_POST['pc_build_id'] == $mb['pc_build']) ? 'checked' : ''; ?>>
+                                <div class="build-card">
+                                    <i class="fas fa-server"></i>
+                                    <div class="build-name"><?php echo htmlspecialchars($mb['build_name']); ?></div>
+                                    <div class="build-price">RM <?php echo number_format($mb['total_price'], 2); ?></div>
+                                </div>
+                            </label>
+                        <?php endwhile; ?>
+                    </div>
+                <?php else: ?>
+                    <div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); padding: 30px 20px; text-align: center; border-radius: 8px; margin-bottom: 20px;">
+                        <i class="fas fa-tools" style="font-size: 2.5rem; color: #64748b; margin-bottom: 15px;"></i>
+                        <div style="color: #fff; font-weight: 800; font-size: 1.1rem; margin-bottom: 5px;">No Blueprints Found</div>
+                        <div style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">You need to assemble and save a PC build in the Builder first before you can showcase it to the community.</div>
+                        <a href="builder.php" class="tech-btn" style="font-size: 0.85rem; padding: 10px 20px;">Launch PC Builder <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                <?php endif; ?>
             </div>
             
             <label class="tech-label">Post Title</label>
-            <input type="text" name="title" class="tech-input" placeholder="What is this discussion about?" required>
+            <input type="text" name="title" class="tech-input" placeholder="What is this discussion about?" value="<?php echo isset($_POST['title']) ? htmlspecialchars($_POST['title']) : ''; ?>" required>
             
             <label class="tech-label">Post Content</label>
-            <textarea name="content" class="tech-input" rows="6" placeholder="Write your thoughts or questions here..." required></textarea>
+            <textarea name="content" class="tech-input" rows="6" placeholder="Write your thoughts or questions here..." required><?php echo isset($_POST['content']) ? htmlspecialchars($_POST['content']) : ''; ?></textarea>
             
             <label class="tech-label">Upload Images (Optional)</label> 
             <div class="image-upload-wrapper" onclick="document.getElementById('post_images').click();">
@@ -404,64 +404,6 @@ function getRankBadge($coins, $tier = 'Basic') {
                         </a>
                         <div class="post-content"><?php echo nl2br(htmlspecialchars($p['content'])); ?></div>
                         
-                        <?php if ($p['post_type'] == 'Showcase' && !empty($p['pc_build_id'])): ?>
-                            <div class="showcase-box">
-                                <div class="showcase-header">
-                                    <div style="flex:1;">
-                                        <span class="showcase-badge"><i class="fas fa-microchip"></i> Hardware Showcase</span>
-                                        <h4 style="margin: 5px 0 0 0; color: #fff; font-size: 1.3rem; font-weight: 900;"><?php echo htmlspecialchars($p['build_name'] ?? 'Custom Build'); ?></h4>
-                                    </div>
-                                    <div class="showcase-price">RM <?php echo number_format($p['total_price'] ?? 0, 2); ?></div>
-                                </div>
-                                
-                                <div class="specs-preview">
-                                    <?php
-                                    $b_id = intval($p['pc_build_id']);
-                                    $specs_sql = "SELECT c.category_name, p.product_name, p.price, p.stock_quantity 
-                                                  FROM build_items bi 
-                                                  JOIN products p ON bi.product_id = p.product_id 
-                                                  JOIN categories c ON p.category_id = c.category_id 
-                                                  WHERE bi.pc_build = $b_id 
-                                                  AND (c.category_name LIKE '%CPU%' OR c.category_name LIKE '%GPU%' OR c.category_name LIKE '%Motherboard%')
-                                                  LIMIT 3";
-                                    $specs_res = $conn->query($specs_sql);
-                                    
-                                    if ($specs_res && $specs_res->num_rows > 0) {
-                                        while ($spec = $specs_res->fetch_assoc()) {
-                                            $icon = 'fa-microchip'; 
-                                            if (stripos($spec['category_name'], 'GPU') !== false) $icon = 'fa-video';
-                                            if (stripos($spec['category_name'], 'Motherboard') !== false) $icon = 'fa-chess-board';
-                                            
-                                            $short_name = strlen($spec['product_name']) > 20 ? substr($spec['product_name'],0,20)."..." : $spec['product_name'];
-                                            
-                                            $stock_color = $spec['stock_quantity'] > 0 ? '#00e676' : '#ff4d4d';
-                                            $stock_text = $spec['stock_quantity'] > 0 ? $spec['stock_quantity'].' In Stock' : 'Out of Stock';
-                                            
-                                            echo "
-                                            <div class='spec-tag'>
-                                                <i class='fas $icon'></i> ".htmlspecialchars($short_name)."
-                                                <div class='tech-tooltip'>
-                                                    <div class='tt-cat'>".htmlspecialchars($spec['category_name'])."</div>
-                                                    <div class='tt-name'>".htmlspecialchars($spec['product_name'])."</div>
-                                                    <div class='tt-footer'>
-                                                        <span class='tt-price'>RM ".number_format($spec['price'], 2)."</span>
-                                                        <span class='tt-stock' style='color: $stock_color;'><i class='fas fa-box'></i> $stock_text</span>
-                                                    </div>
-                                                </div>
-                                            </div>";
-                                        }
-                                    } else {
-                                        echo "<span style='color:#64748b; font-size:0.85rem;'>Full specs available inside.</span>";
-                                    }
-                                    ?>
-                                </div>
-                                
-                                <a href="load_build.php?id=<?php echo $p['pc_build_id']; ?>&action=cart" class="tech-btn" style="width: 100%; text-align: center; display: block; padding: 10px; font-size:0.9rem;">
-                                    <i class="fas fa-cart-plus"></i> Load This Build to Cart
-                                </a>
-                            </div>
-                        <?php endif; ?>
-
                         <?php 
                         $imgs = !empty($p['post_images']) ? json_decode($p['post_images'], true) : [];
                         if (is_array($imgs) && count($imgs) > 0): 
@@ -497,8 +439,8 @@ function getRankBadge($coins, $tier = 'Basic') {
                             </a>
 
                             <?php if ($p['customer_id'] == $customer_id): ?>
-                                <a href="javascript:void(0);" onclick="cyberConfirm('[WARNING] Purge this signal from the Neural Network? This cannot be undone.', function() { window.location.href='community.php?action=delete&post_id=<?php echo $p['post_id']; ?>'; }, null, true);" class="action-btn" style="color: #ff4d4d; border-color: rgba(255, 77, 77, 0.3); margin-left:auto;">
-                                <i class="fas fa-trash-alt"></i> Delete
+                                <a href="community.php?action=delete&post_id=<?php echo $p['post_id']; ?>" class="action-btn" style="color: #ff4d4d; border-color: rgba(255, 77, 77, 0.3); margin-left:auto;" onclick="return confirm('Delete this post?');">
+                                    <i class="fas fa-trash-alt"></i> Delete
                                 </a>
                             <?php endif; ?>
                         </div>
@@ -563,6 +505,7 @@ function getRankBadge($coins, $tier = 'Basic') {
 
     </div>
 </div>
+</div>
 
 <div id="lightbox">
     <span class="lb-close" onclick="closeLightbox()">&times;</span>
@@ -574,6 +517,7 @@ function getRankBadge($coins, $tier = 'Basic') {
 <?php include 'includes/footer.php'; ?>
 
 <script>
+    // 发帖面板展开控制
     function togglePostForm() {
         const form = document.getElementById('post-form');
         form.style.display = form.style.display === 'block' ? 'none' : 'block';
@@ -582,24 +526,32 @@ function getRankBadge($coins, $tier = 'Basic') {
         }
     }
 
+    // 🌟 发帖分类与配置单卡片显示控制
     function selectPostType(cardElement, typeValue) {
+        // 清除选中样式
         document.querySelectorAll('.type-card').forEach(card => {
             card.classList.remove('selected');
             card.querySelector('input[type="radio"]').checked = false;
         });
+        // 激活当前选项
         cardElement.classList.add('selected');
         cardElement.querySelector('input[type="radio"]').checked = true;
 
         const buildSelect = document.getElementById('build_select_container');
+        const blueprintRadios = document.querySelectorAll('.blueprint-radio');
+        
         if (typeValue === 'Showcase') {
             buildSelect.style.display = 'block';
-            buildSelect.querySelector('select').setAttribute('required', 'required');
+            if (blueprintRadios.length > 0) {
+                blueprintRadios.forEach(r => r.setAttribute('required', 'required'));
+            }
         } else {
             buildSelect.style.display = 'none';
-            buildSelect.querySelector('select').removeAttribute('required');
+            blueprintRadios.forEach(r => r.removeAttribute('required'));
         }
     }
 
+    // 图片上传预览
     function previewImages(event) {
         const container = document.getElementById('image-preview-container');
         container.innerHTML = ''; 
@@ -618,6 +570,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         }
     }
 
+    // Lightbox 相册引擎
     let currentGallery = [];
     let currentIndex = 0;
 
@@ -643,6 +596,15 @@ function getRankBadge($coins, $tier = 'Basic') {
 
     function updateLightboxImage() {
         document.getElementById('lightbox-img').src = currentGallery[currentIndex];
+    }
+    
+    // 初始化检查 (如果在提交失败后，保持展示配置单)
+    window.onload = function() {
+        const checkedType = document.querySelector('input[name="post_type"]:checked');
+        if(checkedType && checkedType.value === 'Showcase') {
+            document.getElementById('build_select_container').style.display = 'block';
+            document.querySelectorAll('.blueprint-radio').forEach(r => r.setAttribute('required', 'required'));
+        }
     }
 </script>
 </body>
