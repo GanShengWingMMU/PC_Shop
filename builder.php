@@ -167,15 +167,15 @@ if ($stock_res) {
 // ==========================================
 // 🚀 AI 瓶颈预警与商业 Upsell 引擎
 // ==========================================
-$system_tier = "AWAITING CORE PARTS";
+$system_tier = "Awaiting Core Parts";
 $tier_color = "#555"; 
 $bottleneck_warning = "";
 $bottleneck_color = "";
 
 if (isset($cart[1], $cart[2], $cart[4], $cart[6])) {
-    if ($total_price >= 8000) { $system_tier = "PERFORMANCE CLASS: ENTHUSIAST"; $tier_color = "#ff007f"; } 
-    elseif ($total_price >= 4000) { $system_tier = "PERFORMANCE CLASS: PRO GAMING"; $tier_color = "#00e676"; } 
-    else { $system_tier = "PERFORMANCE CLASS: MAINSTREAM"; $tier_color = "#00f2fe"; }
+    if ($total_price >= 8000) { $system_tier = "Enthusiast / Ultra"; $tier_color = "#ff007f"; } 
+    elseif ($total_price >= 4000) { $system_tier = "Pro Gaming / High-end"; $tier_color = "#00e676"; } 
+    else { $system_tier = "Mainstream / Entry"; $tier_color = "#00f2fe"; }
 }
 
 if (isset($cart[1]) && isset($cart[4])) {
@@ -184,10 +184,10 @@ if (isset($cart[1]) && isset($cart[4])) {
 
     if (($gpu_tier - $cpu_tier) >= 3) {
         $bottleneck_color = "#ff4d4d"; 
-        $bottleneck_warning = "<strong><i class='fas fa-exclamation-triangle'></i> Severe CPU Bottleneck:</strong><br> Your GPU is heavily throttled by the processor.<br><a href='select_part.php?category_id=1&socket=$socket_param' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE CPU TO FIX</a>";
+        $bottleneck_warning = "<strong><i class='fas fa-exclamation-triangle'></i> CPU Bottleneck:</strong><br> Your GPU is too powerful for this processor.<br><a href='select_part.php?category_id=1&socket=$socket_param' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE CPU TO FIX</a>";
     } elseif (($cpu_tier - $gpu_tier) >= 3) {
         $bottleneck_color = "#f97316"; 
-        $bottleneck_warning = "<strong><i class='fas fa-info-circle'></i> Unbalanced Build:</strong><br> High-end CPU with a weak Graphics Card. Great for rendering, poor for gaming.<br><a href='select_part.php?category_id=4' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE GPU TO FIX</a>";
+        $bottleneck_warning = "<strong><i class='fas fa-info-circle'></i> Unbalanced Build:</strong><br> High-end CPU with a weak Graphics Card.<br><a href='select_part.php?category_id=4' style='color:#00f2fe; text-decoration:none; display:inline-block; margin-top:8px; font-weight:900;'><i class='fas fa-arrow-up'></i> UPGRADE GPU TO FIX</a>";
     }
 }
 
@@ -195,24 +195,24 @@ if (isset($cart[1]) && isset($cart[4])) {
 // 5. DAG 有向无环图数据结构 (Workflow Matrix)
 // ==========================================
 $workflow = [
-    'Phase 1: Core Foundation' => [
-        ['id' => 1, 'name' => 'Processor (CPU)', 'icon' => 'fa-microchip', 'req' => [], 'params' => '', 'desc' => 'The brain of your workstation.'],
-        ['id' => 2, 'name' => 'Motherboard', 'icon' => 'fa-chess-board', 'req' => [1], 'params' => "&socket=$socket_param", 'lock_msg' => 'Select a CPU to unlock compatible boards.', 'desc' => $socket_param ? "Locked to $socket_param platform." : "Awaiting CPU platform..."],
+    'Step 1: Core Components' => [
+        ['id' => 1, 'name' => 'Processor (CPU)', 'icon' => 'fa-microchip', 'req' => [], 'params' => '', 'desc' => 'The brain of your PC.'],
+        ['id' => 2, 'name' => 'Motherboard', 'icon' => 'fa-chess-board', 'req' => [1], 'params' => "&socket=$socket_param", 'lock_msg' => 'Select a CPU first.', 'desc' => $socket_param ? "Locked to $socket_param socket." : "Waiting for CPU selection..."],
     ],
-    'Phase 2: Performance' => [
-        ['id' => 4, 'name' => 'Graphics Card (GPU)', 'icon' => 'fa-tv', 'req' => [2], 'params' => '', 'lock_msg' => 'Requires Motherboard foundation.', 'desc' => 'Defines your gaming limits.'],
-        ['id' => 6, 'name' => 'Power Supply (PSU)', 'icon' => 'fa-plug', 'req' => [4], 'params' => "&min_w=$rec_psu", 'lock_msg' => 'Select GPU for power calculation.', 'desc' => $total_wattage > 0 ? "Recommended minimum: {$rec_psu}W" : "Awaiting system load..."]
+    'Step 2: Graphics & Power' => [
+        ['id' => 4, 'name' => 'Graphics Card (GPU)', 'icon' => 'fa-tv', 'req' => [2], 'params' => '', 'lock_msg' => 'Select a Motherboard first.', 'desc' => 'Handles gaming and rendering.'],
+        ['id' => 6, 'name' => 'Power Supply (PSU)', 'icon' => 'fa-plug', 'req' => [4], 'params' => "&min_w=$rec_psu", 'lock_msg' => 'Select GPU for power calculation.', 'desc' => $total_wattage > 0 ? "Recommended minimum: {$rec_psu}W" : "Waiting for system load..."]
     ],
-    'Phase 3: Storage & Aesthetics' => [
-        ['id' => 3, 'name' => 'Memory (RAM)', 'icon' => 'fa-memory', 'req' => [2], 'params' => ($ram_type_param ? "&ram_type=$ram_type_param" : ""), 'lock_msg' => 'Requires Motherboard.', 'desc' => $ram_type_param ? "Locked to $ram_type_param memory standard." : 'Awaiting Motherboard platform...'],
-        ['id' => 5, 'name' => 'Storage (SSD)', 'icon' => 'fa-hdd', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'Ultra-fast NVMe recommended.'],
-        ['id' => 8, 'name' => 'Cooling System', 'icon' => 'fa-fan', 'req' => [1], 'params' => '', 'lock_msg' => 'Requires CPU for socket fit.', 'desc' => 'Keep your CPU temperatures low.'],
+    'Step 3: Storage, Cooling & Case' => [
+        ['id' => 3, 'name' => 'Memory (RAM)', 'icon' => 'fa-memory', 'req' => [2], 'params' => ($ram_type_param ? "&ram_type=$ram_type_param" : ""), 'lock_msg' => 'Select a Motherboard first.', 'desc' => $ram_type_param ? "Locked to $ram_type_param memory." : 'Waiting for Motherboard...'],
+        ['id' => 5, 'name' => 'Storage (SSD/HDD)', 'icon' => 'fa-hdd', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'Where your files and games are stored.'],
+        ['id' => 8, 'name' => 'CPU Cooler', 'icon' => 'fa-fan', 'req' => [1], 'params' => '', 'lock_msg' => 'Select a CPU first.', 'desc' => 'Keeps your processor cool.'],
         ['id' => 7, 'name' => 'PC Case', 'icon' => 'fa-box', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'The house for your components.']
     ],
-    'Phase 4: Software & Peripherals' => [
-        ['id' => 9, 'name' => 'Operating System', 'icon' => 'fa-windows', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'Essential for running your PC.'],
-        ['id' => 10, 'name' => 'Case Fans', 'icon' => 'fa-dharmachakra', 'req' => [7], 'params' => '', 'lock_msg' => 'Select a PC Case first.', 'desc' => 'Extra airflow and RGB aesthetics.'],
-        ['id' => 11, 'name' => 'Monitor', 'icon' => 'fa-desktop', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'Complete your setup with a display.']
+    'Step 4: Software & Extras' => [
+        ['id' => 9, 'name' => 'Operating System', 'icon' => 'fa-windows', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'Windows OS.'],
+        ['id' => 10, 'name' => 'Case Fans', 'icon' => 'fa-dharmachakra', 'req' => [7], 'params' => '', 'lock_msg' => 'Select a PC Case first.', 'desc' => 'Extra airflow and RGB lighting.'],
+        ['id' => 11, 'name' => 'Monitor', 'icon' => 'fa-desktop', 'req' => [], 'params' => '', 'lock_msg' => '', 'desc' => 'Your display screen.']
     ]
 ];
 
@@ -233,7 +233,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     .builder-dashboard { max-width: 1400px; margin: 40px auto 80px; padding: 0 20px; display: grid; grid-template-columns: 1fr 380px; gap: 40px; align-items: start; position: relative; z-index: 1;}
     .builder-main-column { display: flex; flex-direction: column; }
     
-    /* 🌟 对齐 Packages 的高级毛玻璃侧边栏 */
     .builder-sidebar-column { position: sticky; top: 100px; background: rgba(10, 10, 15, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 16px; padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
 
     @media (max-width: 1024px) {
@@ -243,7 +242,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
 
     .phase-title { margin: 40px 0 15px; color: var(--accent); font-weight: 900; letter-spacing: 2px; text-transform: uppercase; font-size: 0.9rem; border-bottom: 1px dashed rgba(0,242,254,0.2); padding-bottom: 10px; display: flex; align-items: center; gap: 10px;}
     
-    /* 🌟 核心修复 2：统一卡片高度与高级交互 */
     .slot-card { 
         background: var(--dark-card); 
         border: 1px solid rgba(255,255,255,0.08); 
@@ -254,7 +252,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         justify-content: space-between; 
         align-items: center; 
         transition: 0.3s ease; 
-        min-height: 110px; /* 强制统一最小高度，防止坍塌变窄 */
+        min-height: 110px; 
         box-sizing: border-box;
     }
     .slot-card:hover:not(.slot-locked) { 
@@ -275,7 +273,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         box-shadow: 0 4px 15px rgba(0,242,254,0.05); 
     }
     
-    /* 🌟 对齐 Packages 的按钮样式 */
     .btn-action { padding: 10px 24px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; text-decoration: none; transition: 0.3s; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; text-transform: uppercase; letter-spacing: 1px; }
     .btn-select { background: rgba(0,242,254,0.1) !important; color: #00f2fe !important; border: 1px solid #00f2fe !important; }
     .btn-select:hover { background: #00f2fe !important; color: #000 !important; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4) !important; transform: translateY(-2px); }
@@ -298,7 +295,6 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     .metric-bar-bg { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
     .metric-bar-fill { height: 100%; border-radius: 3px; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
 
-    /* 全息透视装机线框图 */
     .blueprint-wrapper {
         position: relative; width: 100%; height: 320px;
         background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 242, 254, 0.2);
@@ -381,15 +377,15 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         <?php endif; ?>
 
         <div>
-            <h1 style="font-size: 3rem; font-weight: 900; margin: 0; letter-spacing: -1px; color: #fff;">SYSTEM <span style="color:var(--accent); text-shadow: 0 0 20px rgba(0,242,254,0.4);">ARCHITECT</span></h1>
-            <p style="color: #888; font-size: 1.1rem; margin-top: 5px;">Topological build engine & Bottleneck AI Analysis active.</p>
+            <h1 style="font-size: 3rem; font-weight: 900; margin: 0; letter-spacing: -1px; color: #fff;">CUSTOM <span style="color:var(--accent); text-shadow: 0 0 20px rgba(0,242,254,0.4);">PC BUILDER</span></h1>
+            <p style="color: #888; font-size: 1.1rem; margin-top: 5px;">Smart compatibility check & performance analyzer active.</p>
             
             <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; font-size: 0.85rem; color: #aaa; font-weight: 600;">
-                <span>SYSTEM INTEGRATION STATUS</span>
+                <span>BUILD PROGRESS</span>
                 <div>
                     <?php if ($progress > 0): ?>
                         <a href="javascript:void(0);" onclick="cyberConfirm('Are you sure you want to clear your current PC build? This action cannot be undone.', function() { localStorage.removeItem('gridcity_backup_build'); window.location.href='builder.php?action=clear'; }, null, true);" style="color: #ff4d4d; text-decoration: none; margin-right: 15px; padding: 6px 12px; border: 1px dashed rgba(255,77,77,0.3); border-radius: 6px; transition: 0.3s;" onmouseover="this.style.background='rgba(255,77,77,0.1)'; this.style.borderColor='#ff4d4d';" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(255,77,77,0.3)';">
-                        <i class="fas fa-trash-alt"></i> WIPE LOADOUT
+                        <i class="fas fa-trash-alt"></i> START OVER
                         </a>
                     <?php endif; ?>
                     <span style="color: var(--accent); font-size: 1.6rem; font-family: 'JetBrains Mono', monospace; text-shadow: 0 0 15px rgba(0,242,254,0.5);"><?php echo $progress; ?>%</span>
@@ -429,7 +425,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                                 <div style="color: var(--accent); font-weight: 700; font-size: 1.05rem;"><?php echo htmlspecialchars($cart[$cid]['name']); ?></div>
                                 <div style="color: #00e676; font-size: 0.95rem; font-weight: 800; margin-top: 5px; font-family: 'JetBrains Mono', monospace;">RM <?php echo number_format($cart[$cid]['price'], 2); ?></div>
                             <?php elseif (!$has_stock): ?>
-                                <div style="color: #ef4444; font-size: 0.85rem; font-weight: bold;"><i class="fas fa-times-circle"></i> Currently depleted from database.</div>
+                                <div style="color: #ef4444; font-size: 0.85rem; font-weight: bold;"><i class="fas fa-times-circle"></i> Currently out of stock.</div>
                             <?php else: ?>
                                 <div style="color: #64748b; font-size: 0.9rem;"><?php echo $slot['desc']; ?></div>
                             <?php endif; ?>
@@ -443,7 +439,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                             <a href="select_part.php?category_id=<?php echo $cid . $slot['params']; ?>" class="btn-action btn-change"><i class="fas fa-sync-alt" style="margin-right: 6px;"></i> REPLACE</a>
                             <a href="builder.php?action=remove&cat_id=<?php echo $cid; ?>" style="color: #ef4444; margin-left: 20px; font-size: 1.4rem; transition: 0.2s;" onmouseover="this.style.color='#fff'; this.style.textShadow='0 0 10px #ef4444';" onmouseout="this.style.color='#ef4444'; this.style.textShadow='none';"><i class="fas fa-times-circle"></i></a>
                         <?php elseif (!$has_stock): ?>
-                            <span class="btn-action btn-out-of-stock">NO STOCK</span>
+                            <span class="btn-action btn-out-of-stock">OUT OF STOCK</span>
                         <?php else: ?>
                             <a href="select_part.php?category_id=<?php echo $cid . $slot['params']; ?>" class="btn-action btn-select"><i class="fas fa-crosshairs" style="margin-right: 6px;"></i> SELECT</a>
                         <?php endif; ?>
@@ -473,10 +469,10 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         ?>
         <div class="perf-hub">
             <div class="hub-header">
-                <div class="hub-title"><i class="fas fa-satellite-dish" style="color: var(--accent);"></i> MULTI-SCENARIO AI PREDICTOR</div>
+                <div class="hub-title"><i class="fas fa-chart-line" style="color: var(--accent);"></i> PERFORMANCE ESTIMATOR</div>
                 <div class="bot-badge" style="border: 1px solid <?php echo $bottleneck_color ?: '#00e676'; ?>; color: <?php echo $bottleneck_color ?: '#00e676'; ?>;">
                     <i class="fas <?php echo empty($bottleneck_color) ? 'fa-check-circle' : 'fa-exclamation-triangle'; ?>"></i> 
-                    <?php echo empty($bottleneck_warning) ? 'OPTIMAL PAIRING: Balanced components.' : strip_tags($bottleneck_warning); ?>
+                    <?php echo empty($bottleneck_warning) ? 'Great Match: Balanced components.' : strip_tags($bottleneck_warning); ?>
                 </div>
             </div>
             
@@ -536,7 +532,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         
     <div class="builder-sidebar-column">
         <h3 style="margin: 0; color: #fff; font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">
-            <i class="fas fa-receipt" style="color: var(--accent);"></i> SYSTEM SUMMARY
+            <i class="fas fa-list" style="color: var(--accent);"></i> BUILD SUMMARY
         </h3>
 
         <div class="blueprint-wrapper">
@@ -589,7 +585,7 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         
         <div style="display: flex; flex-direction: column; gap: 20px;">
             <div>
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">System Tier</div>
+                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Performance Tier</div>
                 <div style="font-size: 1.2rem; font-weight: 900; color: <?php echo $tier_color; ?>; text-shadow: 0 0 15px <?php echo $tier_color; ?>88;">
                     <?php echo $system_tier; ?>
                 </div>
@@ -602,47 +598,47 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
             </div>
 
             <div>
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Power / Upgrade Headroom</div>
+                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Power Supply Check</div>
                 <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; color: #facc15; font-weight: 900; margin-bottom: 5px;"><i class="fas fa-bolt" style="text-shadow: 0 0 10px rgba(251,191,36,0.4);"></i> Load: <?php echo $total_wattage; ?> W</div>
                 
                 <?php if (isset($cart[6])): ?>
                     <?php if ($psu_wattage < $total_wattage): ?>
                         <div style="color: #ff4d4d; font-size: 0.85rem; line-height: 1.4; background: rgba(255,77,77,0.1); padding: 10px; border-radius: 6px; border: 1px dashed #ff4d4d;">
-                            <i class="fas fa-radiation"></i> <strong>CRITICAL:</strong> Your PSU (<?php echo $psu_wattage; ?>W) cannot support this system. PC will shut down under load!
+                            <i class="fas fa-radiation"></i> <strong>WARNING:</strong> Your PSU (<?php echo $psu_wattage; ?>W) cannot support this system. PC will shut down under load!
                         </div>
                     <?php elseif ($psu_wattage < ($total_wattage * 1.3)): ?>
                         <div style="color: #f97316; font-size: 0.85rem; line-height: 1.4; background: rgba(249,115,22,0.1); padding: 10px; border-radius: 6px; border: 1px solid #f97316;">
-                            <i class="fas fa-battery-half"></i> <strong>LOW HEADROOM:</strong> Only <?php echo round((($psu_wattage - $total_wattage) / $psu_wattage) * 100); ?>% upgrade margin. Consider a larger PSU for future-proofing.
+                            <i class="fas fa-battery-half"></i> <strong>LOW POWER:</strong> Only <?php echo round((($psu_wattage - $total_wattage) / $psu_wattage) * 100); ?>% upgrade margin. Consider a larger PSU for future-proofing.
                         </div>
                     <?php else: ?>
                         <div style="color: #00e676; font-size: 0.85rem; line-height: 1.4; background: rgba(0,230,118,0.05); padding: 10px; border-radius: 6px; border: 1px solid rgba(0,230,118,0.3);">
-                            <i class="fas fa-battery-full"></i> <strong>SAFE:</strong> <?php echo round((($psu_wattage - $total_wattage) / $psu_wattage) * 100); ?>% capacity remaining. Excellent upgrade headroom.
+                            <i class="fas fa-battery-full"></i> <strong>GOOD:</strong> <?php echo round((($psu_wattage - $total_wattage) / $psu_wattage) * 100); ?>% capacity remaining. Excellent upgrade headroom.
                         </div>
                     <?php endif; ?>
                 <?php else: ?>
-                    <div style="color: #64748b; font-size: 0.85rem;"><i class="fas fa-plug"></i> Select a Power Supply to calculate headroom.</div>
+                    <div style="color: #64748b; font-size: 0.85rem;"><i class="fas fa-plug"></i> Select a Power Supply to calculate.</div>
                 <?php endif; ?>
             </div>
             
             <div style="margin-top: 5px; padding-top: 20px; border-top: 1px dashed rgba(255,255,255,0.1);">
-                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Raw Component Value</div>
+                <div style="font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; font-weight: 800; letter-spacing: 1px;">Total Price</div>
                 <div style="font-family: 'JetBrains Mono', monospace; font-size: 2.2rem; color: var(--accent); font-weight: 900; text-shadow: 0 0 20px rgba(0,242,254,0.3);">RM <?php echo number_format($total_price, 2); ?></div>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                 <?php if ($progress == 100): ?>
                     <button type="button" onclick="openProcessModal('checkout')" class="btn-action btn-select" style="text-align: center; font-size: 1.1rem; padding: 15px; width: 100%; box-sizing: border-box; border: none; cursor: pointer;">
-                        DEPLOY SYSTEM <i class="fas fa-shopping-cart" style="margin-left: 8px;"></i>
+                        ADD TO CART <i class="fas fa-shopping-cart" style="margin-left: 8px;"></i>
                     </button>
                 <?php else: ?>
                     <span class="btn-action" style="background: rgba(255,255,255,0.05); color: #64748b; cursor: not-allowed; padding: 15px; border: 1px dashed rgba(255,255,255,0.1); text-align: center; width: 100%; box-sizing: border-box;">
-                        Complete Build to Deploy
+                        Complete Build to Checkout
                     </span>
                 <?php endif; ?>
                 
                 <?php if ($progress > 0): ?>
                     <button type="button" onclick="openProcessModal('save')" class="btn-action btn-change" style="text-align: center; padding: 12px; width: 100%; box-sizing: border-box; cursor: pointer;">
-                        <i class="fas fa-save" style="margin-right: 8px;"></i> ARCHIVE BLUEPRINT
+                        <i class="fas fa-save" style="margin-right: 8px;"></i> SAVE BUILD
                     </button>
                 <?php endif; ?>
             </div>
@@ -654,13 +650,13 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
     <div style="background: rgba(10, 10, 15, 0.95); margin: 10% auto; padding: 0; width: 90%; max-width: 480px; border-radius: 12px; border: 1px solid #00f2fe; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.7), inset 0 0 20px rgba(0, 242, 254, 0.05); transform: translateY(-20px); animation: modalSlideIn 0.3s forwards;">
         
         <div style="padding: 20px 25px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
-            <h3 style="margin: 0; color: #fff; font-weight: 900; letter-spacing: -0.5px;" id="processModalTitle"><i class="fa-solid fa-server" style="color: #00f2fe;"></i> Process Configuration</h3>
+            <h3 style="margin: 0; color: #fff; font-weight: 900; letter-spacing: -0.5px;" id="processModalTitle"><i class="fa-solid fa-server" style="color: #00f2fe;"></i> Choose an Action</h3>
             <span onclick="closeProcessModal()" style="color: #64748b; cursor: pointer; font-size: 1.5rem; transition: 0.3s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#64748b'">&times;</span>
         </div>
 
         <div style="padding: 30px 25px;">
             <div style="text-align: center; margin-bottom: 25px;">
-                <div style="font-size: 0.85rem; color: #888; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Total Build Value</div>
+                <div style="font-size: 0.85rem; color: #888; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">Total Price</div>
                 <div style="font-family: 'JetBrains Mono', monospace; font-size: 2rem; color: #00f2fe; font-weight: 900; text-shadow: 0 0 15px rgba(0,242,254,0.3);">RM <?php echo number_format($total_price, 2); ?></div>
             </div>
 
@@ -668,8 +664,8 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
                 <input type="hidden" name="process_action" id="processActionInput" value="save">
                 
                 <div style="margin-bottom: 25px;">
-                    <label style="color: #00f2fe; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">Name Your Rig (Optional)</label>
-                    <input type="text" name="build_name" placeholder="e.g. Project Midnight, Titan V..." style="width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 14px; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; transition: 0.3s;" onfocus="this.style.borderColor='#00f2fe'; this.style.boxShadow='0 0 15px rgba(0,242,254,0.1)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='none';">
+                    <label style="color: #00f2fe; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block;">Name Your PC (Optional)</label>
+                    <input type="text" name="build_name" placeholder="e.g. My Gaming Rig..." style="width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 14px; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; transition: 0.3s;" onfocus="this.style.borderColor='#00f2fe'; this.style.boxShadow='0 0 15px rgba(0,242,254,0.1)';" onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.boxShadow='none';">
                 </div>
 
                 <button type="submit" id="processSubmitBtn" style="background: #ffffff; color: #000; font-weight: 800; padding: 15px; width: 100%; border-radius: 8px; border: none; cursor: pointer; transition: 0.3s; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(255,255,255,0.1);">
@@ -694,13 +690,13 @@ $progress = (count($flat_slots) > 0) ? round((count($cart) / count($flat_slots))
         const btn = document.getElementById('processSubmitBtn');
         
         if (action === 'checkout') {
-            title.innerHTML = '<i class="fa-solid fa-cart-arrow-down" style="color: #ffd700;"></i> Checkout Build';
+            title.innerHTML = '<i class="fa-solid fa-cart-arrow-down" style="color: #ffd700;"></i> Checkout';
             btn.innerHTML = 'Add to Cart & Checkout <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i>';
             btn.style.background = '#ffd700';
             btn.style.color = '#000';
         } else {
-            title.innerHTML = '<i class="fa-solid fa-save" style="color: #00e676;"></i> Save Draft';
-            btn.innerHTML = 'Secure to Armory <i class="fa-solid fa-shield-halved" style="margin-left: 8px;"></i>';
+            title.innerHTML = '<i class="fa-solid fa-save" style="color: #00e676;"></i> Save Build';
+            btn.innerHTML = 'Save for Later <i class="fa-solid fa-save" style="margin-left: 8px;"></i>';
             btn.style.background = '#00e676';
             btn.style.color = '#000';
         }
@@ -746,6 +742,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         }
+    }
+    
+    const clearBtn = document.querySelector('a[href="builder.php?action=clear"]');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            localStorage.removeItem('gridcity_backup_build');
+        });
     }
 });
 </script>

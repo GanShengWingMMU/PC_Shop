@@ -708,9 +708,9 @@ if (strpos($card_num, '4') === 0) {
                                 <div class="name">
                                     <span style="color: #64748b; font-size: 0.8rem; margin-right: 5px;"><?php echo $item['quantity']; ?>x</span>
                                     <?php 
-                                        if ($item['product_id']) echo htmlspecialchars($item['product_name']);
-                                        elseif ($item['pc_build']) echo htmlspecialchars("Rig: " . $item['build_name']);
-                                        elseif ($item['package_id']) echo htmlspecialchars("Pkg: " . $item['package_name']);
+                                    if ($item['product_id']) echo htmlspecialchars($item['product_name'] ?? 'Unknown Component');
+                                    elseif ($item['pc_build']) echo htmlspecialchars("Rig: " . ($item['build_name'] ?? 'Custom Build'));
+                                    elseif ($item['package_id']) echo htmlspecialchars("Pkg: " . ($item['package_name'] ?? 'Standard Package'));
                                     ?>
                                 </div>
                                 <div class="price">

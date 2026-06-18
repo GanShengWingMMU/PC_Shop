@@ -11,30 +11,59 @@ $customer_id = $_SESSION['customer_id'];
 $cart_items = [];
 $total_price = 0;
 
-// 👇 🌟 新增：在這裡處理數量 +1 和 -1 的邏輯 👇
+// ==========================================
+// 🚀 核心修复：带库存穿透检测的购物车增减算法
+// ==========================================
 if (isset($_POST['update_quantity'])) {
-    $cart_id = $_POST['cart_id'];
+    $cart_id = intval($_POST['cart_id']);
     $qty_action = $_POST['qty_action'];
 
     if ($qty_action === 'plus') {
-        // 數量 +1
-        $update_stmt = $conn->prepare("UPDATE shopping_cart SET quantity = quantity + 1 WHERE cart_id = ? AND customer_id = ?");
-        $update_stmt->bind_param("ii", $cart_id, $customer_id);
-        $update_stmt->execute();
-        $update_stmt->close();
+        // 1. 抓取该购物车物品的身份
+        $check_type = $conn->prepare("SELECT product_id, package_id, pc_build, quantity FROM shopping_cart WHERE cart_id = ? AND customer_id = ?");
+        $check_type->bind_param("ii", $cart_id, $customer_id);
+        $check_type->execute();
+        $c_data = $check_type->get_result()->fetch_assoc();
+        $check_type->close();
+        
+        if ($c_data) {
+            $can_add = true;
+            $new_qty = $c_data['quantity'] + 1;
+            
+            // 2. 根据不同身份穿透查询真实剩余库存
+            if ($c_data['product_id']) {
+                $st_check = $conn->query("SELECT stock_quantity FROM products WHERE product_id = " . intval($c_data['product_id']));
+                $st = $st_check->fetch_assoc();
+                if ($new_qty > $st['stock_quantity']) $can_add = false;
+            } elseif ($c_data['package_id']) {
+                // 套餐：找出底层最缺货的零件能拼出几套
+                $st_check = $conn->query("SELECT MIN(FLOOR(p.stock_quantity / pi.quantity)) as max_pkg FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = " . intval($c_data['package_id']));
+                $st = $st_check->fetch_assoc();
+                if ($new_qty > $st['max_pkg']) $can_add = false;
+            } elseif ($c_data['pc_build']) {
+                // 自组装：找出底层最缺货的零件能拼出几套
+                $st_check = $conn->query("SELECT MIN(FLOOR(p.stock_quantity / bi.quantity)) as max_bld FROM build_items bi JOIN products p ON bi.product_id = p.product_id WHERE bi.pc_build = " . intval($c_data['pc_build']));
+                $st = $st_check->fetch_assoc();
+                if ($new_qty > $st['max_bld']) $can_add = false;
+            }
+            
+            // 3. 安全更新
+            if ($can_add) {
+                $conn->query("UPDATE shopping_cart SET quantity = $new_qty WHERE cart_id = $cart_id");
+            } else {
+                $_SESSION['error_msg'] = "Maximum available stock reached. Cannot add more.";
+            }
+        }
     } elseif ($qty_action === 'minus') {
-        // 數量 -1 (用 GREATEST 防呆，確保數量最低是 1)
         $update_stmt = $conn->prepare("UPDATE shopping_cart SET quantity = GREATEST(1, quantity - 1) WHERE cart_id = ? AND customer_id = ?");
         $update_stmt->bind_param("ii", $cart_id, $customer_id);
         $update_stmt->execute();
         $update_stmt->close();
     }
-    // 處理完畢後，重新載入頁面以顯示最新總價
     header("Location: cart.php");
     exit();
 }
 
-// 🌟 升級 1：SQL 查詢加入 packages 表格的 LEFT JOIN
 $sql = "SELECT c.cart_id, c.quantity, c.product_id, c.pc_build, c.package_id, 
                p.product_name AS product_name, p.price AS product_price, p.image_url,
                b.build_name, b.total_price AS old_build_price,
@@ -51,10 +80,7 @@ if ($stmt = $conn->prepare($sql)) {
     $result = $stmt->get_result();
 
     while ($row = $result->fetch_assoc()) {
-        
-        // 🌟 升級 2：精準計算三種不同商品的價格 (防鎖價漏洞)
         if (!empty($row['pc_build'])) {
-            // 自組電腦邏輯 (動態計算最新價格)
             $build_id = $row['pc_build'];
             $components = [];
             $dynamic_build_price = 0;
@@ -71,21 +97,18 @@ if ($stmt = $conn->prepare($sql)) {
             $c_res = $c_stmt->get_result();
             while ($c_row = $c_res->fetch_assoc()) {
                 $components[] = $c_row;
-                // 累加最新零件價格
                 $dynamic_build_price += ($c_row['price'] * $c_row['quantity']);
             }
             $c_stmt->close();
             
             $row['components'] = $components; 
-            $row['build_price'] = $dynamic_build_price; // 覆蓋舊價格
+            $row['build_price'] = $dynamic_build_price; 
             $total_price += ($dynamic_build_price * $row['quantity']);
             
         } elseif (!empty($row['package_id'])) {
-            // 🌟 高阶商业逻辑：套餐价格不读死数据，而是随底层零件实时浮动！
             $pkg_id = $row['package_id'];
             $dynamic_pkg_price = 0;
             
-            // 实时去关联表中抓取属于这个套餐的所有零件，并累加它们的最新的价格 (已修復乘上 quantity)
             $pkg_sql = "SELECT p.price, pi.quantity FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = ?";
             $pkg_stmt = $conn->prepare($pkg_sql);
             $pkg_stmt->bind_param("i", $pkg_id);
@@ -93,24 +116,20 @@ if ($stmt = $conn->prepare($sql)) {
             $pkg_res = $pkg_stmt->get_result();
             
             while ($p_row = $pkg_res->fetch_assoc()) {
-                $dynamic_pkg_price += ($p_row['price'] * $p_row['quantity']); // 修复：加入零件數量乘數
+                $dynamic_pkg_price += ($p_row['price'] * $p_row['quantity']); 
             }
             $pkg_stmt->close();
             
-            // 将动态计算出的真实总价覆盖掉原本的 0 元
             $row['package_price'] = $dynamic_pkg_price; 
             $total_price += ($dynamic_pkg_price * $row['quantity']);
             
         } else {
-            // 单品零件逻辑
             $total_price += ($row['product_price'] * $row['quantity']);
         }
         
         $cart_items[] = $row;
     }
     $stmt->close();
-} else {
-    die("Database query failed: " . $conn->error);
 }
 ?>
 
@@ -123,7 +142,6 @@ if ($stmt = $conn->prepare($sql)) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Modal CSS 保持不變 */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);
@@ -151,7 +169,6 @@ if ($stmt = $conn->prepare($sql)) {
         .comp-name { font-size: 0.95rem; color: var(--text-main); margin-top: 3px; }
         .comp-price { font-size: 0.9rem; color: var(--text-muted); font-weight: bold; text-align: right; }
 
-        /* 🌟 購物車商品專屬標籤設計 */
         .item-tag {
             font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
             padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;
@@ -175,10 +192,16 @@ if ($stmt = $conn->prepare($sql)) {
         
         <?php if(!empty($cart_items)): ?>
             <a href="javascript:void(0);" onclick="cyberConfirm('[WARNING] Purge all items from your payload? This action cannot be reversed.', function() { window.location.href='remove_cart.php?action=clear'; }, null, true);" style="color: #ff4d4d; border: 1px solid #ff4d4d; padding: 8px 15px; text-decoration: none; border-radius: 6px; transition: 0.3s; font-weight: bold; background: rgba(255, 77, 77, 0.05);" onmouseover="this.style.background='rgba(255, 77, 77, 0.15)'" onmouseout="this.style.background='rgba(255, 77, 77, 0.05)'">
-    <i class="fa-solid fa-trash-can"></i> Remove All
-</a>
+                <i class="fa-solid fa-trash-can"></i> Remove All
+            </a>
         <?php endif; ?>
     </div>
+
+    <?php if (isset($_SESSION['error_msg'])): ?>
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; text-align: center;">
+            <i class="fa-solid fa-circle-exclamation"></i> <?php echo $_SESSION['error_msg']; unset($_SESSION['error_msg']); ?>
+        </div>
+    <?php endif; ?>
 
     <div class="cart-layout">
         <div class="cart-items-column">
@@ -200,7 +223,7 @@ if ($stmt = $conn->prepare($sql)) {
                             </div>
                             <div class="cart-item-info">
                                 <span class="item-tag tag-custom"><i class="fa-solid fa-gear"></i> Custom Rig</span>
-                                <h4><?php echo htmlspecialchars($item['build_name']); ?></h4>
+                                <h4><?php echo htmlspecialchars($item['build_name'] ?? 'Custom PC'); ?></h4>
                                 <div class="price">RM <?php echo number_format($item['build_price'], 2); ?></div>
                                 
                                 <button type="button" onclick="openModal('modal_<?php echo $item['pc_build']; ?>')" style="background: transparent; border: none; padding: 0; margin-top: 8px; font-size: 0.9rem; color: var(--text-muted); text-decoration: underline; cursor: pointer; transition: 0.3s;" onmouseover="this.style.color='#ffd700'" onmouseout="this.style.color='var(--text-muted)'">
@@ -214,7 +237,7 @@ if ($stmt = $conn->prepare($sql)) {
                             </div>
                             <div class="cart-item-info">
                                 <span class="item-tag tag-package"><i class="fa-solid fa-box"></i> Pre-Built Package</span>
-                                <h4><?php echo htmlspecialchars($item['package_name']); ?></h4>
+                                <h4><?php echo htmlspecialchars($item['package_name'] ?? 'PC Package'); ?></h4>
                                 <div class="price">RM <?php echo number_format($item['package_price'], 2); ?></div>
                             </div>
 
@@ -224,7 +247,7 @@ if ($stmt = $conn->prepare($sql)) {
                             </div>
                             <div class="cart-item-info">
                                 <span class="item-tag tag-component"><i class="fa-solid fa-microchip"></i> Component</span>
-                                <h4><?php echo htmlspecialchars($item['product_name']); ?></h4>
+                                <h4><?php echo htmlspecialchars($item['product_name'] ?? 'PC Component'); ?></h4>
                                 <div class="price">RM <?php echo number_format($item['product_price'], 2); ?></div>
                             </div>
                         <?php endif; ?>
@@ -232,16 +255,16 @@ if ($stmt = $conn->prepare($sql)) {
                         <div class="cart-item-controls">
                             <div class="qty" style="background: rgba(255,255,255,0.05); padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
                              <form method="POST" style="display: inline-block; margin: 0;">
-    <input type="hidden" name="cart_id" value="<?php echo $item['cart_id']; ?>">
-    <input type="hidden" name="update_quantity" value="1">
-    <div class="quantity-badge" style="display: flex; align-items: center; gap: 10px; padding: 2px 10px;">
-        <button type="submit" name="qty_action" value="minus" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; font-size: 1.1rem; transition: 0.2s;" onmouseover="this.style.color='#ff4d4d'" onmouseout="this.style.color='#fff'">-</button>
-        
-        <span style="color: var(--accent-blue); font-weight: bold; font-size: 1rem;"><?php echo $item['quantity']; ?></span>
-        
-        <button type="submit" name="qty_action" value="plus" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; font-size: 1.1rem; transition: 0.2s;" onmouseover="this.style.color='#00e676'" onmouseout="this.style.color='#fff'">+</button>
-    </div>
-</form>
+                                <input type="hidden" name="cart_id" value="<?php echo $item['cart_id']; ?>">
+                                <input type="hidden" name="update_quantity" value="1">
+                                <div class="quantity-badge" style="display: flex; align-items: center; gap: 10px; padding: 2px 10px;">
+                                    <button type="submit" name="qty_action" value="minus" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; font-size: 1.1rem; transition: 0.2s;" onmouseover="this.style.color='#ff4d4d'" onmouseout="this.style.color='#fff'">-</button>
+                                    
+                                    <span style="color: var(--accent-blue); font-weight: bold; font-size: 1rem;"><?php echo $item['quantity']; ?></span>
+                                    
+                                    <button type="submit" name="qty_action" value="plus" style="background: transparent; border: none; color: #fff; cursor: pointer; font-weight: bold; font-size: 1.1rem; transition: 0.2s;" onmouseover="this.style.color='#00e676'" onmouseout="this.style.color='#fff'">+</button>
+                                </div>
+                            </form>
                             </div>
                             <a href="remove_cart.php?id=<?php echo $item['cart_id']; ?>" class="btn-remove" title="Remove Item" style="color: #ff4d4d; transition: 0.3s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
                                 <i class="fa-solid fa-trash-can"></i>

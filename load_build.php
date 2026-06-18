@@ -112,5 +112,6 @@ if (isset($_GET['action']) && $_GET['action'] == 'cart') {
 
     header("Location: builder.php");
     exit();
+    }
 }
 ?>

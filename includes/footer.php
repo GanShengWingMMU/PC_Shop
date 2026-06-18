@@ -92,34 +92,6 @@
         transform: translateX(4px); /* 🌟 高级悬浮交互：平滑右移 */
     }
     
-    .social-icons {
-        display: flex;
-        gap: 12px;
-        margin-top: 10px;
-    }
-    
-    .social-icon {
-        width: 38px;
-        height: 38px;
-        background: #111827;
-        border: 1px solid #1e293b;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #94a3b8;
-        text-decoration: none;
-        transition: 0.3s;
-        font-size: 1.1rem;
-    }
-    
-    .social-icon:hover {
-        background: rgba(0, 242, 254, 0.1);
-        border-color: #00f2fe;
-        color: #00f2fe;
-        transform: translateY(-3px);
-    }
-    
     .footer-bottom {
         max-width: 1200px;
         margin: 0 auto;
@@ -169,21 +141,15 @@
         <div class="footer-brand">
             <a href="index.php" class="footer-logo">GridCitY <span>PC</span></a>
             <p class="footer-desc">Your ultimate destination for premium components, AI-powered builds, and an elite tech community.</p>
-            <div class="social-icons">
-                <a href="#" class="social-icon" title="Discord Community"><i class="fa-brands fa-discord"></i></a>
-                <a href="#" class="social-icon" title="Twitter / X"><i class="fa-brands fa-x-twitter"></i></a>
-                <a href="#" class="social-icon" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
-                <a href="#" class="social-icon" title="GitHub Source"><i class="fa-brands fa-github"></i></a>
-            </div>
         </div>
         
         <div>
             <h4 class="footer-heading">Hardware & Tech</h4>
             <ul class="footer-links">
-                <li><a href="components.php"><i class="fas fa-microchip" style="font-size:0.8rem; color:#475569;"></i> All Components</a></li>
-                <li><a href="packages.php"><i class="fas fa-box" style="font-size:0.8rem; color:#475569;"></i> Pre-built Packages</a></li>
-                <li><a href="builder.php"><i class="fas fa-tools" style="font-size:0.8rem; color:#475569;"></i> Custom PC Builder</a></li>
-                <li><a href="community.php"><i class="fas fa-network-wired" style="font-size:0.8rem; color:#475569;"></i> Neural Network</a></li>
+                <li><a href="components.php">All Components</a></li>
+                <li><a href="packages.php">Pre-built Packages</a></li>
+                <li><a href="builder.php">Custom PC Builder</a></li>
+                <li><a href="community.php">Neural Network</a></li>
             </ul>
         </div>
         
@@ -204,6 +170,7 @@
                 <li><a href="#"><i class="fa-solid fa-headset" style="color: #00f2fe;"></i> Help Center</a></li>
                 <li><a href="#"><i class="fa-solid fa-envelope" style="color: #00f2fe;"></i> support@gridcity.com</a></li>
                 <li><a href="#"><i class="fa-solid fa-location-dot" style="color: #00f2fe;"></i> Cyberjaya, Malaysia</a></li>
+                <li><a href="technology.php">Core Architecture</a></li>
             </ul>
             <div style="margin-top: 15px; font-size: 0.8rem; color: #475569; font-weight: 600;">
                 Mon-Fri: 9:00 AM - 6:00 PM (MYT)
@@ -246,8 +213,6 @@
 </style>
 
 <script>
-    // 呼叫此函數取代原有的 confirm()
-    // 參數: 訊息內容, 確認後執行的函數, 取消後執行的函數 (可為空), 是否為危險警告(紅色)
     function cyberConfirm(message, confirmCallback, cancelCallback = null, isWarning = false) {
         const modal = document.getElementById('cyberSystemModal');
         const modalBox = document.getElementById('cyberModalBox');
@@ -282,7 +247,6 @@
             confirmBtn.onmouseout = () => { confirmBtn.style.background = 'rgba(0, 242, 254, 0.1)'; confirmBtn.style.color = '#00f2fe'; confirmBtn.style.boxShadow = 'none'; };
         }
 
-        // 綁定點擊事件
         confirmBtn.onclick = function() {
             modal.style.display = 'none';
             if(confirmCallback) confirmCallback();
