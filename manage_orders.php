@@ -65,9 +65,9 @@ if (isset($_POST['update_status'])) {
                 <?php 
                 $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
                 if ($role === 'superadmin'): ?>
-                    <li><a href="manage_staff.php"><i class="fas fa-user-tie"></i> Manage Staff</a></li>
+                    <li><a href="manage_staff.php"> Manage Staff</a></li>
                 <?php endif; ?>
-                <li><a href="manage_users.php"><i class="fas fa-users"></i> Manage Customers</a></li>
+                <li><a href="manage_users.php"> Manage Customers</a></li>
                 <li><a href="manage_categories.php">Categories</a></li>
                 <li><a href="manage_products.php">Products</a></li> 
                 <li><a href="manage_packages.php">Packages</a></li>
