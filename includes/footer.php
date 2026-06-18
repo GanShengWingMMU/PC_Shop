@@ -170,7 +170,6 @@
                 <li><a href="#"><i class="fa-solid fa-headset" style="color: #00f2fe;"></i> Help Center</a></li>
                 <li><a href="#"><i class="fa-solid fa-envelope" style="color: #00f2fe;"></i> support@gridcity.com</a></li>
                 <li><a href="#"><i class="fa-solid fa-location-dot" style="color: #00f2fe;"></i> Cyberjaya, Malaysia</a></li>
-                <li><a href="technology.php">Core Architecture</a></li>
             </ul>
             <div style="margin-top: 15px; font-size: 0.8rem; color: #475569; font-weight: 600;">
                 Mon-Fri: 9:00 AM - 6:00 PM (MYT)
