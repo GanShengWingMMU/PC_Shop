@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 18, 2026 at 09:01 AM
+-- Generation Time: Jun 18, 2026 at 03:28 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -174,7 +174,13 @@ INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_even
 (104, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-18 11:32:34'),
 (105, 6, 'admin', 'Admin', 'System Login', '127.0.0.1', '2026-06-18 11:36:26'),
 (106, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-18 11:39:20'),
-(107, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-18 13:45:13');
+(107, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-18 13:45:13'),
+(108, 1, 'Alvis', 'SuperAdmin', 'Modified Staff Profile ID: 1', '127.0.0.1', '2026-06-18 20:28:50'),
+(109, 1, 'Alvis', 'SuperAdmin', 'Pinned Post ID: 3', '', '2026-06-18 21:05:54'),
+(110, 1, 'Alvis', 'SuperAdmin', 'Unpinned Post ID: 3', '', '2026-06-18 21:05:55'),
+(111, 1, 'Alvis', 'SuperAdmin', 'Censored Post ID: 3', '', '2026-06-18 21:07:57'),
+(112, 1, 'Alvis', 'SuperAdmin', 'Censored Post ID: 1', '', '2026-06-18 21:25:54'),
+(113, 1, 'Alvis', 'SuperAdmin', 'Censored Post ID: 2', '', '2026-06-18 21:25:57');
 
 -- --------------------------------------------------------
 
@@ -549,17 +555,20 @@ CREATE TABLE `community_posts` (
   `content` text NOT NULL,
   `post_type` enum('Showcase','Discussion','Question') DEFAULT 'Discussion',
   `views` int(11) DEFAULT 0,
-  `created_at` datetime DEFAULT current_timestamp()
+  `created_at` datetime DEFAULT current_timestamp(),
+  `is_pinned` tinyint(1) DEFAULT 0,
+  `report_count` int(11) DEFAULT 0,
+  `is_flagged` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `community_posts`
 --
 
-INSERT INTO `community_posts` (`post_id`, `customer_id`, `pc_build_id`, `title`, `content`, `post_type`, `views`, `created_at`) VALUES
-(1, 5, NULL, 'test', 'hello', 'Discussion', 0, '2026-05-01 22:36:47'),
-(2, 5, 28, 'god', '。。。', 'Showcase', 0, '2026-05-02 22:31:12'),
-(3, 6, NULL, 'hi dear suhaimi', 'i just wanna say ur build is godlike ahahhaha', 'Discussion', 0, '2026-05-18 01:56:15');
+INSERT INTO `community_posts` (`post_id`, `customer_id`, `pc_build_id`, `title`, `content`, `post_type`, `views`, `created_at`, `is_pinned`, `report_count`, `is_flagged`) VALUES
+(1, 5, NULL, 'test', 'hello', 'Discussion', 0, '2026-05-01 22:36:47', 0, 0, 0),
+(2, 5, 28, 'god', '。。。', 'Showcase', 0, '2026-05-02 22:31:12', 0, 0, 0),
+(3, 6, NULL, 'hi dear suhaimi', 'i just wanna say ur build is godlike ahahhaha', 'Discussion', 0, '2026-05-18 01:56:15', 0, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -614,10 +623,10 @@ CREATE TABLE `customers` (
 INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `birthday`, `wallet_balance`, `reward_coins`, `membership_tier`, `vip_expiry_date`, `auto_renew`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`, `created_at`) VALUES
 (1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99972177.99, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
 (3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
-(5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 100455.00, 10000, 'VIP', '2026-06-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14'),
+(5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 100455.00, 10002, 'VIP', '2026-06-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14'),
 (6, 'kskbl', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', '+60122222620', '2025-11-17', 1000.00, 50, 'VIP', '2026-06-08 15:33:29', 0, NULL, 'Active', NULL, NULL, 27, 44, 13, 0, '2026-05-09 21:32:45'),
 (7, 'XUANMING0126', NULL, NULL, 'chenweishen8733@gmail.com', '$2y$10$t1mb1tQakaIxjZZJG/2/RurpbpIpkGQ9mObmsvcM9AFz.I0ZskP3.', '', '2026-05-18', 0.00, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-18 16:39:41'),
-(8, 'Alvis', NULL, NULL, 'ocalvis88@gmail.com', '$2y$10$JHAUBkQ2sgoDKHebVWIvNe7uUqsr3XUVHonZzXlpWy83oOcnjen4W', '', '2005-10-07', 455.00, 50, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-21 22:15:47');
+(8, 'Alvis', NULL, NULL, 'ocalvis88@gmail.com', '$2y$10$JHAUBkQ2sgoDKHebVWIvNe7uUqsr3XUVHonZzXlpWy83oOcnjen4W', '', '2005-10-07', 455.00, 10000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-21 22:15:47');
 
 -- --------------------------------------------------------
 
@@ -636,7 +645,7 @@ CREATE TABLE `customer_addresses` (
   `state` varchar(100) NOT NULL,
   `postcode` varchar(20) NOT NULL,
   `country` varchar(100) DEFAULT 'Malaysia',
-  `full_address` text NOT NULL,
+  `full_address` longtext NOT NULL,
   `is_default` tinyint(1) DEFAULT 0 COMMENT '1=Default, 0=Normal',
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -791,7 +800,7 @@ CREATE TABLE `packages` (
   `score_creator` int(11) DEFAULT 0,
   `score_student` int(11) DEFAULT 0,
   `score_enthusiast` int(11) DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -799,19 +808,19 @@ CREATE TABLE `packages` (
 --
 
 INSERT INTO `packages` (`package_id`, `package_name`, `description`, `price`, `image_url`, `target_persona`, `stock_status`, `score_gamer`, `score_creator`, `score_student`, `score_enthusiast`, `created_at`) VALUES
-(1, 'Esports Predator V1', 'Intel i5-13400F + RTX 4060. The ultimate sweet spot for 1080p competitive gaming and esports titles like Valorant and CS2.', 0.00, 'image/pkg_6a26b69ebfb83.png', 'Gamer', 'Available', 9, 3, 1, 4, '2026-04-09 10:59:36'),
-(3, 'Campus Starter Box', 'Intel Core i3-12100 + 16GB RAM + 512GB NVMe. Fast, reliable, and affordable. Perfect for assignments, web browsing, and media consumption.', 0.00, 'image/pkg_6a26b698c725e.png', 'Student', 'Available', 1, 2, 10, 0, '2026-04-09 10:59:36'),
-(4, 'Neon Liquid Beast', 'Intel Core i9-14900K + RTX 4090 + Custom Hard-Tube Liquid Cooling. For those who demand absolute perfection and maximum RGB aesthetics.', 0.00, 'image/pkg_6a26b690bf805.png', 'Enthusiast', 'Available', 10, 8, 0, 10, '2026-04-09 10:59:36'),
-(7, 'AMD Sweet Spot 1440p', 'Ryzen 7800X3D + RX 7800 XT. The absolute most cost-effective 1440p high-refresh-rate gaming machine available today.', 0.00, 'image/pkg_6a26b687232a5.png', 'Gamer', 'Available', 10, 4, 1, 5, '2026-04-30 11:22:59'),
-(8, 'The 4K Juggernaut', 'Intel i7-14700K + RTX 4080 SUPER. Zero compromises. Built inside the gorgeous Lian Li O11 Dynamic.', 0.00, 'image/pkg_6a26b67ec1402.png', 'Enthusiast', 'Available', 9, 8, 1, 10, '2026-04-30 11:22:59'),
-(9, 'Video Editor Pro Mac-Killer', 'Intel i7-14700K + 64GB DDR5 + RTX 4060 Ti + 2TB Gen4 SSD. Optimized entirely for Adobe Premiere and After Effects.', 0.00, 'image/pkg_6a26b6775b696.png', 'Creator', 'Available', 5, 10, 2, 6, '2026-04-30 11:22:59'),
-(10, 'Campus Budget Brawler', 'Ryzen 7600 + 32GB RAM + 1TB SSD. Powerful enough for coding, multitasking, and light 1080p eSports gaming on a tight budget.', 0.00, 'image/pkg_6a26b66d33484.png', 'Student', 'Available', 5, 3, 10, 0, '2026-04-30 11:22:59'),
-(11, 'NVIDIA 1080p Ultra Rig', 'Intel i5-12400F + RTX 4060 Ti + 16GB RAM. Max out every setting at 1080p with DLSS 3 Frame Gen support.', 0.00, 'image/pkg_6a26b665349a3.png', 'Gamer', 'Available', 8, 4, 5, 2, '2026-04-30 11:22:59'),
-(12, 'Red Team Flagship', 'Ryzen 7800X3D + RX 7900 XTX 24GB + 360mm AIO. Unadulterated rasterization power designed to destroy 4K gaming.', 14229.00, 'image/pkg_6a26b6582bee3.png', '', 'Available', 10, 6, 1, 9, '2026-04-30 11:22:59'),
-(13, 'Entry Code Compiler', 'Intel i5-12400F + RX 7600 + 32GB RAM. A highly efficient machine focused on RAM and fast storage for programming.', 0.00, 'image/pkg_6a26b6503331a.png', 'Student', 'Available', 4, 3, 9, 0, '2026-04-30 11:22:59'),
-(14, 'Studio 3D Renderer', 'Ryzen 9 7950X + 64GB RAM + RTX 4070 Ti SUPER. 16 massive cores designed specifically for Blender and Cinema4D.', 0.00, 'image/pkg_6a26b647d53f6.png', 'Creator', 'Available', 7, 10, 1, 7, '2026-04-30 11:22:59'),
-(15, 'Esports 360Hz Champion', 'Ryzen 7800X3D + RTX 4070 Ti SUPER. Built to push 300+ FPS in CS2, Valorant, and Apex Legends.', 0.00, 'image/pkg_6a26b63ee8b49.png', 'Gamer', 'Available', 9, 5, 1, 6, '2026-04-30 11:22:59'),
-(16, 'Liquid Nitrogen Concept', 'Intel i9-13900K + RTX 4080 SUPER + 4TB SSD + Titanium PSU. The peak of PC building excess.', 0.00, 'image/pkg_6a26b636477a7.png', 'Enthusiast', 'Available', 9, 9, 0, 10, '2026-04-30 11:22:59');
+(1, 'Esports Predator V1', 'Intel i5-13400F + RTX 4060. The ultimate sweet spot for 1080p competitive gaming and esports titles like Valorant and CS2.', 0.00, 'image/pkg_6a26b69ebfb83.png', 'Gamer', 'Available', 9, 3, 1, 4, '2026-04-09 18:59:36'),
+(3, 'Campus Starter Box', 'Intel Core i3-12100 + 16GB RAM + 512GB NVMe. Fast, reliable, and affordable. Perfect for assignments, web browsing, and media consumption.', 0.00, 'image/pkg_6a26b698c725e.png', 'Student', 'Available', 1, 2, 10, 0, '2026-04-09 18:59:36'),
+(4, 'Neon Liquid Beast', 'Intel Core i9-14900K + RTX 4090 + Custom Hard-Tube Liquid Cooling. For those who demand absolute perfection and maximum RGB aesthetics.', 0.00, 'image/pkg_6a26b690bf805.png', 'Enthusiast', 'Available', 10, 8, 0, 10, '2026-04-09 18:59:36'),
+(7, 'AMD Sweet Spot 1440p', 'Ryzen 7800X3D + RX 7800 XT. The absolute most cost-effective 1440p high-refresh-rate gaming machine available today.', 0.00, 'image/pkg_6a26b687232a5.png', 'Gamer', 'Available', 10, 4, 1, 5, '2026-04-30 19:22:59'),
+(8, 'The 4K Juggernaut', 'Intel i7-14700K + RTX 4080 SUPER. Zero compromises. Built inside the gorgeous Lian Li O11 Dynamic.', 0.00, 'image/pkg_6a26b67ec1402.png', 'Enthusiast', 'Available', 9, 8, 1, 10, '2026-04-30 19:22:59'),
+(9, 'Video Editor Pro Mac-Killer', 'Intel i7-14700K + 64GB DDR5 + RTX 4060 Ti + 2TB Gen4 SSD. Optimized entirely for Adobe Premiere and After Effects.', 0.00, 'image/pkg_6a26b6775b696.png', 'Creator', 'Available', 5, 10, 2, 6, '2026-04-30 19:22:59'),
+(10, 'Campus Budget Brawler', 'Ryzen 7600 + 32GB RAM + 1TB SSD. Powerful enough for coding, multitasking, and light 1080p eSports gaming on a tight budget.', 0.00, 'image/pkg_6a26b66d33484.png', 'Student', 'Available', 5, 3, 10, 0, '2026-04-30 19:22:59'),
+(11, 'NVIDIA 1080p Ultra Rig', 'Intel i5-12400F + RTX 4060 Ti + 16GB RAM. Max out every setting at 1080p with DLSS 3 Frame Gen support.', 0.00, 'image/pkg_6a26b665349a3.png', 'Gamer', 'Available', 8, 4, 5, 2, '2026-04-30 19:22:59'),
+(12, 'Red Team Flagship', 'Ryzen 7800X3D + RX 7900 XTX 24GB + 360mm AIO. Unadulterated rasterization power designed to destroy 4K gaming.', 14229.00, 'image/pkg_6a26b6582bee3.png', '', 'Available', 10, 6, 1, 9, '2026-04-30 19:22:59'),
+(13, 'Entry Code Compiler', 'Intel i5-12400F + RX 7600 + 32GB RAM. A highly efficient machine focused on RAM and fast storage for programming.', 0.00, 'image/pkg_6a26b6503331a.png', 'Student', 'Available', 4, 3, 9, 0, '2026-04-30 19:22:59'),
+(14, 'Studio 3D Renderer', 'Ryzen 9 7950X + 64GB RAM + RTX 4070 Ti SUPER. 16 massive cores designed specifically for Blender and Cinema4D.', 0.00, 'image/pkg_6a26b647d53f6.png', 'Creator', 'Available', 7, 10, 1, 7, '2026-04-30 19:22:59'),
+(15, 'Esports 360Hz Champion', 'Ryzen 7800X3D + RTX 4070 Ti SUPER. Built to push 300+ FPS in CS2, Valorant, and Apex Legends.', 0.00, 'image/pkg_6a26b63ee8b49.png', 'Gamer', 'Available', 9, 5, 1, 6, '2026-04-30 19:22:59'),
+(16, 'Liquid Nitrogen Concept', 'Intel i9-13900K + RTX 4080 SUPER + 4TB SSD + Titanium PSU. The peak of PC building excess.', 0.00, 'image/pkg_6a26b636477a7.png', 'Enthusiast', 'Available', 9, 9, 0, 10, '2026-04-30 19:22:59');
 
 -- --------------------------------------------------------
 
@@ -1107,7 +1116,9 @@ INSERT INTO `promo_codes` (`promo_id`, `code_name`, `target_category`, `is_vip_o
 (5, 'ELITEGAMER', 'Packages', 1, 'Active', '2026-05-07 13:37:15', 150.00, 'Fixed', 3000.00, 0.00),
 (6, 'UPGRADE5', 'Components', 0, 'Active', '2026-05-07 13:37:15', 5.00, 'Percentage', 50.00, 20.00),
 (7, 'VIPPARTS12', 'Components', 1, 'Active', '2026-05-07 13:37:15', 12.00, 'Percentage', 200.00, 100.00),
-(8, 'EXPIRED50', 'All', 0, 'Inactive', '2026-05-07 13:37:15', 0.00, 'Percentage', 0.00, 0.00);
+(8, 'EXPIRED50', 'All', 0, 'Inactive', '2026-05-07 13:37:15', 0.00, 'Percentage', 0.00, 0.00),
+(12, 'FATHTERDAY2026', 'All', 0, '', '2026-06-18 20:37:57', 10.00, 'Percentage', 500.00, 0.00),
+(14, 'NEWATTEND', 'All', 1, 'Inactive', '2026-06-18 20:44:53', 10.00, 'Percentage', 0.00, 0.00);
 
 -- --------------------------------------------------------
 
@@ -1492,7 +1503,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `admin_logs`
 --
 ALTER TABLE `admin_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=108;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=114;
 
 --
 -- AUTO_INCREMENT for table `bank`
@@ -1594,7 +1605,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `promo_codes`
 --
 ALTER TABLE `promo_codes`
-  MODIFY `promo_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `promo_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `reviews`
