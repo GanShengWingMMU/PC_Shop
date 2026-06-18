@@ -57,25 +57,26 @@ if (isset($_GET['scan_post'])) {
     header("Location: manage_forum.php?msg=censored"); exit();
 }
 
-// 🌟 4. 封号/禁言 (Ban User)
+// 🌟 4. 禁言 (Mute User - 只禁言不封号)
 if (isset($_GET['ban_user'])) {
     $uid = intval($_GET['ban_user']);
-    $conn->query("UPDATE customers SET account_status = 'Banned' WHERE customer_id = $uid");
+    // 改为 Muted，这样 login.php 就不会阻止他们登录
+    $conn->query("UPDATE customers SET account_status = 'Muted' WHERE customer_id = $uid");
     
-    $action_msg = "Banned User ID: $uid";
+    $action_msg = "Muted User ID: $uid";
     $conn->query("INSERT INTO admin_logs (admin_id, username, role, action_event) VALUES ('$admin_id', '$admin_username', '$current_role', '$action_msg')");
-    header("Location: manage_forum.php?msg=banned"); exit();
+    header("Location: manage_forum.php?msg=muted"); exit();
 }
 
-// 🌟 5. 独立出来的 解封功能 (Unban User)
+// 🌟 5. 解除禁言 (Unmute User)
 if (isset($_GET['unban_user'])) {
     $uid = intval($_GET['unban_user']);
     // 将状态改回 Active
     $conn->query("UPDATE customers SET account_status = 'Active' WHERE customer_id = $uid");
     
-    $action_msg = "Unbanned User ID: $uid";
+    $action_msg = "Unmuted User ID: $uid";
     $conn->query("INSERT INTO admin_logs (admin_id, username, role, action_event) VALUES ('$admin_id', '$admin_username', '$current_role', '$action_msg')");
-    header("Location: manage_forum.php?msg=unbanned"); exit();
+    header("Location: manage_forum.php?msg=unmuted"); exit();
 }
 ?>
 <!DOCTYPE html>
@@ -87,7 +88,6 @@ if (isset($_GET['unban_user'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 🌟 表格滚动容器与自定义滚动条 */
         .table-scroll-container {
             max-height: 65vh;
             overflow-y: auto;
@@ -96,7 +96,6 @@ if (isset($_GET['unban_user'])) {
             background: rgba(0,0,0,0.5);
             position: relative;
         }
-        
         .table-scroll-container::-webkit-scrollbar { width: 8px; }
         .table-scroll-container::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 8px; }
         .table-scroll-container::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.4); border-radius: 8px; }
@@ -104,20 +103,11 @@ if (isset($_GET['unban_user'])) {
 
         .cyber-table { width: 100%; border-collapse: collapse; text-align: left; }
         
-        /* 🌟 固定表头 */
         .cyber-table th { 
-            position: sticky; 
-            top: 0; 
-            z-index: 20; 
-            background: rgba(15, 10, 20, 0.95); 
-            backdrop-filter: blur(10px);
-            padding: 15px; 
-            color:#a855f7; 
-            font-size: 12px; 
-            text-transform: uppercase; 
-            border-bottom: 2px solid rgba(168,85,247,0.2); 
-            letter-spacing: 1px; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); 
+            position: sticky; top: 0; z-index: 20; 
+            background: rgba(15, 10, 20, 0.95); backdrop-filter: blur(10px);
+            padding: 15px; color:#a855f7; font-size: 12px; text-transform: uppercase; 
+            border-bottom: 2px solid rgba(168,85,247,0.2); letter-spacing: 1px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); 
         }
         
         .cyber-table td { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.03); color: #fff; vertical-align: top; }
@@ -127,9 +117,10 @@ if (isset($_GET['unban_user'])) {
         .rank-title { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px; margin-top: 5px; display: inline-block; }
         .rank-vip { color: #ffd700; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255,215,0,0.4); }
         .rank-standard { color: #00f2fe; background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0,242,254,0.4); }
-        .banned-badge { color: #ff4d4d; background: rgba(255, 77, 77, 0.1); font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255, 77, 77, 0.4); }
         
-        /* 🌟 配套拥有者专属徽章 CSS */
+        /* 改成了 Muted 专用的橙色警告徽章 */
+        .banned-badge { color: #ff9800; background: rgba(255, 152, 0, 0.1); font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255, 152, 0, 0.4); }
+        
         .badge-package { color: #10b981; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.4); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px; margin-top: 5px; display: inline-block; margin-left: 5px; }
 
         .action-group { display: flex; flex-direction: column; gap: 6px; min-width: 110px; }
@@ -137,69 +128,17 @@ if (isset($_GET['unban_user'])) {
         .btn-purge { color:#ff4d4d; border-color:rgba(255,77,77,0.4); background: rgba(255,77,77,0.05); } .btn-purge:hover { background:rgba(255,77,77,0.2); }
         .btn-scan { color:#00e676; border-color:rgba(0,230,118,0.4); background: rgba(0,230,118,0.05); } .btn-scan:hover { background:rgba(0,230,118,0.2); }
         
-        /* 🌟 新增的 Ban 和 Unban 按钮样式 */
         .btn-ban { color:#ff9800; border-color:rgba(255,152,0,0.4); background: rgba(255,152,0,0.05); } .btn-ban:hover { background:rgba(255,152,0,0.2); }
         .btn-unban { color:#00f2fe; border-color:rgba(0,242,254,0.4); background: rgba(0,242,254,0.05); } .btn-unban:hover { background:rgba(0,242,254,0.2); }
         
         .report-warning { color: #ff9800; font-weight: bold; font-size: 11px; margin-top: 5px; display: flex; align-items: center; gap: 5px;}
         .pinned-row { background: rgba(250, 204, 21, 0.05); }
 
-        /* Hover Tooltip CSS */
-        .tooltip-container {
-            position: relative;
-            display: inline-block;
-            max-width: 300px;
-            cursor: pointer;
-        }
-        .post-content-preview {
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            color: #888; 
-            font-size: 12px; 
-            margin-top: 5px;
-            display: block;
-            border-bottom: 1px dashed rgba(255,255,255,0.1);
-            padding-bottom: 2px;
-        }
-        .tooltip-text {
-            visibility: hidden;
-            opacity: 0;
-            width: max-content;
-            max-width: 350px;
-            background-color: rgba(15, 15, 20, 0.95);
-            color: #fff;
-            text-align: left;
-            border-radius: 8px;
-            padding: 15px;
-            position: absolute;
-            z-index: 10;
-            top: 100%;
-            left: 0;
-            margin-top: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
-            border: 1px solid rgba(168,85,247,0.3);
-            font-size: 12px;
-            line-height: 1.5;
-            white-space: pre-wrap; 
-            transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
-            transform: translateY(-5px);
-        }
-        .tooltip-text::after {
-            content: "";
-            position: absolute;
-            bottom: 100%;
-            left: 20px;
-            margin-left: -5px;
-            border-width: 5px;
-            border-style: solid;
-            border-color: transparent transparent rgba(168,85,247,0.3) transparent;
-        }
-        .tooltip-container:hover .tooltip-text {
-            visibility: visible;
-            opacity: 1;
-            transform: translateY(0);
-        }
+        .tooltip-container { position: relative; display: inline-block; max-width: 300px; cursor: pointer; }
+        .post-content-preview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #888; font-size: 12px; margin-top: 5px; display: block; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 2px; }
+        .tooltip-text { visibility: hidden; opacity: 0; width: max-content; max-width: 350px; background-color: rgba(15, 15, 20, 0.95); color: #fff; text-align: left; border-radius: 8px; padding: 15px; position: absolute; z-index: 10; top: 100%; left: 0; margin-top: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); border: 1px solid rgba(168,85,247,0.3); font-size: 12px; line-height: 1.5; white-space: pre-wrap; transition: opacity 0.3s, visibility 0.3s, transform 0.3s; transform: translateY(-5px); }
+        .tooltip-text::after { content: ""; position: absolute; bottom: 100%; left: 20px; margin-left: -5px; border-width: 5px; border-style: solid; border-color: transparent transparent rgba(168,85,247,0.3) transparent; }
+        .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; transform: translateY(0); }
     </style>
 </head>
 <body>
@@ -219,9 +158,9 @@ if (isset($_GET['unban_user'])) {
                 if ($msg == 'deleted') $text = "Signal Purged Successfully.";
                 if ($msg == 'moved') $text = "Post successfully migrated to new section.";
                 if ($msg == 'censored') $text = "Anomalies cleansed from post content.";
-                // 为 Ban 和 Unban 定制了不同的成功提示语
-                if ($msg == 'banned') $text = "Citizen access revoked (Banned).";
-                if ($msg == 'unbanned') $text = "Citizen access restored (Unbanned).";
+                // 🌟 更新了弹窗的文案
+                if ($msg == 'muted') $text = "Citizen silenced. (They can still log in and buy PCs, but cannot post).";
+                if ($msg == 'unmuted') $text = "Citizen speaking rights restored.";
                 
                 if ($text != "") echo "<div style='color:#00e676; background:rgba(0,230,118,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(0,230,118,0.3);'><i class='fas fa-check-circle'></i> $text</div>";
             }
@@ -265,6 +204,7 @@ if (isset($_GET['unban_user'])) {
                                 
                                 $package_badge = ($row['package_count'] > 0) ? "<div class='badge-package' title='This user purchased a PC Package'><i class='fas fa-cube'></i> Pack Owner</div>" : "";
                                 
+                                // 改为 Muted
                                 $is_banned = ($row['account_status'] === 'Banned' || $row['account_status'] === 'Muted');
                                 $row_bg = ($row['is_pinned'] == 1) ? 'pinned-row' : '';
 
@@ -274,7 +214,7 @@ if (isset($_GET['unban_user'])) {
                                         <div style='font-weight:bold; color:#fff; font-size: 14px;'>{$row['username']}</div>
                                         <div class='rank-title $title_class'>$title_icon</div>{$package_badge}<br>";
                                         if ($is_banned) {
-                                            echo "<span class='banned-badge' style='margin-top:5px; display:inline-block;'><i class='fas fa-lock'></i> ACCESS DENIED</span>";
+                                            echo "<span class='banned-badge' style='margin-top:5px; display:inline-block;'><i class='fas fa-comment-slash'></i> MUTED / SILENCED</span>";
                                         }
                                 echo "</td>";
                                 
@@ -314,11 +254,11 @@ if (isset($_GET['unban_user'])) {
                                 echo "<td style='text-align: center; vertical-align: middle;'>
                                         <div class='action-group'>";
                                     
-                                    // 🌟 独立调用的 Ban 与 Unban 按钮
+                                    // 🌟 按钮文案改为 Mute 和 Unmute
                                     if ($is_banned) {
-                                        echo "<a href='manage_forum.php?unban_user={$cid}' class='action-btn btn-unban' onclick=\"return confirm('Restore this citizen\'s access?');\"><i class='fas fa-unlock'></i> Unban User</a>";
+                                        echo "<a href='manage_forum.php?unban_user={$cid}' class='action-btn btn-unban' onclick=\"return confirm('Restore this citizen\'s speaking rights?');\"><i class='fas fa-comment'></i> Unmute User</a>";
                                     } else {
-                                        echo "<a href='manage_forum.php?ban_user={$cid}' class='action-btn btn-ban' onclick=\"return confirm('Revoke this citizen\'s access to the Nexus?');\"><i class='fas fa-user-slash'></i> Ban / Mute</a>";
+                                        echo "<a href='manage_forum.php?ban_user={$cid}' class='action-btn btn-ban' onclick=\"return confirm('Mute this citizen? They can still buy PC but cannot post.');\"><i class='fas fa-comment-slash'></i> Mute User</a>";
                                     }
 
                                     echo "<a href='manage_forum.php?scan_post={$pid}' class='action-btn btn-scan' onclick=\"return confirm('Scan and replace sensitive words?');\"><i class='fas fa-search'></i> Filter Scan</a>";
