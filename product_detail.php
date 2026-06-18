@@ -316,19 +316,58 @@ function getRankBadge($coins, $tier = 'Basic') {
         <h2 class="section-header">Technical Specifications</h2>
         <table class="specs-table">
             <?php 
-                $desc = $product['description'];
-                if (empty($desc)) {
-                    echo "<tr><td colspan='2'>No detailed specifications available.</td></tr>";
-                } elseif (strpos($desc, '|') !== false) {
-                    $specs = explode('|', $desc);
-                    foreach ($specs as $spec) {
+                $desc = trim($product['description'] ?? '');
+                $specs_data = trim($product['specifications'] ?? '');
+                $has_specs = false;
+
+                // 1. 智能提取并显示 Marketing Description (Overview)
+                if (!empty($desc)) {
+                    // 过滤掉后台自动添加的 'Overview: ' 前缀
+                    $clean_desc = preg_replace('/^Overview:\s*/i', '', $desc);
+                    
+                    // 如果 description 里混杂了 '|' 符号（适配后台的混合写入逻辑），只提取第一段作为简介
+                    if (strpos($clean_desc, '|') !== false) {
+                        $desc_parts = explode('|', $clean_desc);
+                        $clean_desc = trim($desc_parts[0]);
+                    }
+                    
+                    if (!empty($clean_desc)) {
+                        echo "<tr><td class='key'>Overview</td><td>".nl2br(htmlspecialchars($clean_desc))."</td></tr>";
+                        $has_specs = true;
+                    }
+                }
+
+                // 2. 智能解析并显示详细规格 (Specifications)
+                if (!empty($specs_data)) {
+                    // 自动判断是旧数据的换行符格式，还是新数据的 '|' 格式
+                    if (strpos($specs_data, '|') !== false) {
+                        $spec_lines = explode('|', $specs_data);
+                    } else {
+                        $spec_lines = preg_split('/\r\n|\r|\n/', $specs_data);
+                    }
+
+                    foreach ($spec_lines as $spec) {
+                        $spec = trim($spec);
+                        if (empty($spec)) continue;
+
+                        // 根据冒号拆分 Key 和 Value
                         if (strpos($spec, ':') !== false) {
-                            list($key, $value) = explode(':', $spec);
-                            echo "<tr><td class='key'>".htmlspecialchars(trim($key))."</td><td>".htmlspecialchars(trim($value))."</td></tr>";
+                            $parts = explode(':', $spec, 2); // 限制只切分第一个冒号，防止Value里有冒号被切断
+                            $key = trim($parts[0]);
+                            $value = trim($parts[1]);
+                            echo "<tr><td class='key'>".htmlspecialchars($key)."</td><td>".htmlspecialchars($value)."</td></tr>";
+                            $has_specs = true;
+                        } else {
+                            // 如果没有冒号，作为单独的特性展示
+                            echo "<tr><td class='key'>Feature</td><td>".htmlspecialchars($spec)."</td></tr>";
+                            $has_specs = true;
                         }
                     }
-                } else {
-                    echo "<tr><td class='key'>Overview</td><td>".nl2br(htmlspecialchars($desc))."</td></tr>";
+                }
+
+                // 3. 空白数据处理
+                if (!$has_specs) {
+                    echo "<tr><td colspan='2'>No detailed specifications available.</td></tr>";
                 }
             ?>
         </table>
