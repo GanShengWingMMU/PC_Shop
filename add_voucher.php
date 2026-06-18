@@ -3,8 +3,10 @@ session_start();
 if (file_exists('config.php')) { require_once 'config.php'; } 
 else { include 'db_connect.php'; }
 
-// 🌟 终极安全锁：只有 SuperAdmin 才能锻造折扣码
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
+$admin_id = $_SESSION['admin_id'] ?? 0;
+$admin_username = $_SESSION['admin_username'] ?? 'UnknownAdmin';
+
 if (empty($current_role) || strtolower($current_role) !== 'superadmin') {
     echo "<script>alert('ACCESS DENIED: ALPHA CLEARANCE REQUIRED to Forge Protocols.'); window.location.href='manage_vouchers.php';</script>";
     exit();
@@ -18,25 +20,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_voucher'])) {
     $discount_value = floatval($_POST['discount_value']);
     $target_category = $_POST['target_category'];
     $min_spend = floatval($_POST['min_spend']);
-    
-    // 🌟 表单里虽然删了，但资料库可能还需要这个值，直接默认为 0
     $max_cap = 0.00; 
-    
     $is_vip_only = isset($_POST['is_vip_only']) ? 1 : 0;
-    $status = 'Active'; // 刚创建默认是激活状态
+    $status = 'Active'; 
 
-    // 检查是否有重复的代码名称
     $check = $conn->prepare("SELECT promo_id FROM promo_codes WHERE code_name = ?");
     $check->bind_param("s", $code_name);
     $check->execute();
     if ($check->get_result()->num_rows > 0) {
         $error_msg = "OVERRIDE FAILED: The code name '{$code_name}' already exists in the database.";
     } else {
-        // 写入资料库
         $stmt = $conn->prepare("INSERT INTO promo_codes (code_name, discount_type, discount_value, target_category, min_spend, max_cap, is_vip_only, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("ssdsddis", $code_name, $discount_type, $discount_value, $target_category, $min_spend, $max_cap, $is_vip_only, $status);
         
         if ($stmt->execute()) {
+            // 🌟 写入 Log
+            $action_msg = "Forged New Promo Code: $code_name";
+            $ip_address = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+            $log_stmt = $conn->prepare("INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES (?, ?, ?, ?, ?)");
+            $log_stmt->bind_param("issss", $admin_id, $admin_username, $current_role, $action_msg, $ip_address);
+            $log_stmt->execute();
+            $log_stmt->close();
+
             header("Location: manage_vouchers.php?msg=forged");
             exit();
         } else {

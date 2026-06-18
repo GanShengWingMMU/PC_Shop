@@ -4,14 +4,28 @@ if (file_exists('config.php')) { require_once 'config.php'; }
 else { include 'db_connect.php'; }
 
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
+$admin_id = $_SESSION['admin_id'] ?? 0;
+$admin_username = $_SESSION['admin_username'] ?? 'UnknownAdmin';
+
 if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
     header("Location: admin_login.php"); exit();
 }
 
-// 🌟 软删除：基于你的 SQL 结构，这里必须改成 Inactive，否则会删除顾客的使用历史记录！
+// 🌟 软删除 Voucher + 记录 Log
 if (isset($_GET['delete_id']) && strtolower($current_role) === 'superadmin') {
     $del_id = intval($_GET['delete_id']);
+    
+    // 把状态更新为 Inactive
     $conn->query("UPDATE promo_codes SET status = 'Inactive' WHERE promo_id = $del_id");
+    
+    // 🌟 写入 Log
+    $action_msg = "Deactivated Promo Code ID: $del_id";
+    $ip_address = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    $log_stmt = $conn->prepare("INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES (?, ?, ?, ?, ?)");
+    $log_stmt->bind_param("issss", $admin_id, $admin_username, $current_role, $action_msg, $ip_address);
+    $log_stmt->execute();
+    $log_stmt->close();
+
     header("Location: manage_vouchers.php?msg=inactive");
     exit();
 }
