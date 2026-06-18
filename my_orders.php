@@ -207,18 +207,21 @@ switch($current_filter) {
     }
 
     /* 退貨處理中標籤 (不可點擊) */
-    .badge-outline-orange {
-        background: rgba(235, 94, 40, 0.1); /* 極淡的主題橘色背景 */
-        border: 1px solid rgba(235, 94, 40, 0.4);
-        color: #eb5e28;
-        padding: 6px 14px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        user-select: none;
+   .badge-outline-orange {
+        background: rgba(235, 94, 40, 0.1); border: 1px solid rgba(235, 94, 40, 0.4); color: #eb5e28;
+        padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; user-select: none;
+    }
+
+    /* 退款成功 (新增的綠色) */
+    .badge-outline-green {
+        background: rgba(0, 230, 118, 0.1); border: 1px solid rgba(0, 230, 118, 0.4); color: #00e676;
+        padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; user-select: none;
+    }
+
+    /* 拒絕退貨 (新增的紅色) */
+    .badge-outline-red {
+        background: rgba(255, 77, 77, 0.1); border: 1px solid rgba(255, 77, 77, 0.4); color: #ff4d4d;
+        padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; user-select: none;
     }
 
     /* 評價按鈕 */
@@ -391,9 +394,23 @@ switch($current_filter) {
                             <?php endif; ?>
                         <?php endif; ?>
 
-                        <?php if (!empty($item['return_status'])): ?>
-                            <span class="badge-outline-orange" style="font-size: 0.75rem; padding: 4px 10px;">
-                                <i class="fa-solid fa-clock-rotate-left"></i> Return: <?php echo htmlspecialchars($item['return_status']); ?>
+<?php if (!empty($item['return_status'])): ?>
+                            <?php 
+                                // 預設為處理中 (橘色 + 時鐘圖示)
+                                $badge_class = 'badge-outline-orange';
+                                $icon_class = 'fa-clock-rotate-left';
+                                
+                                // 判斷狀態改變顏色和圖示
+                                if ($item['return_status'] == 'Refunded') {
+                                    $badge_class = 'badge-outline-green';
+                                    $icon_class = 'fa-circle-check'; // 打勾
+                                } elseif ($item['return_status'] == 'Rejected') {
+                                    $badge_class = 'badge-outline-red';
+                                    $icon_class = 'fa-circle-xmark'; // 打叉
+                                }
+                            ?>
+                            <span class="<?php echo $badge_class; ?>" style="font-size: 0.75rem; padding: 4px 10px;">
+                                <i class="fa-solid <?php echo $icon_class; ?>"></i> Return: <?php echo htmlspecialchars($item['return_status']); ?>
                             </span>
                         <?php else: ?>
                             <button type="button" class="btn-outline-muted" style="font-size: 0.75rem; padding: 4px 10px;" onclick="promptReturn(<?php echo $order['order_id']; ?>, <?php echo $item['order_detail_id']; ?>)">

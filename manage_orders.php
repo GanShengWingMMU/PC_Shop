@@ -42,6 +42,45 @@ if (isset($_POST['update_status'])) {
         $stmt->close();
     }
 }
+
+if (isset($_POST['process_return'])) {
+    $detail_id = intval($_POST['order_detail_id']);
+    $return_action = $_POST['return_action']; // 'approve' 或是 'reject'
+    $saved_sort = isset($_POST['current_sort']) ? $_POST['current_sort'] : 'desc';
+
+    if ($return_action === 'approve') {
+        // 1. 獲取商品價格、數量和客戶ID，準備退款
+        $info_stmt = $conn->prepare("
+            SELECT od.unit_price, od.quantity, o.customer_id 
+            FROM order_details od 
+            JOIN orders o ON od.order_id = o.order_id 
+            WHERE od.order_detail_id = ?
+        ");
+        $info_stmt->bind_param("i", $detail_id);
+        $info_stmt->execute();
+        $result = $info_stmt->get_result();
+        
+        if ($row = $result->fetch_assoc()) {
+            $refund_amount = $row['unit_price'] * $row['quantity']; // 計算總退款金額
+            $cust_id = $row['customer_id'];
+            
+            // 2. 更新訂單明細狀態為 Refunded
+            $conn->query("UPDATE order_details SET return_status = 'Refunded' WHERE order_detail_id = $detail_id");
+            
+            // 3. 把錢退回顧客的數位錢包
+            $conn->query("UPDATE customers SET wallet_balance = wallet_balance + $refund_amount WHERE customer_id = $cust_id");
+            
+            header("Location: manage_orders.php?updated=refund_success&sort=" . urlencode($saved_sort));
+            exit();
+        }
+    } elseif ($return_action === 'reject') {
+        // 拒絕退貨
+        $conn->query("UPDATE order_details SET return_status = 'Rejected' WHERE order_detail_id = $detail_id");
+        header("Location: manage_orders.php?updated=refund_rejected&sort=" . urlencode($saved_sort));
+        exit();
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -114,19 +153,67 @@ if (isset($_POST['update_status'])) {
                             echo "<td style='padding:15px; font-weight:bold;'>" . htmlspecialchars($row['username']) . "</td>";
                             echo "<td style='padding:15px; color:#888; font-size:12px;'>" . date('d M, Y', strtotime($row['order_date'])) . "</td>";
                             
-                            // 🌟 完美修复：抓取订单内部商品的完整逻辑
                             echo "<td style='padding:15px;'>";
                             $order_id_val = $row['order_id'];
-                            $sql_items = "SELECT od.quantity, p.product_name, pkg.package_name, sb.build_name 
+                            $sql_items = "SELECT od.order_detail_id, od.quantity, od.unit_price, od.return_status, od.return_reason, od.return_image, p.product_name, pkg.package_name, sb.build_name 
                                           FROM order_details od 
                                           LEFT JOIN products p ON od.product_id = p.product_id 
                                           LEFT JOIN packages pkg ON od.package_id = pkg.package_id 
                                           LEFT JOIN saved_builds sb ON od.pc_build = sb.pc_build 
                                           WHERE od.order_id = $order_id_val";
                             $res_items = $conn->query($sql_items);
+                            
                             while($item = $res_items->fetch_assoc()) {
+                                // 🌟 1. 抓取並顯示商品名稱與數量 (剛剛可能不小心刪到這行了！)
                                 $name = $item['product_name'] ?: ($item['package_name'] ? "[Package] ".$item['package_name'] : "[Custom PC] ".$item['build_name']);
-                                echo "<div class='item-row'><span class='qty-badge'>{$item['quantity']}x</span> ".htmlspecialchars($name)."</div>";
+                                echo "<div class='item-row'><span class='qty-badge'>{$item['quantity']}x</span> ".htmlspecialchars($name);
+                                
+                                // 🌟 2. 顯示退貨警告框與審核機制 (美化版)
+                                if (!empty($item['return_status'])) {
+                                    $bg_color = $item['return_status'] == 'Refunded' ? 'rgba(0, 230, 118, 0.05)' : ($item['return_status'] == 'Rejected' ? 'rgba(255, 77, 77, 0.05)' : 'rgba(235, 94, 40, 0.05)');
+                                    $border_color = $item['return_status'] == 'Refunded' ? '#00e676' : ($item['return_status'] == 'Rejected' ? '#ff4d4d' : '#eb5e28');
+                                    
+                                    echo "<div style='margin-top:6px; margin-bottom:12px; margin-left:32px; padding:8px 12px; background:{$bg_color}; border-left:2px solid {$border_color}; border-radius:0 4px 4px 0;'>";
+                                    
+                                    echo "<div style='display:flex; justify-content:space-between; align-items:flex-start;'>";
+                                    echo "<div>";
+                                    echo "<strong style='color:{$border_color}; font-size:11px;'><i class='fa-solid fa-triangle-exclamation'></i> Return: " . htmlspecialchars($item['return_status']) . "</strong><br>";
+                                    echo "<span style='color:#888; font-size:11px;'>Reason: <span style='color:#bbb;'>" . htmlspecialchars($item['return_reason']) . "</span></span>";
+                                    echo "</div>";
+                                    
+                                    // 顯示顧客上傳的照片連結
+                                    if (!empty($item['return_image'])) {
+                                        echo "<a href='{$item['return_image']}' target='_blank' style='color:#00f2fe; text-decoration:none; font-size:11px; padding:4px 8px; border:1px solid rgba(0,242,254,0.3); border-radius:4px; transition:0.3s;' onmouseover='this.style.background=\"rgba(0,242,254,0.1)\"' onmouseout='this.style.background=\"transparent\"'><i class='fa-solid fa-image'></i> Evidence</a>";
+                                    }
+                                    echo "</div>";
+                                    
+                                    // 如果狀態是 Pending，顯示精緻版的 Approve 和 Reject 按鈕
+                                    if ($item['return_status'] === 'Pending') {
+                                        $refund_val = number_format($item['unit_price'] * $item['quantity'], 2);
+                                        echo "<div style='margin-top:10px; display:flex; gap:8px;'>";
+                                        
+                                        // Approve
+                                        echo "<form method='POST' style='margin:0;' onsubmit=\"return confirm('Approve this return and refund RM {$refund_val} to the customer wallet?');\">
+                                                <input type='hidden' name='order_detail_id' value='{$item['order_detail_id']}'>
+                                                <input type='hidden' name='return_action' value='approve'>
+                                                <input type='hidden' name='current_sort' value='{$current_sort}'>
+                                                <button type='submit' name='process_return' style='background:transparent; color:#00e676; border:1px solid #00e676; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; transition:0.3s;' onmouseover='this.style.background=\"rgba(0,230,118,0.1)\"' onmouseout='this.style.background=\"transparent\"'><i class='fa-solid fa-check'></i> Approve (Refund RM {$refund_val})</button>
+                                              </form>";
+                                              
+                                        // Reject
+                                        echo "<form method='POST' style='margin:0;' onsubmit=\"return confirm('Reject this return request?');\">
+                                                <input type='hidden' name='order_detail_id' value='{$item['order_detail_id']}'>
+                                                <input type='hidden' name='return_action' value='reject'>
+                                                <input type='hidden' name='current_sort' value='{$current_sort}'>
+                                                <button type='submit' name='process_return' style='background:transparent; color:#ff4d4d; border:1px solid #ff4d4d; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; transition:0.3s;' onmouseover='this.style.background=\"rgba(255,77,77,0.1)\"' onmouseout='this.style.background=\"transparent\"'><i class='fa-solid fa-xmark'></i> Reject</button>
+                                              </form>";
+                                              
+                                        echo "</div>";
+                                    }
+                                    echo "</div>";
+                                }
+                                // 🌟 3. 結束單一商品的 div
+                                echo "</div>";
                             }
                             echo "</td>";
                             
