@@ -49,13 +49,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt_bank->close();
             
         } elseif ($method === 'Credit Card') {
-            // 🌟 核心修复：添加信用卡的真实验证与关联 bank_id
             $selected_card = $_POST['selected_card'] ?? '';
             if ($selected_card === 'new') {
                 $card_num = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
                 $card_cvc = trim($_POST['dummy_card_cvc']);
-                $stmt_bank = $conn->prepare("SELECT id, balance FROM bank WHERE card_number = ? AND cvc = ?");
-                $stmt_bank->bind_param("ss", $card_num, $card_cvc);
+                $card_exp = trim($_POST['dummy_card_expiry']); // 🌟 接收到期日
+                $stmt_bank = $conn->prepare("SELECT id, balance FROM bank WHERE card_number = ? AND cvc = ? AND expiry_date = ?");
+                $stmt_bank->bind_param("sss", $card_num, $card_cvc, $card_exp);
             } else {
                 $card_id = intval($selected_card);
                 $stmt_bank = $conn->prepare("SELECT b.id, b.balance FROM bank b JOIN saved_cards s ON b.id = s.bank_id WHERE s.card_id = ? AND s.customer_id = ?");
@@ -245,6 +245,7 @@ $stmt_cards->close();
                         </div>
                         <div style="display: flex; gap: 15px;">
                             <input type="text" name="dummy_card_number" placeholder="Card Number (16 digits)" class="form-control" style="flex: 2;">
+                            <input type="text" name="dummy_card_expiry" placeholder="MM/YY" class="form-control" style="flex: 1;" maxlength="5">
                             <input type="text" name="dummy_card_cvc" placeholder="CVC" class="form-control" style="flex: 1;" maxlength="3">
                         </div>
                     </div>

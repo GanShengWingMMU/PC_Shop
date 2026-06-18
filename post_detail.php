@@ -16,7 +16,25 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 }
 $post_id = intval($_GET['id']);
 
+// ==========================================
+// 🌟 评论处理区域
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_comment'])) {
+    
+    // 🚨 MUTE 拦截器：检测用户是否被禁言
+    $check_cid = intval($_SESSION['customer_id']);
+    $mute_check = $conn->query("SELECT account_status FROM customers WHERE customer_id = $check_cid");
+    if ($mute_check && $mute_check->num_rows > 0) {
+        $user_check = $mute_check->fetch_assoc();
+        if ($user_check['account_status'] === 'Muted') {
+            echo "<script>
+                alert('🚫 SYSTEM ALERT: You have been MUTED by an Admin. You can still browse and buy PCs, but you cannot post or comment.');
+                window.history.back();
+            </script>";
+            exit(); // 🛑 触发禁言，立即停止后续留言逻辑！
+        }
+    }
+
     $comment_text = htmlspecialchars(trim($_POST['comment_text']));
     
     if (!empty($comment_text)) {

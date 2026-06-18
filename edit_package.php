@@ -71,6 +71,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     if ($upload_ok && empty($error)) {
+        // 🌟 接收 4 个雷达分数
+        $score_gamer = intval($_POST['score_gamer'] ?? 0);
+        $score_creator = intval($_POST['score_creator'] ?? 0);
+        $score_student = intval($_POST['score_student'] ?? 0);
+        $score_enthusiast = intval($_POST['score_enthusiast'] ?? 0);
+
         // 自動計算更新後的所有選中零件總價格
         $total_price = 0;
         if (isset($_POST['components']) && is_array($_POST['components'])) {
@@ -87,15 +93,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $conn->begin_transaction();
         try {
-            // 🌟 移除了雷达分数的更新，只保留核心栏位
-            $update_query = "UPDATE packages SET package_name=?, description=?, price=?, image_url=?, target_persona=?, stock_status=? WHERE package_id=?";
+            // 🌟 包含 4 个 score 字段的更新
+            $update_query = "UPDATE packages SET package_name=?, description=?, price=?, image_url=?, target_persona=?, stock_status=?, score_gamer=?, score_creator=?, score_student=?, score_enthusiast=? WHERE package_id=?";
             $update_pkg = $conn->prepare($update_query);
             
             if (!$update_pkg) {
                 throw new Exception("SQL Error: " . $conn->error);
             }
 
-            $update_pkg->bind_param("ssdsssi", $package_name, $description, $total_price, $image_url, $target_persona, $stock_status, $package_id);
+            $update_pkg->bind_param("ssdsssiiiii", $package_name, $description, $total_price, $image_url, $target_persona, $stock_status, $score_gamer, $score_creator, $score_student, $score_enthusiast, $package_id);
             $update_pkg->execute();
             $update_pkg->close();
 
@@ -241,15 +247,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <textarea name="description" class="form-control" rows="4" required style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; resize: vertical;"><?php echo htmlspecialchars($pkg['description']); ?></textarea>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Target Persona</label>
-                        <select name="target_persona" class="form-control" style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
-                            <option value="Gamers" <?php if($pkg['target_persona'] == 'Gamers') echo 'selected'; ?>>Gamers</option>
-                            <option value="Professionals" <?php if($pkg['target_persona'] == 'Professionals') echo 'selected'; ?>>Professionals</option>
-                            <option value="Enthusiasts" <?php if($pkg['target_persona'] == 'Enthusiasts') echo 'selected'; ?>>Enthusiasts</option>
-                            <option value="Valuable" <?php if($pkg['target_persona'] == 'Valuable') echo 'selected'; ?>>Valuable</option>
-                        </select>
-                    </div>
+<div class="form-group">
+    <label>Target Persona</label>
+    <select name="target_persona" class="form-control" style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+        <option value="Gamer" <?php if($pkg['target_persona'] == 'Gamer') echo 'selected'; ?>>Gamer</option>
+        <option value="Creator" <?php if($pkg['target_persona'] == 'Creator') echo 'selected'; ?>>Creator</option>
+        <option value="Student" <?php if($pkg['target_persona'] == 'Student') echo 'selected'; ?>>Student / Dev</option>
+        <option value="Enthusiast" <?php if($pkg['target_persona'] == 'Enthusiast') echo 'selected'; ?>>Enthusiast</option>
+    </select>
+</div>
                     
                     <div class="form-group">
                         <label>Stock Status</label>
@@ -258,6 +264,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             <option value="Pre-order" <?php if($pkg['stock_status']=='Pre-order') echo 'selected';?>>Pre-order</option>
                             <option value="Out of Stock" <?php if($pkg['stock_status']=='Out of Stock') echo 'selected';?>>Out of Stock</option>
                         </select>
+                    </div>
+
+                    <div class="form-group full-width" style="grid-column: 1 / -1; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-top: 10px;">
+                        <label style="color: #a855f7; font-weight: bold; font-size: 13px; margin-bottom: 12px; display: block;"><i class="fas fa-chart-pie"></i> DNA Radar Scores (1-10)</label>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                            <div>
+                                <label style="font-size: 11px; color: #cbd5e1;">Gamer Score</label>
+                                <input type="number" name="score_gamer" min="0" max="10" class="form-control" value="<?php echo $pkg['score_gamer'] ?? 0; ?>" required>
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; color: #cbd5e1;">Creator Score</label>
+                                <input type="number" name="score_creator" min="0" max="10" class="form-control" value="<?php echo $pkg['score_creator'] ?? 0; ?>" required>
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; color: #cbd5e1;">Student Score</label>
+                                <input type="number" name="score_student" min="0" max="10" class="form-control" value="<?php echo $pkg['score_student'] ?? 0; ?>" required>
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; color: #cbd5e1;">Enthusiast Score</label>
+                                <input type="number" name="score_enthusiast" min="0" max="10" class="form-control" value="<?php echo $pkg['score_enthusiast'] ?? 0; ?>" required>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group full-width" style="grid-column: 1 / -1;">

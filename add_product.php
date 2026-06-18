@@ -16,21 +16,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
     
+    // 🌟 接收所有装机核心属性
+    $performance_tier = intval($_POST['performance_tier'] ?? 1); 
+    $tdp_wattage = intval($_POST['tdp_wattage'] ?? 0);
+    $socket_type = trim($_POST['socket_type'] ?? '');
+    $ram_type = trim($_POST['ram_type'] ?? '');
+    
     // 🌟 魔法转换区：将数据适配为前台系统支持的 | 分割格式
     $specs_raw = trim($_POST['specs']); 
     $description_input = trim($_POST['description'] ?? '');
 
     $final_desc_parts = [];
     if (!empty($description_input)) {
-        // 清理掉原有的 | 防止破坏格式
         $desc_clean = str_replace('|', ' ', $description_input);
         $final_desc_parts[] = "Overview: " . $desc_clean;
     }
     if (!empty($specs_raw)) {
-        $final_desc_parts[] = $specs_raw; // JS 已经将其转换为 Key: Val | Key: Val 格式
+        $final_desc_parts[] = $specs_raw; 
     }
     
-    // 合并成前台原本认识的终极字符串，存入 description 列
     $formatted_description = implode(' | ', $final_desc_parts);
 
     $image_url = 'image/placeholder_pc.png'; 
@@ -62,10 +66,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
     }
 
     if ($upload_ok) {
-        // 将合并好的 $formatted_description 存入 description，配合你的前台代码
-        $sql = "INSERT INTO products (product_name, category_id, price, stock_quantity, specifications, description, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        // 🌟 更新 SQL 包含 tdp_wattage, socket_type, ram_type
+        $sql = "INSERT INTO products (product_name, category_id, price, stock_quantity, specifications, description, image_url, performance_tier, tdp_wattage, socket_type, ram_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sidssss", $name, $category_id, $price, $stock_quantity, $specs_raw, $formatted_description, $image_url);
+        // bind_param: s(string), i(int), d(double) -> sidssssiiss
+        $stmt->bind_param("sidssssiiss", $name, $category_id, $price, $stock_quantity, $specs_raw, $formatted_description, $image_url, $performance_tier, $tdp_wattage, $socket_type, $ram_type);
         
         if ($stmt->execute()) {
             $log_admin_id = $_SESSION['admin_id'];
@@ -154,6 +159,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
                         <label style="color: #cbd5e1; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Stock Quantity *</label>
                         <input type="number" name="stock" class="form-control" required>
                     </div>
+
+                    <div class="form-group full-width" style="grid-column: 1 / -1; background: rgba(0,242,254,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(0,242,254,0.2); display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                        <div>
+                            <label style="color: #00f2fe; font-weight: bold; font-size: 11px; margin-bottom: 5px; display: block;">TDP Wattage (W)</label>
+                            <input type="number" name="tdp_wattage" class="form-control" value="0" placeholder="e.g. 65">
+                        </div>
+                        <div>
+                            <label style="color: #00f2fe; font-weight: bold; font-size: 11px; margin-bottom: 5px; display: block;">Socket Type (CPU/MB)</label>
+                            <input type="text" name="socket_type" class="form-control" placeholder="e.g. LGA1700, AM5">
+                        </div>
+                        <div>
+                            <label style="color: #00f2fe; font-weight: bold; font-size: 11px; margin-bottom: 5px; display: block;">RAM Type (MB/RAM)</label>
+                            <input type="text" name="ram_type" class="form-control" placeholder="e.g. DDR4, DDR5">
+                        </div>
+                        <div>
+                            <label style="color: #ff4d4d; font-weight: bold; font-size: 11px; margin-bottom: 5px; display: block;">Tier (1-10) [GPU/CPU]</label>
+                            <select name="performance_tier" class="form-control" style="cursor: pointer;">
+                                <?php for($i=1; $i<=10; $i++): ?>
+                                    <option value="<?php echo $i; ?>">Tier <?php echo $i; ?></option>
+                                <?php endfor; ?>
+                            </select>
+                        </div>
+                    </div>
                     
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
                         <label style="color: #00e676; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;"><i class="fas fa-image"></i> Product Image (Max 5MB) *</label>
@@ -175,7 +203,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
                     </div>
                     
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
-                        <label style="color: #cbd5e1; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Marketing Description (Optional)</label>
+                        <label style="color: #cbd5e1; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Marketing Description (Overview)</label>
                         <textarea name="description" class="form-control" rows="3" style="resize: vertical;"></textarea>
                     </div>
                 </div>
@@ -227,7 +255,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
                 syncSpecs();
             });
 
-            // 🌟 配合前台要求，把参数使用 | 符号进行分割
             function syncSpecs() {
                 let lines = [];
                 specsContainer.querySelectorAll('.spec-row').forEach(row => {

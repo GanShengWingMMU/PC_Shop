@@ -25,6 +25,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
     
+    // 🌟 接收所有装机核心属性
+    $performance_tier = intval($_POST['performance_tier'] ?? 1); 
+    $tdp_wattage = intval($_POST['tdp_wattage'] ?? 0);
+    $socket_type = trim($_POST['socket_type'] ?? '');
+    $ram_type = trim($_POST['ram_type'] ?? '');
+    
     // 🌟 魔法转换区：兼容前台代码
     $specs_raw = trim($_POST['specs']); 
     $description_input = trim($_POST['description'] ?? '');
@@ -60,9 +66,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     }
 
     if ($upload_ok) {
-        $sql = "UPDATE products SET product_name=?, category_id=?, price=?, stock_quantity=?, specifications=?, description=?, image_url=? WHERE product_id=?";
+        // 🌟 更新 SQL 包含 tdp_wattage, socket_type, ram_type
+        $sql = "UPDATE products SET product_name=?, category_id=?, price=?, stock_quantity=?, specifications=?, description=?, image_url=?, performance_tier=?, tdp_wattage=?, socket_type=?, ram_type=? WHERE product_id=?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sidisssi", $name, $category_id, $price, $stock_quantity, $specs_raw, $formatted_description, $image_url, $product_id);
+        $stmt->bind_param("sidssssiissi", $name, $category_id, $price, $stock_quantity, $specs_raw, $formatted_description, $image_url, $performance_tier, $tdp_wattage, $socket_type, $ram_type, $product_id);
         
         if ($stmt->execute()) {
             $log_admin_id = $_SESSION['admin_id'];
@@ -82,13 +89,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     }
 }
 
-// 🌟 解析数据库中存储的数据，分离回表单供 Admin 方便编辑
+// 解析数据库中存储的数据
 $db_desc = $prod['description'] ?? '';
 $marketing_text = '';
 $specs_text = '';
 
 if (strpos($db_desc, '|') !== false) {
-    // 处理我们之前组合进去的 "Overview: xxx | spec: xxx" 格式
     $pieces = explode('|', $db_desc);
     $spec_lines = [];
     foreach ($pieces as $piece) {
@@ -101,11 +107,9 @@ if (strpos($db_desc, '|') !== false) {
     }
     $specs_text = implode("\n", $spec_lines);
 } else {
-    // 兼容历史遗留的旧数据
     $marketing_text = $db_desc;
     $old_specs = $prod['specifications'] ?? '';
     if(!empty($old_specs)) {
-        // 去除旧数据中的换行前面的 "- "
         $specs_text = str_replace('- ', '', $old_specs);
     }
 }
@@ -177,6 +181,29 @@ if (strpos($db_desc, '|') !== false) {
                         <label style="color: #cbd5e1; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Stock Quantity</label>
                         <input type="number" name="stock" class="form-control" value="<?php echo $prod['stock_quantity']; ?>" required>
                     </div>
+
+                    <div class="form-group full-width" style="grid-column: 1 / -1; background: rgba(0,242,254,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(0,242,254,0.2); display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                        <div>
+                            <label style="color: #00f2fe; font-weight: bold; font-size: 11px; margin-bottom: 5px; display: block;">TDP Wattage (W)</label>
+                            <input type="number" name="tdp_wattage" class="form-control" value="<?php echo htmlspecialchars($prod['tdp_wattage'] ?? 0); ?>" placeholder="e.g. 65">
+                        </div>
+                        <div>
+                            <label style="color: #00f2fe; font-weight: bold; font-size: 11px; margin-bottom: 5px; display: block;">Socket Type (CPU/MB)</label>
+                            <input type="text" name="socket_type" class="form-control" value="<?php echo htmlspecialchars($prod['socket_type'] ?? ''); ?>" placeholder="e.g. LGA1700, AM5">
+                        </div>
+                        <div>
+                            <label style="color: #00f2fe; font-weight: bold; font-size: 11px; margin-bottom: 5px; display: block;">RAM Type (MB/RAM)</label>
+                            <input type="text" name="ram_type" class="form-control" value="<?php echo htmlspecialchars($prod['ram_type'] ?? ''); ?>" placeholder="e.g. DDR4, DDR5">
+                        </div>
+                        <div>
+                            <label style="color: #ff4d4d; font-weight: bold; font-size: 11px; margin-bottom: 5px; display: block;">Tier (1-10) [GPU/CPU]</label>
+                            <select name="performance_tier" class="form-control" style="cursor: pointer;">
+                                <?php for($i=1; $i<=10; $i++): ?>
+                                    <option value="<?php echo $i; ?>" <?php if(isset($prod['performance_tier']) && $prod['performance_tier'] == $i) echo 'selected'; ?>>Tier <?php echo $i; ?></option>
+                                <?php endfor; ?>
+                            </select>
+                        </div>
+                    </div>
                     
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
                         <label style="color: #00e676; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;"><i class="fas fa-image"></i> Update Photo</label>
@@ -198,7 +225,7 @@ if (strpos($db_desc, '|') !== false) {
                     </div>
                     
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
-                        <label style="color: #cbd5e1; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Marketing Description (Optional)</label>
+                        <label style="color: #cbd5e1; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Marketing Description (Overview)</label>
                         <textarea name="description" class="form-control" rows="3" style="resize: vertical;"><?php echo htmlspecialchars($marketing_text); ?></textarea>
                     </div>
                 </div>
@@ -223,7 +250,6 @@ if (strpos($db_desc, '|') !== false) {
 
             existingData.forEach(line => {
                 if (line.trim() !== '') {
-                    // 读取 PHP 丢过来的 Key: Val
                     let parts = line.split(':');
                     let key = parts[0] ? parts[0].trim() : '';
                     let val = parts.slice(1).join(':').trim(); 

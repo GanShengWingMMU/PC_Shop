@@ -48,7 +48,25 @@ if (isset($_GET['action']) && $_GET['action'] == 'like' && isset($_GET['post_id'
     exit();
 }
 
+// ==========================================
+// 🌟 发帖处理区域
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
+    
+    // 🚨 MUTE 拦截器：检测用户是否被禁言
+    $check_cid = intval($_SESSION['customer_id']);
+    $mute_check = $conn->query("SELECT account_status FROM customers WHERE customer_id = $check_cid");
+    if ($mute_check && $mute_check->num_rows > 0) {
+        $user_check = $mute_check->fetch_assoc();
+        if ($user_check['account_status'] === 'Muted') {
+            echo "<script>
+                alert('🚫 SYSTEM ALERT: You have been MUTED by an Admin. You can still browse and buy PCs, but you cannot post or comment.');
+                window.history.back();
+            </script>";
+            exit(); // 🛑 触发禁言，立即停止后续发帖逻辑！
+        }
+    }
+
     $title = htmlspecialchars(trim($_POST['title'])); 
     $content = htmlspecialchars(trim($_POST['content'])); 
     $post_type = isset($_POST['post_type']) ? $_POST['post_type'] : 'Discussion';
@@ -176,7 +194,6 @@ function getRankBadge($coins, $tier = 'Basic') {
         .type-desc { font-size: 0.8rem; color: #94a3b8; line-height: 1.4; display: block; }
         .type-card.selected { border-color: #00f2fe; background: rgba(0, 242, 254, 0.05); box-shadow: 0 0 15px rgba(0,242,254,0.1); }
 
-        /* 🌟 核心增补：高级 Blueprint 卡片选择器样式 */
         .build-selector-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; max-height: 250px; overflow-y: auto; padding-right: 10px; margin-bottom: 20px; }
         .build-selector-grid::-webkit-scrollbar { width: 6px; }
         .build-selector-grid::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 4px; }

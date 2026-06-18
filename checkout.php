@@ -393,7 +393,7 @@ if (strpos($card_num, '4') === 0) {
             
             $unit_price = $pid ? $item['product_price'] : ($build_id ? $item['build_price'] : ($pkg_id ? $item['package_price'] : 0));
 
-            $insert_detail->bind_param("iiiiiii", $order_id, $pid, $build_id, $pkg_id, $aff_id, $item['quantity'], $unit_price);
+            $insert_detail->bind_param("iiiiiid", $order_id, $pid, $build_id, $pkg_id, $aff_id, $item['quantity'], $unit_price);
             $insert_detail->execute();
 
             if ($aff_id) {

@@ -71,17 +71,18 @@ try {
     }
     $stmt_items->close();
 
-    // ==========================================
-    // 🧠 核心黑科技 V2.0：基於花銷比例的防偏見追踪 (Customer DNA)
-    // ==========================================
     $add_gamer = 0; 
     $add_creator = 0; 
     $add_student = 0;
+    $add_enthusiast = 0; // 🌟 新增发烧友指数
 
     $gpu_ratio = $total_price > 0 ? ($gpu_spend / $total_price) : 0;
     $cpu_ratio = $total_price > 0 ? ($cpu_spend / $total_price) : 0;
 
-    if ($gpu_ratio >= 0.35) {
+    // 🌟 判定逻辑升级：如果总价超过 RM 8000，直接判定为硬核发烧友！
+    if ($total_price >= 8000) {
+        $add_enthusiast = 5; $add_gamer = 2; $add_creator = 2;
+    } elseif ($gpu_ratio >= 0.35) {
         $add_gamer = 5; $add_creator = 1; 
     } elseif ($cpu_ratio >= 0.25 || $ram_spend >= 600) {
         $add_creator = 5; $add_gamer = 2; $add_student = 1;
@@ -89,10 +90,9 @@ try {
         $add_student = 5; $add_creator = 2; $add_gamer = 1;
     }
 
-    $stmt_dna = $conn->prepare("UPDATE customers SET pref_gamer = pref_gamer + ?, pref_creator = pref_creator + ?, pref_student = pref_student + ? WHERE customer_id = ?");
-    $stmt_dna->bind_param("iiii", $add_gamer, $add_creator, $add_student, $customer_id);
-    $stmt_dna->execute();
-    $stmt_dna->close();
+    // 🌟 修复 SQL 语句，打通 4 个指数的写入
+    $stmt_dna = $conn->prepare("UPDATE customers SET pref_gamer = pref_gamer + ?, pref_creator = pref_creator + ?, pref_student = pref_student + ?, pref_enthusiast = pref_enthusiast + ? WHERE customer_id = ?");
+    $stmt_dna->bind_param("iiiii", $add_gamer, $add_creator, $add_student, $add_enthusiast, $customer_id);
 
     // ==========================================
     // 🚦 業務路由分流 (Routing based on Action)

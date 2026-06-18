@@ -125,6 +125,8 @@ if (!empty($_SESSION['pc_build'])) {
             continue; 
         }
 
+        if (!isset($_SESSION['pc_build'][$cat_id])) continue;
+
         $cart[$cat_id] = [
             'product_id' => $row['product_id'],
             'name'       => $row['product_name'],

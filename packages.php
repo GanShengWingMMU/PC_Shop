@@ -450,21 +450,46 @@ include 'includes/header.php';
                     </div>
 
                     <div id="hidden_specs_<?php echo $pkg['package_id']; ?>" style="display: none;">
-                        <?php
-                            $list_sql = "SELECT p.product_name, c.category_name FROM package_items pi JOIN products p ON pi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id WHERE pi.package_id = " . $pkg['package_id'];
-                            $list_res = $conn->query($list_sql);
-                            if ($list_res->num_rows > 0) {
-                                while($item = $list_res->fetch_assoc()) {
-                                    echo "<div class='spec-modal-item'>";
-                                    echo "<span class='spec-cat'>" . htmlspecialchars($item['category_name']) . "</span>";
-                                    echo "<span class='spec-name'>" . htmlspecialchars($item['product_name']) . "</span>";
-                                    echo "</div>";
-                                }
-                            } else {
-                                echo "<div style='color:#64748b; text-align:center; padding: 20px;'>No specific parts listed.</div>";
-                            }
-                        ?>
-                    </div>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px 25px; background: rgba(0,0,0,0.4); border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <div style="text-align: center;">
+            <i class="fas fa-gamepad" style="color: #00f2fe; font-size: 1.2rem; margin-bottom: 5px;"></i>
+            <div style="font-size: 0.65rem; color: #888; text-transform: uppercase; font-weight: 800;">Gamer</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-weight: 900; color: #fff;"><?php echo $pkg['score_gamer']; ?><span style="color:#555; font-size:0.7rem;">/10</span></div>
+        </div>
+        <div style="text-align: center;">
+            <i class="fas fa-palette" style="color: #a855f7; font-size: 1.2rem; margin-bottom: 5px;"></i>
+            <div style="font-size: 0.65rem; color: #888; text-transform: uppercase; font-weight: 800;">Creator</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-weight: 900; color: #fff;"><?php echo $pkg['score_creator']; ?><span style="color:#555; font-size:0.7rem;">/10</span></div>
+        </div>
+        <div style="text-align: center;">
+            <i class="fas fa-code" style="color: #facc15; font-size: 1.2rem; margin-bottom: 5px;"></i>
+            <div style="font-size: 0.65rem; color: #888; text-transform: uppercase; font-weight: 800;">Student</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-weight: 900; color: #fff;"><?php echo $pkg['score_student']; ?><span style="color:#555; font-size:0.7rem;">/10</span></div>
+        </div>
+        <div style="text-align: center;">
+            <i class="fas fa-rocket" style="color: #ff007f; font-size: 1.2rem; margin-bottom: 5px;"></i>
+            <div style="font-size: 0.65rem; color: #888; text-transform: uppercase; font-weight: 800;">Enthusiast</div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-weight: 900; color: #fff;"><?php echo $pkg['score_enthusiast']; ?><span style="color:#555; font-size:0.7rem;">/10</span></div>
+        </div>
+    </div>
+    
+    <div style="padding-top: 10px;">
+        <?php
+            $list_sql = "SELECT p.product_name, c.category_name FROM package_items pi JOIN products p ON pi.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id WHERE pi.package_id = " . $pkg['package_id'];
+            $list_res = $conn->query($list_sql);
+            if ($list_res->num_rows > 0) {
+                while($item = $list_res->fetch_assoc()) {
+                    echo "<div class='spec-modal-item'>";
+                    echo "<span class='spec-cat'>" . htmlspecialchars($item['category_name']) . "</span>";
+                    echo "<span class='spec-name'>" . htmlspecialchars($item['product_name']) . "</span>";
+                    echo "</div>";
+                }
+            } else {
+                echo "<div style='color:#64748b; text-align:center; padding: 20px;'>No specific parts listed.</div>";
+            }
+        ?>
+    </div>
+</div>
 
                     <div class="btn-group">
                         <form action="add_to_cart.php" method="POST" style="flex:1.2; margin:0;">

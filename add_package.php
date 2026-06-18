@@ -28,6 +28,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $target_persona = trim($_POST['target_persona']);
     $stock_status = trim($_POST['stock_status']);
 
+    // 🌟 接收 4 个雷达分数
+    $score_gamer = intval($_POST['score_gamer'] ?? 0);
+    $score_creator = intval($_POST['score_creator'] ?? 0);
+    $score_student = intval($_POST['score_student'] ?? 0);
+    $score_enthusiast = intval($_POST['score_enthusiast'] ?? 0);
+
     $image_url = ""; 
     $upload_ok = true;
 
@@ -74,15 +80,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $conn->begin_transaction();
         try {
-            // 寫入 packages 主表
-            $insert_query = "INSERT INTO packages (package_name, description, price, image_url, target_persona, stock_status) VALUES (?, ?, ?, ?, ?, ?)";
+            // 🌟 寫入 packages 主表 (包含 4 个分数)
+            $insert_query = "INSERT INTO packages (package_name, description, price, image_url, target_persona, stock_status, score_gamer, score_creator, score_student, score_enthusiast) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $insert_pkg = $conn->prepare($insert_query);
             
             if (!$insert_pkg) {
                 throw new Exception("SQL Error: " . $conn->error);
             }
 
-            $insert_pkg->bind_param("ssdsss", $package_name, $description, $total_price, $image_url, $target_persona, $stock_status);
+            $insert_pkg->bind_param("ssdsssiiii", $package_name, $description, $total_price, $image_url, $target_persona, $stock_status, $score_gamer, $score_creator, $score_student, $score_enthusiast);
             $insert_pkg->execute();
             $new_package_id = $insert_pkg->insert_id; // 獲取剛剛新增的 Package ID
             $insert_pkg->close();
@@ -227,15 +233,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <textarea name="description" class="form-control" rows="4" placeholder="Describe the strength of this build..." required style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; resize: vertical;"></textarea>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Target Persona</label>
-                        <select name="target_persona" class="form-control" style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
-                            <option value="Gamers">Gamers</option>
-                            <option value="Professionals">Professionals</option>
-                            <option value="Enthusiasts">Enthusiasts</option>
-                            <option value="Valuable">Valuable (性价比)</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label>Target Persona</label>
+                    <select name="target_persona" class="form-control" style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                    <option value="Gamer">Gamer</option>
+                    <option value="Creator">Creator</option>
+                    <option value="Student">Student / Dev</option>
+                    <option value="Enthusiast">Enthusiast</option>
+                    </select>
+                </div> 
                     
                     <div class="form-group">
                         <label>Stock Status</label>
@@ -244,6 +250,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             <option value="Pre-order">Pre-order</option>
                             <option value="Out of Stock">Out of Stock</option>
                         </select>
+                    </div>
+
+                    <div class="form-group full-width" style="grid-column: 1 / -1; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-top: 10px;">
+                        <label style="color: #00f2fe; font-weight: bold; font-size: 13px; margin-bottom: 12px; display: block;"><i class="fas fa-chart-pie"></i> DNA Radar Scores (1-10)</label>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                            <div>
+                                <label style="font-size: 11px; color: #cbd5e1;">Gamer Score</label>
+                                <input type="number" name="score_gamer" min="0" max="10" class="form-control" value="0" required>
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; color: #cbd5e1;">Creator Score</label>
+                                <input type="number" name="score_creator" min="0" max="10" class="form-control" value="0" required>
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; color: #cbd5e1;">Student Score</label>
+                                <input type="number" name="score_student" min="0" max="10" class="form-control" value="0" required>
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; color: #cbd5e1;">Enthusiast Score</label>
+                                <input type="number" name="score_enthusiast" min="0" max="10" class="form-control" value="0" required>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group full-width" style="grid-column: 1 / -1;">
