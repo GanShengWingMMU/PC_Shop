@@ -181,7 +181,7 @@ if ($coins < 500) {
     $next_tier_name = "Elite Architect";
 } else {
     $natural_tier = "Elite Architect";
-    $target_coins = max($coins, 1000);
+    $target_coins = "MAX"; 
     $progress_pct = 100;
     $natural_color = "#ffd700"; 
     $next_color = "#ffd700"; 
@@ -359,7 +359,7 @@ if ($tier_status === 'VIP') {
                     <div style="text-align: right;">
                         <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 5px;">Next Target: <span style="color: <?php echo $next_color; ?>;"><?php echo $next_tier; ?></span></div>
                         <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; color: #fff; font-weight: bold;">
-                            <?php echo $coins; ?> <span style="color: #64748b;">/ <?php echo $target_coins; ?> PTS</span>
+                        <?php echo $coins; ?> <span style="color: #64748b;"><?php echo ($target_coins === 'MAX') ? ' PTS (MAX TIER)' : ' / ' . $target_coins . ' PTS'; ?></span>
                         </div>
                     </div>
                 </div>

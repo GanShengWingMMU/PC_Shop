@@ -50,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $expiry_date = date('Y-m-d H:i:s', strtotime('+30 days'));
-        // 🌟 修复：防止刷金币，只有首次开通才送 500 金币
-        $coins_to_add = $is_first_time ? 500 : 0;
+        // 🌟 终极防薅羊毛：首月免费试用(白嫖)不送金币，只有扣除钱包余额的真实续费/开通才送 500 金币！
+        $coins_to_add = (!$is_first_time) ? 500 : 0;
 
         $update_sql = "UPDATE customers 
                        SET membership_tier = 'VIP', 
