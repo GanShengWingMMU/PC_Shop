@@ -183,28 +183,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
 </head>
 <body>
     <div class="admin-container">
-        <nav class="admin-sidebar">
-            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3></div>
-         <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php">Dashboard</a></li>
-                
-                <?php 
-                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
-                ?>
-
-                <?php if ($role === 'superadmin'): ?>
-                    <li><a href="manage_staff.php"> Manage Staff</a></li>
-                <?php endif; ?>
-
-                <li><a href="manage_users.php"> Manage Customers</a></li>
-                
-                <li><a href="manage_categories.php">Categories</a></li>
-                <li><a href="manage_products.php">Products</a></li> 
-                <li><a href="manage_packages.php">Packages</a></li>
-                <li><a href="manage_orders.php">Orders</a></li>
-                <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-            </ul>
-        </nav>
+        <?php include 'admin_sidebar.php'; ?>
 
         <div class="admin-content">
             <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">

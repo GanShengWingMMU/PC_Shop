@@ -150,32 +150,11 @@ $js_m_pen = implode(',', array_values($m_pending));
 </head>
 <body>
     <div class="admin-container">
-        <nav class="admin-sidebar">
-            <div class="sidebar-header">
-                <h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3>
-                <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
-            </div>
-            
-          <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php">Dashboard</a></li>
-                
-                <?php 
-                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
-                ?>
+        
+        <?php include 'admin_sidebar.php'; ?>
 
-                <?php if ($role === 'superadmin'): ?>
-                    <li><a href="manage_staff.php"> Manage Staff</a></li>
-                <?php endif; ?>
-
-                <li><a href="manage_users.php"> Manage Customers</a></li>
-                
-                <li><a href="manage_categories.php">Categories</a></li>
-                <li><a href="manage_products.php">Products</a></li> 
-                <li><a href="manage_packages.php">Packages</a></li>
-                <li><a href="manage_orders.php">Orders</a></li>
-                <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-            </ul>
-        </nav>
+        <div class="admin-content" style="padding: 30px;">
+  
 
         <div class="admin-content" style="padding: 30px;">
             <header class="admin-header" style="margin-bottom: 30px; display:flex; justify-content:space-between; align-items:center; background: rgba(11,11,18,0.4); padding: 20px 30px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">

@@ -99,28 +99,7 @@ if (!empty($customer['birthday']) && $customer['birthday'] !== '0000-00-00') {
 </head>
 <body>
     <div class="admin-container" style="display: flex; min-height: 100vh; width: 100%;">
-        <nav class="admin-sidebar">
-            <div class="sidebar-header"><h3><i class="fas fa-shield-alt"></i> GridCity Admin</h3></div>
-             <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php">Dashboard</a></li>
-                
-                <?php 
-                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
-                ?>
-
-                <?php if ($role === 'superadmin'): ?>
-                    <li><a href="manage_staff.php"> Manage Staff</a></li>
-                <?php endif; ?>
-
-                <li><a href="manage_users.php"> Manage Customers</a></li>
-                
-                <li><a href="manage_categories.php">Categories</a></li>
-                <li><a href="manage_products.php">Products</a></li> 
-                <li><a href="manage_packages.php">Packages</a></li>
-                <li><a href="manage_orders.php">Orders</a></li>
-                <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-            </ul>
-        </nav>
+        <?php include 'admin_sidebar.php'; ?>
 
         <div class="admin-content" style="flex: 1; padding: 30px; box-sizing: border-box;">
             <header class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">

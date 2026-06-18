@@ -51,30 +51,16 @@ if (isset($_POST['update_status'])) {
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
         .admin-sort-dropdown { background: rgba(0,0,0,0.6); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); padding: 8px 15px; border-radius: 6px; cursor: pointer; }
+        
+        /* 🌟 把你原本很酷的 Items CSS 加回来 */
+        .qty-badge { background: rgba(0,242,254,0.1); padding: 2px 6px; border-radius: 4px; color: #00f2fe; font-weight: 900; margin-right: 8px; font-size: 11px; border: 1px solid rgba(0,242,254,0.3); }
+        .item-row { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed rgba(255,255,255,0.05); font-size: 12px; color: #cbd5e1; }
+        .item-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     </style>
 </head>
 <body>
     <div class="admin-container">
-        <nav class="admin-sidebar">
-            <div class="sidebar-header">
-                <h3><i class="fas fa-shield-alt"></i> GridCity PC Admin</h3>
-                <p style="color:#555; font-size:11px; font-family:'JetBrains Mono';">Unified Architecture v4.0</p>
-            </div>
-            <ul class="sidebar-menu">
-                <li><a href="admin_dashboard.php">Dashboard</a></li>
-                <?php 
-                $role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
-                if ($role === 'superadmin'): ?>
-                    <li><a href="manage_staff.php"> Manage Staff</a></li>
-                <?php endif; ?>
-                <li><a href="manage_users.php"> Manage Customers</a></li>
-                <li><a href="manage_categories.php">Categories</a></li>
-                <li><a href="manage_products.php">Products</a></li> 
-                <li><a href="manage_packages.php">Packages</a></li>
-                <li><a href="manage_orders.php">Orders</a></li>
-                <li><a href="admin_logout.php" class="logout-btn">Log out</a></li> 
-            </ul>
-        </nav>
+         <?php include 'admin_sidebar.php'; ?>
 
         <div class="admin-content" style="padding: 30px;">
             <header class="admin-header" style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;">
@@ -97,18 +83,17 @@ if (isset($_POST['update_status'])) {
                 <table style="width:100%; border-collapse: collapse;">
                     <thead>
                         <tr style="border-bottom: 2px solid rgba(0,242,254,0.2); text-align: left;">
-                            <th style="padding:15px;">ID</th>
-                            <th style="padding:15px;">Customer</th>
-                            <th style="padding:15px;">Date</th>
-                            <th style="padding:15px;">Items</th>
-                            <th style="padding:15px;">Total</th>
-                            <th style="padding:15px;">Status</th>
-                            <th style="padding:15px;">Update</th>
+                            <th style="padding:15px; color:#64748b; font-size:12px;">ID</th>
+                            <th style="padding:15px; color:#64748b; font-size:12px;">Customer</th>
+                            <th style="padding:15px; color:#64748b; font-size:12px;">Date</th>
+                            <th style="padding:15px; color:#64748b; font-size:12px; width:30%;">Items Purchased</th>
+                            <th style="padding:15px; color:#64748b; font-size:12px;">Total</th>
+                            <th style="padding:15px; color:#64748b; font-size:12px;">Status</th>
+                            <th style="padding:15px; color:#64748b; font-size:12px;">Update</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
-                        // 🌟 使用动态的 $order_by
                         $sql = "SELECT o.*, c.username FROM orders o JOIN customers c ON o.customer_id = c.customer_id ORDER BY $order_by";
                         $res = $conn->query($sql);
                         while ($row = $res->fetch_assoc()) {
@@ -120,23 +105,39 @@ if (isset($_POST['update_status'])) {
                             elseif ($status == 'Cancelled') $status_color = "#ff4d4d";
 
                             echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
-                            echo "<td style='padding:15px;'>#{$row['order_id']}</td>";
-                            echo "<td style='padding:15px;'>" . htmlspecialchars($row['username']) . "</td>";
-                            echo "<td style='padding:15px;'>" . date('d M, Y', strtotime($row['order_date'])) . "</td>";
-                            echo "<td style='padding:15px;'>...</td>"; 
-                            echo "<td style='padding:15px; color:#00e676; font-weight:bold;'>RM " . number_format($row['total_amount'], 2) . "</td>";
+                            echo "<td style='padding:15px; font-family: JetBrains Mono;'>#{$row['order_id']}</td>";
+                            echo "<td style='padding:15px; font-weight:bold;'>" . htmlspecialchars($row['username']) . "</td>";
+                            echo "<td style='padding:15px; color:#888; font-size:12px;'>" . date('d M, Y', strtotime($row['order_date'])) . "</td>";
+                            
+                            // 🌟 完美修复：抓取订单内部商品的完整逻辑
+                            echo "<td style='padding:15px;'>";
+                            $order_id_val = $row['order_id'];
+                            $sql_items = "SELECT od.quantity, p.product_name, pkg.package_name, sb.build_name 
+                                          FROM order_details od 
+                                          LEFT JOIN products p ON od.product_id = p.product_id 
+                                          LEFT JOIN packages pkg ON od.package_id = pkg.package_id 
+                                          LEFT JOIN saved_builds sb ON od.pc_build = sb.pc_build 
+                                          WHERE od.order_id = $order_id_val";
+                            $res_items = $conn->query($sql_items);
+                            while($item = $res_items->fetch_assoc()) {
+                                $name = $item['product_name'] ?: ($item['package_name'] ? "[Package] ".$item['package_name'] : "[Custom PC] ".$item['build_name']);
+                                echo "<div class='item-row'><span class='qty-badge'>{$item['quantity']}x</span> ".htmlspecialchars($name)."</div>";
+                            }
+                            echo "</td>";
+                            
+                            echo "<td style='padding:15px; color:#00e676; font-weight:bold; font-family: JetBrains Mono;'>RM " . number_format($row['total_amount'], 2) . "</td>";
                             echo "<td style='padding:15px; font-weight:bold; color:$status_color'>$status</td>";
                             echo "<td style='padding:15px;'>
                                     <form method='POST'>
                                         <input type='hidden' name='order_id' value='{$row['order_id']}'>
                                         <input type='hidden' name='current_sort' value='$current_sort'>
-                                        <select name='new_status' style='background:#000; color:#fff; border:1px solid #333; padding:5px; border-radius:4px;'>
+                                        <select name='new_status' style='background:#000; color:#fff; border:1px solid #333; padding:6px; border-radius:4px; margin-bottom:5px; width:100px;'>
                                             <option value='Pending' ".($status=='Pending'?'selected':'').">Pending</option>
                                             <option value='Processing' ".($status=='Processing'?'selected':'').">Processing</option>
                                             <option value='Shipped' ".($status=='Shipped'?'selected':'').">Shipped</option>
                                             <option value='Completed' ".($status=='Completed'?'selected':'').">Completed</option>
-                                        </select>
-                                        <button type='submit' name='update_status' style='background:#00f2fe; color:#000; border:none; padding:5px 10px; cursor:pointer;'>Go</button>
+                                        </select><br>
+                                        <button type='submit' name='update_status' style='background:#00f2fe; color:#000; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer; width:100px;'>Update</button>
                                     </form>
                                   </td>";
                             echo "</tr>";
