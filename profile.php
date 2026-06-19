@@ -7,6 +7,91 @@ $customer_id = $_SESSION['customer_id'];
 $update_msg = $update_err = "";
 $addr_msg = $addr_err = "";
 
+$card_msg = $card_err = "";
+
+// ==========================================
+// 🌟 核心逻辑 3：处理信用卡/支付方式管理 (完美移植 checkout.php 邏輯)
+// ==========================================
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_card'])) {
+    $open_acc = 'cards';
+    $cardholder = htmlspecialchars(trim($_POST['cardholder_name']));
+    // 使用跟 checkout 一樣的 str_replace 清除空白與橫槓
+    $card_number = str_replace([' ', '-'], '', trim($_POST['card_number']));
+    $expiry = htmlspecialchars(trim($_POST['expiry_date']));
+    $cvc = htmlspecialchars(trim($_POST['cvc']));
+
+    // 基本格式防呆
+    if (strlen($card_number) < 16) {
+        $card_err = "Card number must be at least 16 digits.";
+    } elseif (!preg_match('/^(0[1-9]|1[0-2])\/?([0-9]{2})$/', $expiry)) {
+        $card_err = "Expiry date must be in MM/YY format (e.g., 12/25).";
+    } else {
+        
+        // 🚨 終極防護：向虛擬銀行 (bank table) 發起驗證！
+        // 必須卡號、CVC、到期日三個都對才放行
+        $bank_stmt = $conn->prepare("SELECT id FROM bank WHERE card_number = ? AND cvc = ? AND expiry_date = ?");
+        $bank_stmt->bind_param("sss", $card_number, $cvc, $expiry);
+        $bank_stmt->execute();
+        $bank_result = $bank_stmt->get_result();
+
+        if ($bank_result->num_rows > 0) {
+            // ✅ 驗證成功：銀行裡有這張卡，獲取銀行的 ID
+            $bank_account_id = $bank_result->fetch_assoc()['id'];
+            $last_four = substr($card_number, -4);
+            
+            // 🌟 企業級智慧判斷卡片品牌 (直接套用 checkout.php 的邏輯)
+            $card_brand = 'Credit Card'; // 預設值
+            if (strpos($card_number, '4') === 0) {
+                $card_brand = 'Visa';
+            } elseif (strpos($card_number, '5') === 0 || strpos($card_number, '2') === 0) {
+                $card_brand = 'Mastercard';
+            } elseif (strpos($card_number, '3') === 0) {
+                $card_brand = 'Amex'; // Maybank 用戶非常常用
+            } elseif (strpos($card_number, '6') === 0) {
+                $card_brand = 'UnionPay';
+            }
+
+            // 寫入 saved_cards 時，把 bank_id 和動態抓取的 brand 一起寫進去
+            $stmt = $conn->prepare("INSERT INTO saved_cards (customer_id, bank_id, cardholder_name, last_four_digits, expiry_date, card_brand) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("iissss", $customer_id, $bank_account_id, $cardholder, $last_four, $expiry, $card_brand);
+            
+            if($stmt->execute()) { 
+                $card_msg = "Card successfully verified by bank and secured."; 
+            } else { 
+                $card_err = "Failed to add card."; 
+            }
+            $stmt->close();
+        } else {
+            // ❌ 驗證失敗：資料填錯，或是這張卡根本不存在於 bank 裡面
+            $card_err = "Bank validation failed! Incorrect Card Number, Expiry Date, or CVC.";
+        }
+        $bank_stmt->close();
+    }
+}
+
+if (isset($_GET['del_card'])) {
+    $open_acc = 'cards';
+    $c_id = intval($_GET['del_card']);
+    $conn->query("DELETE FROM saved_cards WHERE card_id = $c_id AND customer_id = $customer_id");
+    header("Location: profile.php?tab=cards"); 
+    exit();
+}
+
+if (isset($_GET['set_default_card'])) {
+    $open_acc = 'cards';
+    $c_id = intval($_GET['set_default_card']);
+    // 先把所有卡片變成非預設 (0)
+    $conn->query("UPDATE saved_cards SET is_default = 0 WHERE customer_id = $customer_id");
+    // 再把指定的這張卡片變成預設 (1)
+    $conn->query("UPDATE saved_cards SET is_default = 1 WHERE card_id = $c_id AND customer_id = $customer_id");
+    header("Location: profile.php?tab=cards"); 
+    exit();
+}
+
+// 抓取使用者的卡片資料
+$saved_cards = $conn->query("SELECT * FROM saved_cards WHERE customer_id = $customer_id ORDER BY is_default DESC, created_at DESC");
+// 👆👆👆 複製到這裡結束 👆👆👆
+
 $open_acc = 'account';
 
 // ==========================================
@@ -551,8 +636,106 @@ if ($tier_status === 'VIP') {
                             <?php endif; ?>
                         </div>
                     </div>
+                    
                 </div>
+<div class="accordion-item <?php echo $open_acc == 'cards' ? 'active' : ''; ?>" id="acc-cards">
+                    <div class="accordion-header" onclick="toggleAccordion('acc-cards')">
+                        <span><i class="fas fa-credit-card" style="margin-right: 10px;"></i> Payment Methods</span>
+                        <i class="fas fa-chevron-down chevron"></i>
+                    </div>
+                    <div class="accordion-content">
+                        
+                       <?php if($card_msg) echo "<div class='dynamic-alert' style='font-size: 0.85rem; color: #00e676; background: rgba(0,230,118,0.05); padding: 15px; border: 1px solid rgba(0,230,118,0.3); border-radius: 8px; margin-bottom: 20px; font-weight: bold;'><i class='fas fa-check-circle'></i> $card_msg</div>"; ?>
+                        <?php if($card_err) echo "<div class='dynamic-alert' style='font-size: 0.85rem; color: #ff4d4d; background: rgba(255,77,77,0.05); padding: 15px; border: 1px solid rgba(255,77,77,0.3); border-radius: 8px; margin-bottom: 20px; font-weight: bold;'><i class='fas fa-exclamation-triangle'></i> $card_err</div>"; ?>
 
+                        <button onclick="document.getElementById('add-card-form').style.display='block'" class="tech-btn" style="width: auto; padding: 12px 20px; font-size: 0.85rem; margin-bottom: 20px;"><i class="fas fa-plus"></i> Add New Card</button>
+
+                        <div id="add-card-form" style="display: none; background: rgba(0,0,0,0.4); border: 1px dashed rgba(0,242,254,0.3); padding: 30px; border-radius: 12px; margin-bottom: 25px;">
+                            <form method="POST" action="profile.php">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                    <div class="tech-input-group" style="grid-column: span 2; margin-bottom:0;">
+                                        <label class="tech-label">Cardholder Name</label>
+                                        <input type="text" name="cardholder_name" class="tech-input" placeholder="e.g. JOHN DOE" required>
+                                    </div>
+                                    <div class="tech-input-group" style="grid-column: span 2; margin-bottom:0;">
+                                        <label class="tech-label">Card Number</label>
+                                        <input type="text" name="card_number" class="tech-input" placeholder="0000 0000 0000 0000" pattern="[0-9 ]{16,19}" title="Enter 16 digit card number" required>
+                                    </div>
+                                    <div class="tech-input-group" style="margin-bottom:0;">
+                                        <label class="tech-label">Expiry Date</label>
+                                        <input type="text" name="expiry_date" class="tech-input" placeholder="MM/YY" pattern="(0[1-9]|1[0-2])\/?([0-9]{2})" title="Format: MM/YY" required>
+                                    </div>
+                                    <div class="tech-input-group" style="margin-bottom:0;">
+                                        <label class="tech-label">CVV / CVC</label>
+                                        <input type="password" name="cvc" class="tech-input" placeholder="123" pattern="[0-9]{3,4}" required>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 25px; display: flex; gap: 15px;">
+                                    <button type="submit" name="add_card" class="tech-btn" style="width: auto; padding: 12px 30px;">Save Card</button>
+                                    <button type="button" onclick="document.getElementById('add-card-form').style.display='none'" class="action-link btn-delete" style="color: #ff4d4d; border: 1px solid rgba(255,77,77,0.3); background: rgba(255,77,77,0.05); flex: none; width: auto; padding: 12px 20px;">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="address-grid"> <?php if($saved_cards->num_rows > 0): while($card = $saved_cards->fetch_assoc()): ?>
+                                
+                                <div style="display: flex; flex-direction: column; gap: 12px;">
+                                    
+                                    <div class="addr-card <?php echo $card['is_default'] ? 'is-default' : ''; ?>" style="padding: 25px; border-radius: 16px; background: linear-gradient(135deg, rgba(20,20,30,0.8) 0%, rgba(5,5,10,0.9) 100%); position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; justify-content: space-between; min-height: 180px;">
+                                        
+                                        <?php if($card['is_default']): ?>
+                                            <div style="position: absolute; top: -50px; right: -50px; width: 120px; height: 120px; background: #00f2fe; filter: blur(70px); opacity: 0.25; pointer-events: none;"></div>
+                                        <?php endif; ?>
+
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; z-index: 1;">
+                                            <?php 
+    $brand_class = 'fa-solid fa-credit-card'; // 預設的通用科技信用卡圖示 (取代原本的 Stripe)
+    $brand_lower = strtolower($card['card_brand']);
+    if ($brand_lower == 'visa') $brand_class = 'fa-brands fa-cc-visa';
+    elseif ($brand_lower == 'mastercard') $brand_class = 'fa-brands fa-cc-mastercard';
+    elseif ($brand_lower == 'amex') $brand_class = 'fa-brands fa-cc-amex';
+?>
+<i class="<?php echo $brand_class; ?>" style="font-size: 2.5rem; color: #00f2fe;"></i>
+                                            
+                                            <?php if($card['is_default']): ?>
+                                                <span style="background: rgba(0, 242, 254, 0.1); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.3); font-size: 0.65rem; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px;">Primary</span>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; color: #fff; letter-spacing: 4px; display: flex; gap: 15px; z-index: 1; text-shadow: 0 2px 10px rgba(0,0,0,0.5); margin-top: 15px; margin-bottom: 10px;">
+                                            <span>••••</span>
+                                            <span>••••</span>
+                                            <span>••••</span>
+                                            <span><?php echo htmlspecialchars($card['last_four_digits']); ?></span>
+                                        </div>
+
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-end; z-index: 1;">
+                                            <div>
+                                                <div style="color: #64748b; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Cardholder Name</div>
+                                                <div style="color: #cbd5e1; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;"><?php echo htmlspecialchars($card['cardholder_name']); ?></div>
+                                            </div>
+                                            <div style="text-align: right;">
+                                                <div style="color: #64748b; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Valid Thru</div>
+                                                <div style="color: #cbd5e1; font-size: 1rem; font-weight: 700; font-family: 'JetBrains Mono';"><?php echo htmlspecialchars($card['expiry_date']); ?></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: flex; gap: 10px;">
+                                        <?php if(!$card['is_default']): ?>
+                                            <a href="profile.php?set_default_card=<?php echo $card['card_id']; ?>" class="action-link" style="font-size: 0.75rem; padding: 8px;"><i class="fas fa-check-circle"></i> Set Primary</a>
+                                        <?php endif; ?>
+                                        <a href="profile.php?del_card=<?php echo $card['card_id']; ?>" onclick="return confirm('Remove this payment method?')" class="action-link btn-delete" style="color: #ff4d4d; border-color: rgba(255,77,77,0.2); flex: <?php echo $card['is_default'] ? '1' : 'none'; ?>; width: <?php echo $card['is_default'] ? '100%' : '40px'; ?>; padding: 8px;"><i class="fas fa-trash"></i> <?php echo $card['is_default'] ? 'Remove Card' : ''; ?></a>
+                                    </div>
+
+                                </div>
+
+                            <?php endwhile; else: ?>
+                                <p style="grid-column: span 2; color: #64748b; font-style: italic; font-size: 0.9rem; text-align: center; padding: 20px;">You haven't saved any payment methods yet.</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="side-panel">
@@ -675,6 +858,64 @@ document.getElementById('new_password').addEventListener('input', function() {
 
     if(/[\W]/.test(val)) { reqSym.className = 'valid'; reqSym.innerHTML = tick + '1 Symbol'; }
     else { reqSym.className = ''; reqSym.innerHTML = cross + '1 Symbol'; }
+});
+
+// === 信用卡自動排版與防呆輸入 (Checkout.php 同款邏輯) ===
+document.addEventListener('DOMContentLoaded', function() {
+    const cardNumberInput = document.querySelector('input[name="card_number"]');
+    const expiryInput = document.querySelector('input[name="expiry_date"]');
+    const cvcInput = document.querySelector('input[name="cvc"]');
+
+    // 1. 卡號防呆：使用與 checkout.php 完全相同的 for 迴圈空白切割法
+    if (cardNumberInput) {
+        cardNumberInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // 移除非數字
+            let formattedValue = '';
+            for (let i = 0; i < value.length; i++) {
+                if (i > 0 && i % 4 === 0) formattedValue += ' ';
+                formattedValue += value[i];
+            }
+            // 限制最大長度為 19 (16個數字 + 3個空格)
+            e.target.value = formattedValue.substring(0, 19);
+        });
+    }
+
+    // 2. 到期日防呆：使用與 checkout.php 完全相同的 substring 與月份驗證
+    if (expiryInput) {
+        expiryInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // 移除非數字
+            
+            if (value.length > 0) {
+                // 抓取前兩個數字 (月份)
+                let month = value.substring(0, 2);
+                
+                if (value.length >= 2) {
+                    // 核心防呆：如果月份大於 12，強制改成 12；如果是 00，強制改成 01
+                    if (parseInt(month) > 12) month = '12';
+                    if (parseInt(month) === 0) month = '01';
+                }
+                
+                // 抓取後面的數字 (年份)
+                let year = value.substring(2, 4);
+                
+                // 組合回去並加上斜線
+                if (value.length > 2) {
+                    value = month + '/' + year;
+                } else {
+                    value = month;
+                }
+            }
+            // 限制最大長度為 5 (MM/YY)
+            e.target.value = value.substring(0, 5);
+        });
+    }
+
+    // 3. CVC 防呆：強制只能輸入數字，最高 4 碼
+    if (cvcInput) {
+        cvcInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/\D/g, '').substring(0, 4);
+        });
+    }
 });
 </script>
 
