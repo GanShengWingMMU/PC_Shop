@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- 主机： 127.0.0.1
--- 生成日期： 2026-06-18 18:46:24
--- 服务器版本： 10.4.32-MariaDB
--- PHP 版本： 8.2.12
+-- Host: 127.0.0.1
+-- Generation Time: Jun 19, 2026 at 05:42 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- 数据库： `pcshop`
+-- Database: `pcshop`
 --
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `admins`
+-- Table structure for table `admins`
 --
 
 CREATE TABLE `admins` (
@@ -39,7 +39,7 @@ CREATE TABLE `admins` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `admins`
+-- Dumping data for table `admins`
 --
 
 INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `reset_token`, `reset_token_expire`, `created_at`) VALUES
@@ -50,7 +50,7 @@ INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `rese
 -- --------------------------------------------------------
 
 --
--- 表的结构 `admin_logs`
+-- Table structure for table `admin_logs`
 --
 
 CREATE TABLE `admin_logs` (
@@ -64,7 +64,7 @@ CREATE TABLE `admin_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `admin_logs`
+-- Dumping data for table `admin_logs`
 --
 
 INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_event`, `ip_address`, `login_time`) VALUES
@@ -209,7 +209,7 @@ INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_even
 -- --------------------------------------------------------
 
 --
--- 表的结构 `bank`
+-- Table structure for table `bank`
 --
 
 CREATE TABLE `bank` (
@@ -225,7 +225,7 @@ CREATE TABLE `bank` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `bank`
+-- Dumping data for table `bank`
 --
 
 INSERT INTO `bank` (`id`, `bank_name`, `cardholder_name`, `card_number`, `cvc`, `expiry_date`, `fpx_username`, `fpx_password`, `balance`) VALUES
@@ -236,7 +236,7 @@ INSERT INTO `bank` (`id`, `bank_name`, `cardholder_name`, `card_number`, `cvc`, 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `build_items`
+-- Table structure for table `build_items`
 --
 
 CREATE TABLE `build_items` (
@@ -247,7 +247,7 @@ CREATE TABLE `build_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `build_items`
+-- Dumping data for table `build_items`
 --
 
 INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`) VALUES
@@ -504,7 +504,7 @@ INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`
 -- --------------------------------------------------------
 
 --
--- 表的结构 `categories`
+-- Table structure for table `categories`
 --
 
 CREATE TABLE `categories` (
@@ -514,7 +514,7 @@ CREATE TABLE `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `categories`
+-- Dumping data for table `categories`
 --
 
 INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
@@ -533,7 +533,7 @@ INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
 -- --------------------------------------------------------
 
 --
--- 表的结构 `community_comments`
+-- Table structure for table `community_comments`
 --
 
 CREATE TABLE `community_comments` (
@@ -547,7 +547,7 @@ CREATE TABLE `community_comments` (
 -- --------------------------------------------------------
 
 --
--- 表的结构 `community_likes`
+-- Table structure for table `community_likes`
 --
 
 CREATE TABLE `community_likes` (
@@ -558,7 +558,7 @@ CREATE TABLE `community_likes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `community_likes`
+-- Dumping data for table `community_likes`
 --
 
 INSERT INTO `community_likes` (`like_id`, `post_id`, `customer_id`, `created_at`) VALUES
@@ -570,7 +570,7 @@ INSERT INTO `community_likes` (`like_id`, `post_id`, `customer_id`, `created_at`
 -- --------------------------------------------------------
 
 --
--- 表的结构 `community_posts`
+-- Table structure for table `community_posts`
 --
 
 CREATE TABLE `community_posts` (
@@ -589,7 +589,7 @@ CREATE TABLE `community_posts` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `community_posts`
+-- Dumping data for table `community_posts`
 --
 
 INSERT INTO `community_posts` (`post_id`, `customer_id`, `pc_build_id`, `title`, `content`, `post_images`, `post_type`, `views`, `created_at`, `is_pinned`, `report_count`, `is_flagged`) VALUES
@@ -602,7 +602,7 @@ INSERT INTO `community_posts` (`post_id`, `customer_id`, `pc_build_id`, `title`,
 -- --------------------------------------------------------
 
 --
--- 表的结构 `consultations`
+-- Table structure for table `consultations`
 --
 
 CREATE TABLE `consultations` (
@@ -617,7 +617,7 @@ CREATE TABLE `consultations` (
 -- --------------------------------------------------------
 
 --
--- 表的结构 `customers`
+-- Table structure for table `customers`
 --
 
 CREATE TABLE `customers` (
@@ -646,7 +646,7 @@ CREATE TABLE `customers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `customers`
+-- Dumping data for table `customers`
 --
 
 INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `birthday`, `wallet_balance`, `reward_coins`, `membership_tier`, `vip_expiry_date`, `auto_renew`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`, `created_at`) VALUES
@@ -660,7 +660,7 @@ INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `
 -- --------------------------------------------------------
 
 --
--- 表的结构 `customer_addresses`
+-- Table structure for table `customer_addresses`
 --
 
 CREATE TABLE `customer_addresses` (
@@ -680,7 +680,7 @@ CREATE TABLE `customer_addresses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `customer_addresses`
+-- Dumping data for table `customer_addresses`
 --
 
 INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `recipient_name`, `phone_number`, `address_line1`, `address_line2`, `city`, `state`, `postcode`, `country`, `full_address`, `is_default`, `created_at`) VALUES
@@ -695,7 +695,7 @@ INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `recipient_name`,
 -- --------------------------------------------------------
 
 --
--- 表的结构 `fpx_accounts`
+-- Table structure for table `fpx_accounts`
 --
 
 CREATE TABLE `fpx_accounts` (
@@ -707,7 +707,7 @@ CREATE TABLE `fpx_accounts` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `fpx_accounts`
+-- Dumping data for table `fpx_accounts`
 --
 
 INSERT INTO `fpx_accounts` (`account_id`, `bank_name`, `username`, `password`, `balance`) VALUES
@@ -718,7 +718,7 @@ INSERT INTO `fpx_accounts` (`account_id`, `bank_name`, `username`, `password`, `
 -- --------------------------------------------------------
 
 --
--- 表的结构 `orders`
+-- Table structure for table `orders`
 --
 
 CREATE TABLE `orders` (
@@ -735,7 +735,7 @@ CREATE TABLE `orders` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `orders`
+-- Dumping data for table `orders`
 --
 
 INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `total_amount`, `coins_used`, `discount_amount`, `shipping_address`, `contact_number`, `order_status`) VALUES
@@ -764,7 +764,7 @@ INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `to
 -- --------------------------------------------------------
 
 --
--- 表的结构 `order_details`
+-- Table structure for table `order_details`
 --
 
 CREATE TABLE `order_details` (
@@ -775,48 +775,51 @@ CREATE TABLE `order_details` (
   `package_id` int(11) DEFAULT NULL,
   `affiliate_id` int(11) DEFAULT NULL,
   `quantity` int(11) NOT NULL,
-  `unit_price` decimal(10,2) NOT NULL
+  `unit_price` decimal(10,2) NOT NULL,
+  `return_status` varchar(50) DEFAULT NULL,
+  `return_reason` text DEFAULT NULL,
+  `return_image` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `order_details`
+-- Dumping data for table `order_details`
 --
 
-INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_build`, `package_id`, `affiliate_id`, `quantity`, `unit_price`) VALUES
-(1, 7, NULL, 9, NULL, NULL, 1, 4620.00),
-(2, 7, NULL, 10, NULL, NULL, 1, 7820.00),
-(3, 7, NULL, 11, NULL, NULL, 1, 4620.00),
-(4, 7, NULL, 13, NULL, NULL, 1, 4620.00),
-(5, 8, NULL, 15, NULL, NULL, 1, 10677.00),
-(6, 9, NULL, 16, NULL, NULL, 1, 6697.00),
-(7, 10, NULL, 17, NULL, NULL, 1, 6697.00),
-(8, 11, NULL, 18, NULL, NULL, 1, 6047.00),
-(9, 12, 1, NULL, NULL, NULL, 1, 950.00),
-(10, 13, NULL, 20, NULL, NULL, 1, 6697.00),
-(11, 14, NULL, 21, NULL, NULL, 1, 6697.00),
-(12, 15, NULL, 22, NULL, NULL, 1, 6697.00),
-(13, 16, NULL, NULL, 16, NULL, 2, 14419.00),
-(14, 16, NULL, NULL, 14, NULL, 1, 14729.00),
-(15, 16, NULL, 26, NULL, NULL, 1, 11787.00),
-(16, 16, NULL, NULL, 3, NULL, 1, 2820.00),
-(17, 16, NULL, NULL, 15, NULL, 1, 10259.00),
-(18, 16, NULL, 29, NULL, NULL, 1, 6427.00),
-(19, 17, NULL, 28, NULL, NULL, 1, 6427.00),
-(20, 18, NULL, NULL, 15, NULL, 1, 10259.00),
-(21, 19, 24, NULL, NULL, NULL, 1, 45.00),
-(22, 20, NULL, NULL, NULL, NULL, 1, 10727.00),
-(23, 21, NULL, NULL, NULL, NULL, 1, 10727.00),
-(24, 22, NULL, NULL, NULL, NULL, 1, 10727.00),
-(25, 23, NULL, NULL, NULL, NULL, 1, 11787.00),
-(26, 24, 48, NULL, NULL, NULL, 25, 1350.00),
-(27, 25, 44, NULL, NULL, NULL, 1, 2550.00),
-(28, 26, 24, NULL, NULL, NULL, 1, 45.00),
-(29, 27, 48, NULL, NULL, NULL, 1, 1350.00);
+INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_build`, `package_id`, `affiliate_id`, `quantity`, `unit_price`, `return_status`, `return_reason`, `return_image`) VALUES
+(1, 7, NULL, 9, NULL, NULL, 1, 4620.00, NULL, NULL, NULL),
+(2, 7, NULL, 10, NULL, NULL, 1, 7820.00, NULL, NULL, NULL),
+(3, 7, NULL, 11, NULL, NULL, 1, 4620.00, NULL, NULL, NULL),
+(4, 7, NULL, 13, NULL, NULL, 1, 4620.00, NULL, NULL, NULL),
+(5, 8, NULL, 15, NULL, NULL, 1, 10677.00, NULL, NULL, NULL),
+(6, 9, NULL, 16, NULL, NULL, 1, 6697.00, NULL, NULL, NULL),
+(7, 10, NULL, 17, NULL, NULL, 1, 6697.00, NULL, NULL, NULL),
+(8, 11, NULL, 18, NULL, NULL, 1, 6047.00, NULL, NULL, NULL),
+(9, 12, 1, NULL, NULL, NULL, 1, 950.00, NULL, NULL, NULL),
+(10, 13, NULL, 20, NULL, NULL, 1, 6697.00, NULL, NULL, NULL),
+(11, 14, NULL, 21, NULL, NULL, 1, 6697.00, NULL, NULL, NULL),
+(12, 15, NULL, 22, NULL, NULL, 1, 6697.00, NULL, NULL, NULL),
+(13, 16, NULL, NULL, 16, NULL, 2, 14419.00, NULL, NULL, NULL),
+(14, 16, NULL, NULL, 14, NULL, 1, 14729.00, NULL, NULL, NULL),
+(15, 16, NULL, 26, NULL, NULL, 1, 11787.00, NULL, NULL, NULL),
+(16, 16, NULL, NULL, 3, NULL, 1, 2820.00, NULL, NULL, NULL),
+(17, 16, NULL, NULL, 15, NULL, 1, 10259.00, NULL, NULL, NULL),
+(18, 16, NULL, 29, NULL, NULL, 1, 6427.00, NULL, NULL, NULL),
+(19, 17, NULL, 28, NULL, NULL, 1, 6427.00, NULL, NULL, NULL),
+(20, 18, NULL, NULL, 15, NULL, 1, 10259.00, NULL, NULL, NULL),
+(21, 19, 24, NULL, NULL, NULL, 1, 45.00, NULL, NULL, NULL),
+(22, 20, NULL, NULL, NULL, NULL, 1, 10727.00, NULL, NULL, NULL),
+(23, 21, NULL, NULL, NULL, NULL, 1, 10727.00, NULL, NULL, NULL),
+(24, 22, NULL, NULL, NULL, NULL, 1, 10727.00, NULL, NULL, NULL),
+(25, 23, NULL, NULL, NULL, NULL, 1, 11787.00, NULL, NULL, NULL),
+(26, 24, 48, NULL, NULL, NULL, 25, 1350.00, NULL, NULL, NULL),
+(27, 25, 44, NULL, NULL, NULL, 1, 2550.00, NULL, NULL, NULL),
+(28, 26, 24, NULL, NULL, NULL, 1, 45.00, NULL, NULL, NULL),
+(29, 27, 48, NULL, NULL, NULL, 1, 1350.00, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
 --
--- 表的结构 `packages`
+-- Table structure for table `packages`
 --
 
 CREATE TABLE `packages` (
@@ -835,7 +838,7 @@ CREATE TABLE `packages` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `packages`
+-- Dumping data for table `packages`
 --
 
 INSERT INTO `packages` (`package_id`, `package_name`, `description`, `price`, `image_url`, `target_persona`, `stock_status`, `score_gamer`, `score_creator`, `score_student`, `score_enthusiast`, `created_at`) VALUES
@@ -856,7 +859,7 @@ INSERT INTO `packages` (`package_id`, `package_name`, `description`, `price`, `i
 -- --------------------------------------------------------
 
 --
--- 表的结构 `package_items`
+-- Table structure for table `package_items`
 --
 
 CREATE TABLE `package_items` (
@@ -867,7 +870,7 @@ CREATE TABLE `package_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `package_items`
+-- Dumping data for table `package_items`
 --
 
 INSERT INTO `package_items` (`id`, `package_id`, `product_id`, `quantity`) VALUES
@@ -989,7 +992,7 @@ INSERT INTO `package_items` (`id`, `package_id`, `product_id`, `quantity`) VALUE
 -- --------------------------------------------------------
 
 --
--- 表的结构 `payments`
+-- Table structure for table `payments`
 --
 
 CREATE TABLE `payments` (
@@ -1002,7 +1005,7 @@ CREATE TABLE `payments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `payments`
+-- Dumping data for table `payments`
 --
 
 INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `reference_number`, `payment_status`, `transaction_date`) VALUES
@@ -1030,7 +1033,7 @@ INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `reference_n
 -- --------------------------------------------------------
 
 --
--- 表的结构 `products`
+-- Table structure for table `products`
 --
 
 CREATE TABLE `products` (
@@ -1051,7 +1054,7 @@ CREATE TABLE `products` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `products`
+-- Dumping data for table `products`
 --
 
 INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `description`, `price`, `stock_quantity`, `specifications`, `image_url`, `status`, `tdp_wattage`, `is_package`, `socket_type`, `ram_type`, `performance_tier`) VALUES
@@ -1120,7 +1123,7 @@ INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `descriptio
 -- --------------------------------------------------------
 
 --
--- 表的结构 `promo_codes`
+-- Table structure for table `promo_codes`
 --
 
 CREATE TABLE `promo_codes` (
@@ -1137,7 +1140,7 @@ CREATE TABLE `promo_codes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `promo_codes`
+-- Dumping data for table `promo_codes`
 --
 
 INSERT INTO `promo_codes` (`promo_id`, `code_name`, `target_category`, `is_vip_only`, `status`, `created_at`, `discount_value`, `discount_type`, `min_spend`, `max_cap`) VALUES
@@ -1155,7 +1158,7 @@ INSERT INTO `promo_codes` (`promo_id`, `code_name`, `target_category`, `is_vip_o
 -- --------------------------------------------------------
 
 --
--- 表的结构 `reviews`
+-- Table structure for table `reviews`
 --
 
 CREATE TABLE `reviews` (
@@ -1168,7 +1171,7 @@ CREATE TABLE `reviews` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `reviews`
+-- Dumping data for table `reviews`
 --
 
 INSERT INTO `reviews` (`review_id`, `product_id`, `customer_id`, `rating`, `comment`, `review_date`) VALUES
@@ -1177,7 +1180,7 @@ INSERT INTO `reviews` (`review_id`, `product_id`, `customer_id`, `rating`, `comm
 -- --------------------------------------------------------
 
 --
--- 表的结构 `saved_builds`
+-- Table structure for table `saved_builds`
 --
 
 CREATE TABLE `saved_builds` (
@@ -1189,7 +1192,7 @@ CREATE TABLE `saved_builds` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `saved_builds`
+-- Dumping data for table `saved_builds`
 --
 
 INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_price`, `created_at`) VALUES
@@ -1226,7 +1229,7 @@ INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_pric
 -- --------------------------------------------------------
 
 --
--- 表的结构 `saved_cards`
+-- Table structure for table `saved_cards`
 --
 
 CREATE TABLE `saved_cards` (
@@ -1242,7 +1245,7 @@ CREATE TABLE `saved_cards` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `saved_cards`
+-- Dumping data for table `saved_cards`
 --
 
 INSERT INTO `saved_cards` (`card_id`, `customer_id`, `bank_id`, `cardholder_name`, `last_four_digits`, `expiry_date`, `card_brand`, `is_default`, `created_at`) VALUES
@@ -1254,7 +1257,7 @@ INSERT INTO `saved_cards` (`card_id`, `customer_id`, `bank_id`, `cardholder_name
 -- --------------------------------------------------------
 
 --
--- 表的结构 `shopping_cart`
+-- Table structure for table `shopping_cart`
 --
 
 CREATE TABLE `shopping_cart` (
@@ -1269,7 +1272,7 @@ CREATE TABLE `shopping_cart` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `shopping_cart`
+-- Dumping data for table `shopping_cart`
 --
 
 INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `package_id`, `affiliate_id`, `quantity`, `added_at`) VALUES
@@ -1282,7 +1285,7 @@ INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`,
 -- --------------------------------------------------------
 
 --
--- 表的结构 `used_vouchers`
+-- Table structure for table `used_vouchers`
 --
 
 CREATE TABLE `used_vouchers` (
@@ -1296,7 +1299,7 @@ CREATE TABLE `used_vouchers` (
 -- --------------------------------------------------------
 
 --
--- 表的结构 `wallet_transactions`
+-- Table structure for table `wallet_transactions`
 --
 
 CREATE TABLE `wallet_transactions` (
@@ -1309,7 +1312,7 @@ CREATE TABLE `wallet_transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- 转存表中的数据 `wallet_transactions`
+-- Dumping data for table `wallet_transactions`
 --
 
 INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amount`, `coins_earned`, `created_at`) VALUES
@@ -1330,11 +1333,11 @@ INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amo
 (15, 8, 'Payment', -350.00, 0, '2026-06-18 21:41:10');
 
 --
--- 转储表的索引
+-- Indexes for dumped tables
 --
 
 --
--- 表的索引 `admins`
+-- Indexes for table `admins`
 --
 ALTER TABLE `admins`
   ADD PRIMARY KEY (`admin_id`),
@@ -1342,19 +1345,19 @@ ALTER TABLE `admins`
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- 表的索引 `admin_logs`
+-- Indexes for table `admin_logs`
 --
 ALTER TABLE `admin_logs`
   ADD PRIMARY KEY (`log_id`);
 
 --
--- 表的索引 `bank`
+-- Indexes for table `bank`
 --
 ALTER TABLE `bank`
   ADD PRIMARY KEY (`id`);
 
 --
--- 表的索引 `build_items`
+-- Indexes for table `build_items`
 --
 ALTER TABLE `build_items`
   ADD PRIMARY KEY (`build_item_id`),
@@ -1362,13 +1365,13 @@ ALTER TABLE `build_items`
   ADD KEY `product_id` (`product_id`);
 
 --
--- 表的索引 `categories`
+-- Indexes for table `categories`
 --
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`category_id`);
 
 --
--- 表的索引 `community_comments`
+-- Indexes for table `community_comments`
 --
 ALTER TABLE `community_comments`
   ADD PRIMARY KEY (`comment_id`),
@@ -1376,7 +1379,7 @@ ALTER TABLE `community_comments`
   ADD KEY `fk_community_comments_customer` (`customer_id`);
 
 --
--- 表的索引 `community_likes`
+-- Indexes for table `community_likes`
 --
 ALTER TABLE `community_likes`
   ADD PRIMARY KEY (`like_id`),
@@ -1384,7 +1387,7 @@ ALTER TABLE `community_likes`
   ADD KEY `fk_community_likes_customer` (`customer_id`);
 
 --
--- 表的索引 `community_posts`
+-- Indexes for table `community_posts`
 --
 ALTER TABLE `community_posts`
   ADD PRIMARY KEY (`post_id`),
@@ -1392,41 +1395,41 @@ ALTER TABLE `community_posts`
   ADD KEY `fk_community_posts_build` (`pc_build_id`);
 
 --
--- 表的索引 `consultations`
+-- Indexes for table `consultations`
 --
 ALTER TABLE `consultations`
   ADD PRIMARY KEY (`consultation_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `customers`
+-- Indexes for table `customers`
 --
 ALTER TABLE `customers`
   ADD PRIMARY KEY (`customer_id`),
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- 表的索引 `customer_addresses`
+-- Indexes for table `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   ADD PRIMARY KEY (`address_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `fpx_accounts`
+-- Indexes for table `fpx_accounts`
 --
 ALTER TABLE `fpx_accounts`
   ADD PRIMARY KEY (`account_id`);
 
 --
--- 表的索引 `orders`
+-- Indexes for table `orders`
 --
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`order_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `order_details`
+-- Indexes for table `order_details`
 --
 ALTER TABLE `order_details`
   ADD PRIMARY KEY (`order_detail_id`),
@@ -1436,13 +1439,13 @@ ALTER TABLE `order_details`
   ADD KEY `fk_order_affiliate` (`affiliate_id`);
 
 --
--- 表的索引 `packages`
+-- Indexes for table `packages`
 --
 ALTER TABLE `packages`
   ADD PRIMARY KEY (`package_id`);
 
 --
--- 表的索引 `package_items`
+-- Indexes for table `package_items`
 --
 ALTER TABLE `package_items`
   ADD PRIMARY KEY (`id`),
@@ -1450,14 +1453,14 @@ ALTER TABLE `package_items`
   ADD KEY `product_id` (`product_id`);
 
 --
--- 表的索引 `payments`
+-- Indexes for table `payments`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`payment_id`),
   ADD KEY `order_id` (`order_id`);
 
 --
--- 表的索引 `products`
+-- Indexes for table `products`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`product_id`),
@@ -1467,14 +1470,14 @@ ALTER TABLE `products`
   ADD KEY `idx_builder_tier` (`performance_tier`);
 
 --
--- 表的索引 `promo_codes`
+-- Indexes for table `promo_codes`
 --
 ALTER TABLE `promo_codes`
   ADD PRIMARY KEY (`promo_id`),
   ADD UNIQUE KEY `code_name` (`code_name`);
 
 --
--- 表的索引 `reviews`
+-- Indexes for table `reviews`
 --
 ALTER TABLE `reviews`
   ADD PRIMARY KEY (`review_id`),
@@ -1482,14 +1485,14 @@ ALTER TABLE `reviews`
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `saved_builds`
+-- Indexes for table `saved_builds`
 --
 ALTER TABLE `saved_builds`
   ADD PRIMARY KEY (`pc_build`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 表的索引 `saved_cards`
+-- Indexes for table `saved_cards`
 --
 ALTER TABLE `saved_cards`
   ADD PRIMARY KEY (`card_id`),
@@ -1497,7 +1500,7 @@ ALTER TABLE `saved_cards`
   ADD KEY `fk_saved_cards_bank` (`bank_id`);
 
 --
--- 表的索引 `shopping_cart`
+-- Indexes for table `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
   ADD PRIMARY KEY (`cart_id`),
@@ -1507,7 +1510,7 @@ ALTER TABLE `shopping_cart`
   ADD KEY `fk_cart_affiliate` (`affiliate_id`);
 
 --
--- 表的索引 `used_vouchers`
+-- Indexes for table `used_vouchers`
 --
 ALTER TABLE `used_vouchers`
   ADD PRIMARY KEY (`used_id`),
@@ -1515,179 +1518,179 @@ ALTER TABLE `used_vouchers`
   ADD KEY `promo_id` (`promo_id`);
 
 --
--- 表的索引 `wallet_transactions`
+-- Indexes for table `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
   ADD PRIMARY KEY (`transaction_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- 在导出的表使用AUTO_INCREMENT
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- 使用表AUTO_INCREMENT `admins`
+-- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
   MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- 使用表AUTO_INCREMENT `admin_logs`
+-- AUTO_INCREMENT for table `admin_logs`
 --
 ALTER TABLE `admin_logs`
   MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=138;
 
 --
--- 使用表AUTO_INCREMENT `bank`
+-- AUTO_INCREMENT for table `bank`
 --
 ALTER TABLE `bank`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- 使用表AUTO_INCREMENT `build_items`
+-- AUTO_INCREMENT for table `build_items`
 --
 ALTER TABLE `build_items`
   MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=384;
 
 --
--- 使用表AUTO_INCREMENT `categories`
+-- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
   MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
--- 使用表AUTO_INCREMENT `community_comments`
+-- AUTO_INCREMENT for table `community_comments`
 --
 ALTER TABLE `community_comments`
   MODIFY `comment_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- 使用表AUTO_INCREMENT `community_likes`
+-- AUTO_INCREMENT for table `community_likes`
 --
 ALTER TABLE `community_likes`
   MODIFY `like_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- 使用表AUTO_INCREMENT `community_posts`
+-- AUTO_INCREMENT for table `community_posts`
 --
 ALTER TABLE `community_posts`
   MODIFY `post_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- 使用表AUTO_INCREMENT `consultations`
+-- AUTO_INCREMENT for table `consultations`
 --
 ALTER TABLE `consultations`
   MODIFY `consultation_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- 使用表AUTO_INCREMENT `customers`
+-- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
   MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- 使用表AUTO_INCREMENT `customer_addresses`
+-- AUTO_INCREMENT for table `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
--- 使用表AUTO_INCREMENT `fpx_accounts`
+-- AUTO_INCREMENT for table `fpx_accounts`
 --
 ALTER TABLE `fpx_accounts`
   MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- 使用表AUTO_INCREMENT `orders`
+-- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
   MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
--- 使用表AUTO_INCREMENT `order_details`
+-- AUTO_INCREMENT for table `order_details`
 --
 ALTER TABLE `order_details`
   MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
--- 使用表AUTO_INCREMENT `packages`
+-- AUTO_INCREMENT for table `packages`
 --
 ALTER TABLE `packages`
   MODIFY `package_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
--- 使用表AUTO_INCREMENT `package_items`
+-- AUTO_INCREMENT for table `package_items`
 --
 ALTER TABLE `package_items`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=398;
 
 --
--- 使用表AUTO_INCREMENT `payments`
+-- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
   MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
--- 使用表AUTO_INCREMENT `products`
+-- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
   MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
 
 --
--- 使用表AUTO_INCREMENT `promo_codes`
+-- AUTO_INCREMENT for table `promo_codes`
 --
 ALTER TABLE `promo_codes`
   MODIFY `promo_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
--- 使用表AUTO_INCREMENT `reviews`
+-- AUTO_INCREMENT for table `reviews`
 --
 ALTER TABLE `reviews`
   MODIFY `review_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- 使用表AUTO_INCREMENT `saved_builds`
+-- AUTO_INCREMENT for table `saved_builds`
 --
 ALTER TABLE `saved_builds`
   MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
--- 使用表AUTO_INCREMENT `saved_cards`
+-- AUTO_INCREMENT for table `saved_cards`
 --
 ALTER TABLE `saved_cards`
   MODIFY `card_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
--- 使用表AUTO_INCREMENT `shopping_cart`
+-- AUTO_INCREMENT for table `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
   MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
--- 使用表AUTO_INCREMENT `used_vouchers`
+-- AUTO_INCREMENT for table `used_vouchers`
 --
 ALTER TABLE `used_vouchers`
   MODIFY `used_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- 使用表AUTO_INCREMENT `wallet_transactions`
+-- AUTO_INCREMENT for table `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
   MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
--- 限制导出的表
+-- Constraints for dumped tables
 --
 
 --
--- 限制表 `build_items`
+-- Constraints for table `build_items`
 --
 ALTER TABLE `build_items`
   ADD CONSTRAINT `build_items_ibfk_1` FOREIGN KEY (`pc_build`) REFERENCES `saved_builds` (`pc_build`) ON DELETE CASCADE,
   ADD CONSTRAINT `build_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `community_comments`
+-- Constraints for table `community_comments`
 --
 ALTER TABLE `community_comments`
   ADD CONSTRAINT `community_comments_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE,
@@ -1696,7 +1699,7 @@ ALTER TABLE `community_comments`
   ADD CONSTRAINT `fk_community_comments_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `community_likes`
+-- Constraints for table `community_likes`
 --
 ALTER TABLE `community_likes`
   ADD CONSTRAINT `community_likes_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE,
@@ -1705,7 +1708,7 @@ ALTER TABLE `community_likes`
   ADD CONSTRAINT `fk_community_likes_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `community_posts`
+-- Constraints for table `community_posts`
 --
 ALTER TABLE `community_posts`
   ADD CONSTRAINT `community_posts_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE,
@@ -1714,25 +1717,25 @@ ALTER TABLE `community_posts`
   ADD CONSTRAINT `fk_community_posts_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `consultations`
+-- Constraints for table `consultations`
 --
 ALTER TABLE `consultations`
   ADD CONSTRAINT `consultations_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `customer_addresses`
+-- Constraints for table `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   ADD CONSTRAINT `customer_addresses_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `orders`
+-- Constraints for table `orders`
 --
 ALTER TABLE `orders`
   ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `order_details`
+-- Constraints for table `order_details`
 --
 ALTER TABLE `order_details`
   ADD CONSTRAINT `fk_order_affiliate` FOREIGN KEY (`affiliate_id`) REFERENCES `customers` (`customer_id`) ON DELETE SET NULL,
@@ -1741,39 +1744,39 @@ ALTER TABLE `order_details`
   ADD CONSTRAINT `order_details_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE SET NULL;
 
 --
--- 限制表 `payments`
+-- Constraints for table `payments`
 --
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `products`
+-- Constraints for table `products`
 --
 ALTER TABLE `products`
   ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `reviews`
+-- Constraints for table `reviews`
 --
 ALTER TABLE `reviews`
   ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `saved_builds`
+-- Constraints for table `saved_builds`
 --
 ALTER TABLE `saved_builds`
   ADD CONSTRAINT `saved_builds_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `saved_cards`
+-- Constraints for table `saved_cards`
 --
 ALTER TABLE `saved_cards`
   ADD CONSTRAINT `fk_saved_cards_bank` FOREIGN KEY (`bank_id`) REFERENCES `bank` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `saved_cards_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `shopping_cart`
+-- Constraints for table `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
   ADD CONSTRAINT `fk_cart_affiliate` FOREIGN KEY (`affiliate_id`) REFERENCES `customers` (`customer_id`) ON DELETE SET NULL,
@@ -1782,14 +1785,14 @@ ALTER TABLE `shopping_cart`
   ADD CONSTRAINT `shopping_cart_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `used_vouchers`
+-- Constraints for table `used_vouchers`
 --
 ALTER TABLE `used_vouchers`
   ADD CONSTRAINT `fk_used_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_used_promo` FOREIGN KEY (`promo_id`) REFERENCES `promo_codes` (`promo_id`) ON DELETE CASCADE;
 
 --
--- 限制表 `wallet_transactions`
+-- Constraints for table `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
   ADD CONSTRAINT `wallet_transactions_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
