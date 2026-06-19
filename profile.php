@@ -4,93 +4,10 @@ session_start();
 require_once 'config.php';
 if (!isset($_SESSION['customer_id'])) { header("Location: login.php"); exit(); }
 $customer_id = $_SESSION['customer_id'];
+
 $update_msg = $update_err = "";
 $addr_msg = $addr_err = "";
-
 $card_msg = $card_err = "";
-
-// ==========================================
-// 🌟 核心逻辑 3：处理信用卡/支付方式管理 (完美移植 checkout.php 邏輯)
-// ==========================================
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_card'])) {
-    $open_acc = 'cards';
-    $cardholder = htmlspecialchars(trim($_POST['cardholder_name']));
-    // 使用跟 checkout 一樣的 str_replace 清除空白與橫槓
-    $card_number = str_replace([' ', '-'], '', trim($_POST['card_number']));
-    $expiry = htmlspecialchars(trim($_POST['expiry_date']));
-    $cvc = htmlspecialchars(trim($_POST['cvc']));
-
-    // 基本格式防呆
-    if (strlen($card_number) < 16) {
-        $card_err = "Card number must be at least 16 digits.";
-    } elseif (!preg_match('/^(0[1-9]|1[0-2])\/?([0-9]{2})$/', $expiry)) {
-        $card_err = "Expiry date must be in MM/YY format (e.g., 12/25).";
-    } else {
-        
-        // 🚨 終極防護：向虛擬銀行 (bank table) 發起驗證！
-        // 必須卡號、CVC、到期日三個都對才放行
-        $bank_stmt = $conn->prepare("SELECT id FROM bank WHERE card_number = ? AND cvc = ? AND expiry_date = ?");
-        $bank_stmt->bind_param("sss", $card_number, $cvc, $expiry);
-        $bank_stmt->execute();
-        $bank_result = $bank_stmt->get_result();
-
-        if ($bank_result->num_rows > 0) {
-            // ✅ 驗證成功：銀行裡有這張卡，獲取銀行的 ID
-            $bank_account_id = $bank_result->fetch_assoc()['id'];
-            $last_four = substr($card_number, -4);
-            
-            // 🌟 企業級智慧判斷卡片品牌 (直接套用 checkout.php 的邏輯)
-            $card_brand = 'Credit Card'; // 預設值
-            if (strpos($card_number, '4') === 0) {
-                $card_brand = 'Visa';
-            } elseif (strpos($card_number, '5') === 0 || strpos($card_number, '2') === 0) {
-                $card_brand = 'Mastercard';
-            } elseif (strpos($card_number, '3') === 0) {
-                $card_brand = 'Amex'; // Maybank 用戶非常常用
-            } elseif (strpos($card_number, '6') === 0) {
-                $card_brand = 'UnionPay';
-            }
-
-            // 寫入 saved_cards 時，把 bank_id 和動態抓取的 brand 一起寫進去
-            $stmt = $conn->prepare("INSERT INTO saved_cards (customer_id, bank_id, cardholder_name, last_four_digits, expiry_date, card_brand) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("iissss", $customer_id, $bank_account_id, $cardholder, $last_four, $expiry, $card_brand);
-            
-            if($stmt->execute()) { 
-                $card_msg = "Card successfully verified by bank and secured."; 
-            } else { 
-                $card_err = "Failed to add card."; 
-            }
-            $stmt->close();
-        } else {
-            // ❌ 驗證失敗：資料填錯，或是這張卡根本不存在於 bank 裡面
-            $card_err = "Bank validation failed! Incorrect Card Number, Expiry Date, or CVC.";
-        }
-        $bank_stmt->close();
-    }
-}
-
-if (isset($_GET['del_card'])) {
-    $open_acc = 'cards';
-    $c_id = intval($_GET['del_card']);
-    $conn->query("DELETE FROM saved_cards WHERE card_id = $c_id AND customer_id = $customer_id");
-    header("Location: profile.php?tab=cards"); 
-    exit();
-}
-
-if (isset($_GET['set_default_card'])) {
-    $open_acc = 'cards';
-    $c_id = intval($_GET['set_default_card']);
-    // 先把所有卡片變成非預設 (0)
-    $conn->query("UPDATE saved_cards SET is_default = 0 WHERE customer_id = $customer_id");
-    // 再把指定的這張卡片變成預設 (1)
-    $conn->query("UPDATE saved_cards SET is_default = 1 WHERE card_id = $c_id AND customer_id = $customer_id");
-    header("Location: profile.php?tab=cards"); 
-    exit();
-}
-
-// 抓取使用者的卡片資料
-$saved_cards = $conn->query("SELECT * FROM saved_cards WHERE customer_id = $customer_id ORDER BY is_default DESC, created_at DESC");
-// 👆👆👆 複製到這裡結束 👆👆👆
 
 $open_acc = 'account';
 
@@ -239,28 +156,103 @@ if (isset($_GET['set_default'])) {
     header("Location: profile.php?tab=address"); exit();
 }
 
+// ==========================================
+// 🌟 核心逻辑 3：处理信用卡/支付方式管理
+// ==========================================
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_card'])) {
+    $open_acc = 'cards';
+    $cardholder = htmlspecialchars(trim($_POST['cardholder_name']));
+    $card_number = str_replace([' ', '-'], '', trim($_POST['card_number']));
+    $expiry = htmlspecialchars(trim($_POST['expiry_date']));
+    $cvc = htmlspecialchars(trim($_POST['cvc']));
+
+    if (strlen($card_number) < 16) {
+        $card_err = "Card number must be at least 16 digits.";
+    } elseif (!preg_match('/^(0[1-9]|1[0-2])\/?([0-9]{2})$/', $expiry)) {
+        $card_err = "Expiry date must be in MM/YY format (e.g., 12/25).";
+    } else {
+        $bank_stmt = $conn->prepare("SELECT id FROM bank WHERE card_number = ? AND cvc = ? AND expiry_date = ?");
+        $bank_stmt->bind_param("sss", $card_number, $cvc, $expiry);
+        $bank_stmt->execute();
+        $bank_result = $bank_stmt->get_result();
+
+        if ($bank_result->num_rows > 0) {
+            $bank_account_id = $bank_result->fetch_assoc()['id'];
+            $last_four = substr($card_number, -4);
+            
+            $card_brand = 'Credit Card'; 
+            if (strpos($card_number, '4') === 0) {
+                $card_brand = 'Visa';
+            } elseif (strpos($card_number, '5') === 0 || strpos($card_number, '2') === 0) {
+                $card_brand = 'Mastercard';
+            } elseif (strpos($card_number, '3') === 0) {
+                $card_brand = 'Amex';
+            } elseif (strpos($card_number, '6') === 0) {
+                $card_brand = 'UnionPay';
+            }
+
+            $stmt = $conn->prepare("INSERT INTO saved_cards (customer_id, bank_id, cardholder_name, last_four_digits, expiry_date, card_brand) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("iissss", $customer_id, $bank_account_id, $cardholder, $last_four, $expiry, $card_brand);
+            
+            if($stmt->execute()) { 
+                $card_msg = "Card successfully verified by bank and secured."; 
+            } else { 
+                $card_err = "Failed to add card."; 
+            }
+            $stmt->close();
+        } else {
+            $card_err = "Bank validation failed! Incorrect Card Number, Expiry Date, or CVC.";
+        }
+        $bank_stmt->close();
+    }
+}
+
+if (isset($_GET['del_card'])) {
+    $open_acc = 'cards';
+    $c_id = intval($_GET['del_card']);
+    $conn->query("DELETE FROM saved_cards WHERE card_id = $c_id AND customer_id = $customer_id");
+    header("Location: profile.php?tab=cards"); 
+    exit();
+}
+
+if (isset($_GET['set_default_card'])) {
+    $open_acc = 'cards';
+    $c_id = intval($_GET['set_default_card']);
+    $conn->query("UPDATE saved_cards SET is_default = 0 WHERE customer_id = $customer_id");
+    $conn->query("UPDATE saved_cards SET is_default = 1 WHERE card_id = $c_id AND customer_id = $customer_id");
+    header("Location: profile.php?tab=cards"); 
+    exit();
+}
+
 if (isset($_GET['tab'])) { $open_acc = $_GET['tab']; }
 
+// ==========================================
+// 🌟 抓取数据
+// ==========================================
 $user = $conn->query("SELECT * FROM customers WHERE customer_id = $customer_id")->fetch_assoc();
 $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = $customer_id ORDER BY is_default DESC, created_at DESC");
+$saved_cards = $conn->query("SELECT * FROM saved_cards WHERE customer_id = $customer_id ORDER BY is_default DESC, created_at DESC");
 
 // ==========================================
-// 🌟 修复后的核心进度条与身份逻辑 (完美同步)
+// 🌟 核心进度条与身份逻辑 (完美同步)
 // ==========================================
-$coins = intval($user['reward_coins'] ?? 0);
+$coins = isset($user['lifetime_coins']) ? intval($user['lifetime_coins']) : intval($user['reward_coins'] ?? 0);
 $tier_status = $user['membership_tier'] ?? 'Standard';
+
+// 统一判定全局 Elite 状态（用于全站Voucher权限和本页的UI控制）
+$is_elite = ($tier_status === 'VIP' || $coins >= 1000);
 
 if ($coins < 500) {
     $natural_tier = "Enthusiast";
     $target_coins = 500;
     $progress_pct = ($coins / 500) * 100;
-    $natural_color = "#00f2fe"; // 赛博蓝
-    $next_color = "#a855f7"; // 专业紫
+    $natural_color = "#00f2fe"; 
+    $next_color = "#a855f7"; 
     $next_tier_name = "Pro Builder";
 } elseif ($coins < 1000) {
     $natural_tier = "Pro Builder";
     $target_coins = 1000;
-    $progress_pct = ($coins / 1000) * 100; // 绝对比例，550/1000 就是 55%
+    $progress_pct = ($coins / 1000) * 100; 
     $natural_color = "#a855f7"; 
     $next_color = "#ffd700"; 
     $next_tier_name = "Elite Architect";
@@ -274,19 +266,24 @@ if ($coins < 500) {
 }
 
 if ($tier_status === 'VIP') {
-    $current_tier = "Elite (VIP)";
+    $profile_display_tier = "Elite (VIP)";
     $icon = "fa-crown";
     $bar_color = "#ffd700"; 
     
     if ($coins < 1000) {
         $next_tier = "Permanent Elite";
-        $benefits_text = "VIP Active! You enjoy Elite privileges. Reach 1000 pts to lock in this status permanently.";
+        $target_coins = 1000; 
+        $progress_pct = ($coins / 1000) * 100; 
+        $next_color = "#ffd700"; 
+        $benefits_text = "VIP Active! You enjoy Elite privileges. Reach {$target_coins} pts to lock in this status permanently.";
     } else {
         $next_tier = "MAX LEVEL";
+        $target_coins = "MAX"; 
+        $progress_pct = 100;
         $benefits_text = "Maximum prestige achieved! You are a Permanent Elite and VIP.";
     }
 } else {
-    $current_tier = $natural_tier;
+    $profile_display_tier = $natural_tier;
     $next_tier = $next_tier_name;
     $bar_color = $natural_color;
     $icon = ($coins >= 1000) ? "fa-crown" : (($coins >= 500) ? "fa-star" : "fa-user");
@@ -438,8 +435,8 @@ if ($tier_status === 'VIP') {
                     <div>
                         <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 5px;">Current Rank</div>
                         <div style="font-size: 1.4rem; font-weight: 900; color: <?php echo $bar_color; ?>; display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px;">
-                            <i class="fas <?php echo $icon; ?>"></i> <?php echo $current_tier; ?>
-                        </div>
+    <i class="fas <?php echo $icon; ?>"></i> <?php echo $profile_display_tier; ?> 
+</div>
                     </div>
                     <div style="text-align: right;">
                         <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 5px;">Next Target: <span style="color: <?php echo $next_color; ?>;"><?php echo $next_tier; ?></span></div>
@@ -538,17 +535,24 @@ if ($tier_status === 'VIP') {
                     </div>
                 </div>
 
+                <!-- 🌟 统一判断入口：修复 Accordion UI 逻辑漏洞 -->
                 <div class="accordion-item <?php echo $open_acc == 'vouchers' ? 'active' : ''; ?>" id="acc-vouchers">
                     <div class="accordion-header" onclick="toggleAccordion('acc-vouchers')">
                         <span><i class="fas fa-crown" style="margin-right: 10px; color: #ffd700;"></i> Membership & Vouchers</span>
                         <i class="fas fa-chevron-down chevron"></i>
                     </div>
                     <div class="accordion-content">
-                        <?php if ($user['membership_tier'] === 'VIP'): ?>
+                        <?php if ($is_elite): ?>
                             <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(10,10,15,0.9) 100%); border: 1px solid rgba(255,215,0,0.4); padding: 30px; border-radius: 12px; position: relative; overflow: hidden;">
-                                <h4 style="color: #ffd700; margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 900;"><i class="fa-solid fa-circle-check"></i> Elite Membership Active</h4>
+                                <h4 style="color: #ffd700; margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 900;"><i class="fa-solid fa-circle-check"></i> Elite Status Active</h4>
                                 <p style="font-size: 0.95rem; color: #e2e8f0; margin: 0 0 8px 0;">Your Elite status is active. Enjoy premium discounts and exclusive vouchers.</p>
-                                <p style="font-size: 0.85rem; color: #94a3b8; font-family: 'JetBrains Mono'; margin: 0 0 25px 0;">Valid until: <span style="color: #fff; font-weight: bold;"><?php echo date('d M Y', strtotime($user['vip_expiry_date'])); ?></span></p>
+                                
+                                <?php if ($tier_status === 'VIP'): ?>
+                                    <p style="font-size: 0.85rem; color: #94a3b8; font-family: 'JetBrains Mono'; margin: 0 0 25px 0;">Valid until: <span style="color: #fff; font-weight: bold;"><?php echo date('d M Y', strtotime($user['vip_expiry_date'])); ?></span></p>
+                                <?php else: ?>
+                                    <p style="font-size: 0.85rem; color: #94a3b8; font-family: 'JetBrains Mono'; margin: 0 0 25px 0;">Valid until: <span style="color: #00e676; font-weight: bold;">LIFETIME (Permanent)</span></p>
+                                <?php endif; ?>
+
                                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                                     <a href="vouchers.php" class="tech-btn" style="background: #ffd700; color: #000; border: none; box-shadow: 0 4px 15px rgba(255,215,0,0.3);"><i class="fa-solid fa-ticket"></i> View My Vouchers</a>
                                     <a href="membership.php" class="tech-btn" style="border: 1px solid rgba(255,215,0,0.5); color: #ffd700;">Manage Subscription</a>
@@ -636,9 +640,9 @@ if ($tier_status === 'VIP') {
                             <?php endif; ?>
                         </div>
                     </div>
-                    
                 </div>
-<div class="accordion-item <?php echo $open_acc == 'cards' ? 'active' : ''; ?>" id="acc-cards">
+
+                <div class="accordion-item <?php echo $open_acc == 'cards' ? 'active' : ''; ?>" id="acc-cards">
                     <div class="accordion-header" onclick="toggleAccordion('acc-cards')">
                         <span><i class="fas fa-credit-card" style="margin-right: 10px;"></i> Payment Methods</span>
                         <i class="fas fa-chevron-down chevron"></i>
@@ -677,7 +681,8 @@ if ($tier_status === 'VIP') {
                             </form>
                         </div>
 
-                        <div class="address-grid"> <?php if($saved_cards->num_rows > 0): while($card = $saved_cards->fetch_assoc()): ?>
+                        <div class="address-grid"> 
+                            <?php if($saved_cards->num_rows > 0): while($card = $saved_cards->fetch_assoc()): ?>
                                 
                                 <div style="display: flex; flex-direction: column; gap: 12px;">
                                     
@@ -689,13 +694,13 @@ if ($tier_status === 'VIP') {
 
                                         <div style="display: flex; justify-content: space-between; align-items: flex-start; z-index: 1;">
                                             <?php 
-    $brand_class = 'fa-solid fa-credit-card'; // 預設的通用科技信用卡圖示 (取代原本的 Stripe)
-    $brand_lower = strtolower($card['card_brand']);
-    if ($brand_lower == 'visa') $brand_class = 'fa-brands fa-cc-visa';
-    elseif ($brand_lower == 'mastercard') $brand_class = 'fa-brands fa-cc-mastercard';
-    elseif ($brand_lower == 'amex') $brand_class = 'fa-brands fa-cc-amex';
-?>
-<i class="<?php echo $brand_class; ?>" style="font-size: 2.5rem; color: #00f2fe;"></i>
+                                            $brand_class = 'fa-solid fa-credit-card'; 
+                                            $brand_lower = strtolower($card['card_brand']);
+                                            if ($brand_lower == 'visa') $brand_class = 'fa-brands fa-cc-visa';
+                                            elseif ($brand_lower == 'mastercard') $brand_class = 'fa-brands fa-cc-mastercard';
+                                            elseif ($brand_lower == 'amex') $brand_class = 'fa-brands fa-cc-amex';
+                                            ?>
+                                            <i class="<?php echo $brand_class; ?>" style="font-size: 2.5rem; color: #00f2fe;"></i>
                                             
                                             <?php if($card['is_default']): ?>
                                                 <span style="background: rgba(0, 242, 254, 0.1); color: #00f2fe; border: 1px solid rgba(0, 242, 254, 0.3); font-size: 0.65rem; font-weight: 800; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px;">Primary</span>
@@ -736,6 +741,7 @@ if ($tier_status === 'VIP') {
                         </div>
                     </div>
                 </div>
+
             </div>
 
             <div class="side-panel">
@@ -910,7 +916,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 3. CVC 防呆：強制只能輸入數字，最高 4 碼
+    // 3. CVC 防呆：強制只能输入数字，最高 4 码
     if (cvcInput) {
         cvcInput.addEventListener('input', function(e) {
             this.value = this.value.replace(/\D/g, '').substring(0, 4);

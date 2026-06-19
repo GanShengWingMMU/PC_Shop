@@ -135,7 +135,7 @@ elseif ($filter_type == 'Discussion') { $where_clause = "WHERE cp.post_type IN (
 elseif ($filter_type == 'Trending') { $order_clause = "ORDER BY like_count DESC, cp.created_at DESC"; }
 
 $query_posts = "
-    SELECT cp.*, c.username, c.reward_coins, c.membership_tier,
+    SELECT cp.*, c.username, c.reward_coins, c.lifetime_coins, c.membership_tier,
            (SELECT COUNT(*) FROM community_likes WHERE post_id = cp.post_id) AS like_count,
            (SELECT COUNT(*) FROM community_likes WHERE post_id = cp.post_id AND customer_id = $customer_id) AS user_liked,
            (SELECT COUNT(*) FROM community_comments WHERE post_id = cp.post_id) AS comment_count,
@@ -148,7 +148,7 @@ $query_posts = "
 ";
 $posts = $conn->query($query_posts);
 $total_posts = $conn->query("SELECT COUNT(*) FROM community_posts")->fetch_row()[0];
-$top_builders = $conn->query("SELECT c.username, c.reward_coins, c.membership_tier, COUNT(cp.post_id) as post_count FROM customers c JOIN community_posts cp ON c.customer_id = cp.customer_id GROUP BY c.customer_id ORDER BY post_count DESC LIMIT 3");
+$top_builders = $conn->query("SELECT c.username, c.lifetime_coins, c.membership_tier, COUNT(cp.post_id) as post_count FROM customers c JOIN community_posts cp ON c.customer_id = cp.customer_id GROUP BY c.customer_id ORDER BY post_count DESC LIMIT 3");
 
 function getRankBadge($coins, $tier = 'Basic') {
     if ($tier === 'VIP') return '<span class="rank-badge elite" title="Elite Subscriber"><i class="fas fa-crown"></i> Elite</span>';
@@ -402,7 +402,7 @@ function getRankBadge($coins, $tier = 'Basic') {
                             <div class="author-info">
                                 <div class="author-name">
                                     <?php echo htmlspecialchars($p['username']); ?>
-                                    <?php echo getRankBadge($p['reward_coins'], $p['membership_tier']); ?>
+                                    <?php echo getRankBadge($p['lifetime_coins'], $p['membership_tier']); ?>
                                 </div>
                                 <div class="post-time"><?php echo date('M d, Y • H:i', strtotime($p['created_at'])); ?></div>
                             </div>
@@ -508,7 +508,7 @@ function getRankBadge($coins, $tier = 'Basic') {
                                 <?php echo htmlspecialchars($tb['username']); ?>
                             </div>
                             <div style="margin-top: 4px;">
-                                <?php echo getRankBadge($tb['reward_coins'], $tb['membership_tier']); ?>
+                                <?php echo getRankBadge($tb['lifetime_coins'], $tb['membership_tier']); ?>
                             </div>
                         </div>
                         <?php if($rank == 1) echo '<i class="fas fa-medal" style="color: #ffd700; font-size: 1.5rem;"></i>'; ?>

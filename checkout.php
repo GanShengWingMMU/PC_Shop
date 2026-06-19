@@ -10,8 +10,8 @@ if (!isset($_SESSION['customer_id'])) {
 $customer_id = $_SESSION['customer_id'];
 $error_message = "";
 
-// 取得顾客目前的钱包余额与金币
-$user_query = "SELECT wallet_balance, reward_coins, membership_tier FROM customers WHERE customer_id = ?";
+// 🌟 1. 取得顾客目前的钱包余额、金币，以及最重要的 lifetime_coins
+$user_query = "SELECT wallet_balance, reward_coins, lifetime_coins, membership_tier FROM customers WHERE customer_id = ?";
 $stmt_user = $conn->prepare($user_query);
 $stmt_user->bind_param("i", $customer_id);
 $stmt_user->execute();
@@ -20,9 +20,13 @@ $stmt_user->close();
 
 $current_balance = $user_data['wallet_balance'];
 $current_coins = $user_data['reward_coins'];
+$lifetime_coins = $user_data['lifetime_coins'] ?? 0;
 $current_tier = $user_data['membership_tier'];
-$saved_addresses = [];
 
+// 🌟 2. 全局定义：什么是真正的 Elite？（买VIP 或 积分满1000）
+$is_elite = ($current_tier === 'VIP' || $lifetime_coins >= 1000);
+
+$saved_addresses = [];
 $address_query = "SELECT * FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC";
 $stmt_addr = $conn->prepare($address_query);
 $stmt_addr->bind_param("i", $customer_id);
@@ -171,7 +175,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($item['product_id']) { $sub_comp += $item_price; } else { $sub_pkg += $item_price; }
             }
 
-            // 🌟 修复：防止并发 (Race Condition)
             $promo_stmt = $conn->prepare("
                 SELECT p.* FROM promo_codes p 
                 LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = ? 
@@ -183,7 +186,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $promo_res = $promo_stmt->get_result();
             
             if ($promo_row = $promo_res->fetch_assoc()) {
-                if ($promo_row['is_vip_only'] == 1 && $current_tier !== 'VIP') {
+                // 🌟 3. 后台验证修复：只拦截非 Elite 玩家
+                if ($promo_row['is_vip_only'] == 1 && !$is_elite) {
                     throw new Exception("[ACCESS DENIED] The promo code '{$applied_promo_code}' is exclusive to ELITE members only.");
                 }
                 
@@ -224,13 +228,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bank_account_id_to_deduct = null; 
         if ($final_payment_method === 'Credit Card') {
             $selected_card = $_POST['selected_card'] ?? '';
-if ($selected_card === 'new') {
+            if ($selected_card === 'new') {
                 $card_num = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
                 $card_cvc = trim($_POST['dummy_card_cvc']);
                 $card_name = trim($_POST['dummy_card_name'] ?? 'Cardholder'); 
-                $card_expiry = trim($_POST['dummy_card_expiry'] ?? ''); // 🌟 1. 抓取顧客在畫面上輸入的到期日
+                $card_expiry = trim($_POST['dummy_card_expiry'] ?? '');
                 
-                // 🌟 2. 銀行驗證升級：加上 expiry_date 條件，必須卡號、CVC、到期日三個都對才放行！
                 $bank_stmt = $conn->prepare("SELECT id FROM bank WHERE card_number = ? AND cvc = ? AND expiry_date = ?");
                 $bank_stmt->bind_param("sss", $card_num, $card_cvc, $card_expiry);
                 $bank_stmt->execute();
@@ -240,27 +243,23 @@ if ($selected_card === 'new') {
                     $bank_account_id_to_deduct = $bank_result->fetch_assoc()['id']; 
                     $last_four = substr($card_num, -4);
                     
-// 🌟 企業級智慧判斷卡片品牌 (支援大馬常見的 Visa, Mastercard, Amex, UnionPay)
-$card_brand = 'Credit Card'; // 預設值
-
-if (strpos($card_num, '4') === 0) {
-    $card_brand = 'Visa';
-} elseif (strpos($card_num, '5') === 0 || strpos($card_num, '2') === 0) {
-    $card_brand = 'Mastercard';
-} elseif (strpos($card_num, '3') === 0) {
-    $card_brand = 'Amex'; // Maybank 用戶非常常用
-} elseif (strpos($card_num, '6') === 0) {
-    $card_brand = 'UnionPay';
-}
+                    $card_brand = 'Credit Card'; 
+                    if (strpos($card_num, '4') === 0) {
+                        $card_brand = 'Visa';
+                    } elseif (strpos($card_num, '5') === 0 || strpos($card_num, '2') === 0) {
+                        $card_brand = 'Mastercard';
+                    } elseif (strpos($card_num, '3') === 0) {
+                        $card_brand = 'Amex';
+                    } elseif (strpos($card_num, '6') === 0) {
+                        $card_brand = 'UnionPay';
+                    }
                     $final_payment_method = $card_brand . " ending in " . $last_four; 
                     
-                    // 🌟 3. 動態儲存：拔掉寫死的 '12/28'，把顧客剛剛輸入的真實 $card_expiry 存進 saved_cards
                     $save_card = $conn->prepare("INSERT INTO saved_cards (customer_id, bank_id, cardholder_name, last_four_digits, expiry_date, card_brand) VALUES (?, ?, ?, ?, ?, ?)");
                     $save_card->bind_param("iissss", $customer_id, $bank_account_id_to_deduct, $card_name, $last_four, $card_expiry, $card_brand);
                     $save_card->execute();
 
                 } else {
-                    // 🌟 4. 錯誤訊息也要跟著升級
                     throw new Exception("[TRANSACTION FAILED] Bank Declined: Invalid Card Number, Expiry Date, or CVC. Please try again.");
                 }
             } else {
@@ -368,7 +367,6 @@ if (strpos($card_num, '4') === 0) {
         $order_id = $insert_order->insert_id;
 
         if ($promo_id_to_log) {
-            // 🌟 修复：最后执行记录，通过 affected_rows 防止并发多线程同时刷入
             $log_used = $conn->prepare("INSERT INTO used_vouchers (customer_id, promo_id, order_id) VALUES (?, ?, ?)");
             $log_used->bind_param("iii", $customer_id, $promo_id_to_log, $order_id);
             try {
@@ -376,13 +374,23 @@ if (strpos($card_num, '4') === 0) {
                     throw new Exception("Concurrency Error: Voucher already used.");
                 }
             } catch (mysqli_sql_exception $e) {
-                // 如果数据库有了 UNIQUE Index 报错也会被抓到
                 throw new Exception("Security Alert: Voucher usage conflict detected.");
             }
         }
 
         $insert_detail = $conn->prepare("INSERT INTO order_details (order_id, product_id, pc_build, package_id, affiliate_id, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $reward_stmt = $conn->prepare("UPDATE customers SET reward_coins = reward_coins + ? WHERE customer_id = ?");
+        
+        // 🌟 4. 修复金币发放漏洞：不仅发给创作者，买家结账也该拿金币！
+        // 给买家发金币
+        $buyer_coins_earned = floor($final_amount / 10);
+        if ($buyer_coins_earned > 0) {
+            $buyer_reward = $conn->prepare("UPDATE customers SET reward_coins = reward_coins + ?, lifetime_coins = lifetime_coins + ? WHERE customer_id = ?");
+            $buyer_reward->bind_param("iii", $buyer_coins_earned, $buyer_coins_earned, $customer_id);
+            $buyer_reward->execute();
+        }
+
+        // 给创作者发金币
+        $affiliate_reward_stmt = $conn->prepare("UPDATE customers SET reward_coins = reward_coins + ?, lifetime_coins = lifetime_coins + ? WHERE customer_id = ?");
         $bounty_per_build = 500; 
 
         foreach ($cart_items as $item) {
@@ -398,8 +406,8 @@ if (strpos($card_num, '4') === 0) {
 
             if ($aff_id) {
                 $total_bounty = $bounty_per_build * $item['quantity']; 
-                $reward_stmt->bind_param("ii", $total_bounty, $aff_id);
-                $reward_stmt->execute();
+                $affiliate_reward_stmt->bind_param("iii", $total_bounty, $total_bounty, $aff_id);
+                $affiliate_reward_stmt->execute();
             }
         }
 
@@ -683,14 +691,14 @@ if (strpos($card_num, '4') === 0) {
                     </div>
                 </div>
 
-                <div class="checkout-panel" style="border-color: <?php echo ($current_tier === 'VIP') ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.08)'; ?>;">
-                    <div class="panel-title" style="color: <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#fff'; ?>;">
+                <div class="checkout-panel" style="border-color: <?php echo $is_elite ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.08)'; ?>;">
+                    <div class="panel-title" style="color: <?php echo $is_elite ? '#ffd700' : '#fff'; ?>;">
                         <i class="fa-solid fa-ticket" style="color: inherit;"></i> Apply Voucher Code
                     </div>
                     
                     <div style="display: flex; gap: 15px;">
                         <input type="text" name="applied_promo_code" id="promo_code_input" class="cyber-input" placeholder="Enter override code..." style="font-family: 'JetBrains Mono', monospace; text-transform: uppercase;">
-                        <button type="button" onclick="openVoucherModal()" class="cyber-button" style="width: auto; background: transparent; border: 1px solid <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#00f2fe'; ?>; color: <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#00f2fe'; ?>; padding: 0 20px;">
+                        <button type="button" onclick="openVoucherModal()" class="cyber-button" style="width: auto; background: transparent; border: 1px solid <?php echo $is_elite ? '#ffd700' : '#00f2fe'; ?>; color: <?php echo $is_elite ? '#ffd700' : '#00f2fe'; ?>; padding: 0 20px;">
                             Browse
                         </button>
                     </div>
@@ -768,7 +776,7 @@ if (strpos($card_num, '4') === 0) {
                 $sql_vouchers = "SELECT p.* FROM promo_codes p 
                                  LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = $customer_id 
                                  WHERE p.status = 'Active' AND uv.promo_id IS NULL AND (p.is_vip_only = 0";
-                if ($current_tier === 'VIP') { $sql_vouchers .= " OR p.is_vip_only = 1"; }
+                if ($is_elite) { $sql_vouchers .= " OR p.is_vip_only = 1"; }
                 $sql_vouchers .= ") ORDER BY p.is_vip_only DESC, p.discount_value DESC";
                 
                 $res_vouchers = $conn->query($sql_vouchers);
@@ -837,7 +845,8 @@ if (strpos($card_num, '4') === 0) {
             ?>
         };
 
-        const currentTier = '<?php echo $current_tier; ?>';
+        // 🌟 7. JS 端逻辑修复，传入 $is_elite 的判断
+        const isElite = <?php echo $is_elite ? 'true' : 'false'; ?>;
         const baseSubtotal = <?php echo (float)$total_amount; ?>;
         const maxUserCoins = <?php echo (int)$current_coins; ?>;
         
@@ -915,7 +924,7 @@ if (strpos($card_num, '4') === 0) {
             if (code && activeVouchers[code]) {
                 const v = activeVouchers[code];
                 const targetSubtotal = cartSubtotals[v.cat] || cartSubtotals['All'];
-                const isVipValid = (v.vip === 0 || (v.vip === 1 && currentTier === 'VIP'));
+                const isVipValid = (v.vip === 0 || (v.vip === 1 && isElite)); // JS 也修复
                 const isSpendValid = (targetSubtotal >= v.min);
 
                 if (isVipValid && isSpendValid && targetSubtotal > 0) {
@@ -998,22 +1007,17 @@ if (strpos($card_num, '4') === 0) {
         const expiryInput = document.getElementById('dummy_card_expiry');
         if (expiryInput) {
             expiryInput.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, ''); // 移除非數字
+                let value = e.target.value.replace(/\D/g, '');
                 
                 if (value.length > 0) {
-                    // 🌟 1. 抓取前兩個數字 (月份)
                     let month = value.substring(0, 2);
                     
                     if (value.length >= 2) {
-                        // 🌟 核心防呆：如果月份大於 12，強制改成 12；如果是 00，強制改成 01
                         if (parseInt(month) > 12) month = '12';
                         if (parseInt(month) === 0) month = '01';
                     }
                     
-                    // 🌟 2. 抓取後面的數字 (年份)
                     let year = value.substring(2, 4);
-                    
-                    // 🌟 3. 組合回去並加上斜線
                     if (value.length > 2) {
                         value = month + '/' + year;
                     } else {

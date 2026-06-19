@@ -9,8 +9,8 @@ if (!isset($_SESSION['customer_id'])) {
 
 $customer_id = $_SESSION['customer_id'];
 
-// 抓取會員等級與使用者名稱
-$stmt = $conn->prepare("SELECT membership_tier, username FROM customers WHERE customer_id = ?");
+// 🌟 1. 抓取 lifetime_coins 来做真假 Elite 验证
+$stmt = $conn->prepare("SELECT membership_tier, username, lifetime_coins FROM customers WHERE customer_id = ?");
 $stmt->bind_param("i", $customer_id);
 $stmt->execute();
 $user_data = $stmt->get_result()->fetch_assoc();
@@ -18,16 +18,21 @@ $stmt->close();
 
 $current_tier = $user_data['membership_tier'];
 $username = $user_data['username'];
+$lifetime_coins = $user_data['lifetime_coins'] ?? 0;
 
-// 🌟 邏輯修復：精準計算該顧客「真正可用且未被使用過」的優惠券數量
+// 🌟 2. 核心修复：定义真正的 ELITE
+$is_elite = ($current_tier === 'VIP' || $lifetime_coins >= 1000);
+
+// 🌟 3. 查询可用券时，只看是不是 Elite，而不是是不是 VIP
 $count_query = "
     SELECT COUNT(p.promo_id) as total FROM promo_codes p 
     LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = ? 
     WHERE p.status = 'Active' AND uv.promo_id IS NULL 
-    AND (p.is_vip_only = 0 OR (p.is_vip_only = 1 AND ? = 'VIP'))
+    AND (p.is_vip_only = 0 OR (p.is_vip_only = 1 AND ? = 1))
 ";
 $count_stmt = $conn->prepare($count_query);
-$count_stmt->bind_param("is", $customer_id, $current_tier);
+$elite_int = $is_elite ? 1 : 0; // 转换成 0 或 1 传给 SQL
+$count_stmt->bind_param("ii", $customer_id, $elite_int);
 $count_stmt->execute();
 $total_vouchers = $count_stmt->get_result()->fetch_assoc()['total'];
 $count_stmt->close();
@@ -107,8 +112,8 @@ $count_stmt->close();
         </div>
         <div style="text-align: right; background: rgba(0,0,0,0.4); padding: 10px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
             <div style="color: #888; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px;">Current Tier</div>
-            <div style="color: <?php echo ($current_tier === 'VIP') ? '#ffd700' : '#00f2fe'; ?>; font-weight: 900; font-size: 1.3rem;">
-                <i class="fa-solid <?php echo ($current_tier === 'VIP') ? 'fa-crown' : 'fa-user'; ?>"></i> <?php echo strtoupper($current_tier); ?>
+            <div style="color: <?php echo $is_elite ? '#ffd700' : '#00f2fe'; ?>; font-weight: 900; font-size: 1.3rem;">
+                <i class="fa-solid <?php echo $is_elite ? 'fa-crown' : 'fa-user'; ?>"></i> <?php echo $is_elite ? 'ELITE STATUS' : strtoupper($current_tier); ?>
             </div>
         </div>
     </div>
@@ -117,7 +122,6 @@ $count_stmt->close();
         <div class="section-title"><i class="fa-solid fa-crown" style="color: #ffd700;"></i> ELITE Exclusive Vouchers <span></span></div>
         <div class="voucher-grid">
             <?php
-
             $vip_stmt = $conn->prepare("
                 SELECT p.* FROM promo_codes p 
                 LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = ? 
@@ -129,7 +133,8 @@ $count_stmt->close();
             $vip_res = $vip_stmt->get_result();
             
             while ($v = $vip_res->fetch_assoc()):
-                $is_locked = ($current_tier !== 'VIP');
+                // 🌟 5. 判断卡片是否锁定，只看是不是 Elite
+                $is_locked = !$is_elite;
             ?>
                 <div class="voucher-card <?php echo $is_locked ? 'locked' : ''; ?>" style="<?php echo $is_locked ? 'opacity: 0.6; filter: grayscale(0.8);' : 'border-color: rgba(255,215,0,0.3);'; ?>">
                     
@@ -177,7 +182,6 @@ $count_stmt->close();
         <div class="section-title"><i class="fa-solid fa-earth-americas" style="color: #00f2fe;"></i> Public Vouchers <span></span></div>
         <div class="voucher-grid">
             <?php
-            // 🌟 過濾已使用的 Public 券
             $pub_stmt = $conn->prepare("
                 SELECT p.* FROM promo_codes p 
                 LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = ? 

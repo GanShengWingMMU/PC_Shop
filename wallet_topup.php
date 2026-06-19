@@ -95,9 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $deduct_stmt->close();
 
                 // (2) 增加顾客钱包余额与金币
-                $update_sql = "UPDATE customers SET wallet_balance = wallet_balance + ?, reward_coins = reward_coins + ? WHERE customer_id = ?";
+                // (2) 增加顾客钱包余额、可消费金币 (reward_coins) 以及永久经验值 (lifetime_coins)
+                $update_sql = "UPDATE customers SET wallet_balance = wallet_balance + ?, reward_coins = reward_coins + ?, lifetime_coins = lifetime_coins + ? WHERE customer_id = ?";
                 $stmt_update = $conn->prepare($update_sql);
-                $stmt_update->bind_param("dii", $amount, $coins_earned, $customer_id);
+                // 注意绑定参数变成了 diii (1个浮点数，3个整数)
+                $stmt_update->bind_param("diii", $amount, $coins_earned, $coins_earned, $customer_id);
                 $stmt_update->execute();
                 $stmt_update->close();
 
