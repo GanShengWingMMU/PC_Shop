@@ -317,6 +317,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        ksort($required_products); 
+
         foreach ($required_products as $pid => $req_qty) {
             $stock_stmt = $conn->prepare("SELECT stock_quantity, product_name FROM products WHERE product_id = ? FOR UPDATE");
             $stock_stmt->bind_param("i", $pid);
