@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 19, 2026 at 05:42 AM
+-- Generation Time: Jun 21, 2026 at 02:15 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -45,7 +45,7 @@ CREATE TABLE `admins` (
 INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `reset_token`, `reset_token_expire`, `created_at`) VALUES
 (1, 'Alvis', 'Alvis@100884', 'chenweishen8733@gmail.com', 'SuperAdmin', NULL, NULL, '2026-04-29 21:17:21'),
 (6, 'admin', '$2y$10$eEJCvFMxRls.uVHpHNhmE.RfF/tCcUAzzEO1j8tv9anwNH2UqEpje', 'admin123@gmail.com', 'Admin', NULL, NULL, '2026-06-16 17:19:24'),
-(7, 'OC alvis', '$2y$10$FRlZ4BIls3e9qOk49vx1xe.IN8qveQxwVmYiJGeNi384ieZVBuDn6', 'ocalvis88@gmail.com', 'Admin', NULL, NULL, '2026-06-17 16:24:45');
+(7, 'OC alvis', '$2y$10$RApQv7nsSnlEuMIZHrHfXu5TsXB49lZnUS/opdB9vP2tEo8G0VeZ6', 'ocalvis88@gmail.com', 'Admin', NULL, NULL, '2026-06-17 16:24:45');
 
 -- --------------------------------------------------------
 
@@ -204,7 +204,15 @@ INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_even
 (134, 1, 'Alvis', 'SuperAdmin', 'Changed User ID: 6 status to Banned', '', '2026-06-18 22:13:57'),
 (135, 1, 'Alvis', 'SuperAdmin', 'Unbanned User ID: 6', '', '2026-06-18 22:18:48'),
 (136, 1, 'Alvis', 'SuperAdmin', 'Muted User ID: 6', '', '2026-06-18 22:44:55'),
-(137, 1, 'Alvis', 'SuperAdmin', 'Unmuted User ID: 6', '', '2026-06-18 23:07:24');
+(137, 1, 'Alvis', 'SuperAdmin', 'Unmuted User ID: 6', '', '2026-06-18 23:07:24'),
+(138, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-20 13:45:59'),
+(139, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-20 14:54:36'),
+(140, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-21 08:05:18'),
+(141, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-21 08:23:33'),
+(142, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-21 13:54:22'),
+(143, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-21 19:55:54'),
+(144, 7, 'OC alvis', 'Admin', 'System Login', '127.0.0.1', '2026-06-21 20:08:02'),
+(145, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-06-21 20:08:20');
 
 -- --------------------------------------------------------
 
@@ -1538,7 +1546,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `admin_logs`
 --
 ALTER TABLE `admin_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=138;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=146;
 
 --
 -- AUTO_INCREMENT for table `bank`
