@@ -16,8 +16,7 @@ $conn->query("UPDATE orders SET order_status = 'Shipped'
 
 // 🌟 1. 捕捉排序参数
 $current_sort = $_GET['sort'] ?? 'desc';
-// 确定 SQL 的 ORDER BY 部分
-$order_by = 'o.order_id DESC'; // 默认：最新订单
+$order_by = 'o.order_id DESC'; 
 if ($current_sort === 'asc') $order_by = 'o.order_id ASC';
 elseif ($current_sort === 'price_desc') $order_by = 'o.total_amount DESC';
 elseif ($current_sort === 'price_asc') $order_by = 'o.total_amount ASC';
@@ -27,9 +26,7 @@ if (isset($_POST['update_status'])) {
     $order_id = intval($_POST['order_id']);
     $new_status = trim($_POST['new_status']);
     
-    // 🌟 在允许的列表中加入 'Delivered'
     $allowed = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Completed', 'Cancelled'];
-    
     $saved_sort = isset($_POST['current_sort']) ? $_POST['current_sort'] : 'desc';
     
     if (in_array($new_status, $allowed)) {
@@ -45,11 +42,10 @@ if (isset($_POST['update_status'])) {
 
 if (isset($_POST['process_return'])) {
     $detail_id = intval($_POST['order_detail_id']);
-    $return_action = $_POST['return_action']; // 'approve' 或是 'reject'
+    $return_action = $_POST['return_action']; 
     $saved_sort = isset($_POST['current_sort']) ? $_POST['current_sort'] : 'desc';
 
     if ($return_action === 'approve') {
-        // 1. 獲取商品價格、數量和客戶ID，準備退款
         $info_stmt = $conn->prepare("
             SELECT od.unit_price, od.quantity, o.customer_id 
             FROM order_details od 
@@ -61,26 +57,21 @@ if (isset($_POST['process_return'])) {
         $result = $info_stmt->get_result();
         
         if ($row = $result->fetch_assoc()) {
-            $refund_amount = $row['unit_price'] * $row['quantity']; // 計算總退款金額
+            $refund_amount = $row['unit_price'] * $row['quantity']; 
             $cust_id = $row['customer_id'];
             
-            // 2. 更新訂單明細狀態為 Refunded
             $conn->query("UPDATE order_details SET return_status = 'Refunded' WHERE order_detail_id = $detail_id");
-            
-            // 3. 把錢退回顧客的數位錢包
             $conn->query("UPDATE customers SET wallet_balance = wallet_balance + $refund_amount WHERE customer_id = $cust_id");
             
             header("Location: manage_orders.php?updated=refund_success&sort=" . urlencode($saved_sort));
             exit();
         }
     } elseif ($return_action === 'reject') {
-        // 拒絕退貨
         $conn->query("UPDATE order_details SET return_status = 'Rejected' WHERE order_detail_id = $detail_id");
         header("Location: manage_orders.php?updated=refund_rejected&sort=" . urlencode($saved_sort));
         exit();
     }
 }
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -93,10 +84,31 @@ if (isset($_POST['process_return'])) {
     <style>
         .admin-sort-dropdown { background: rgba(0,0,0,0.6); color: #00f2fe; border: 1px solid rgba(0,242,254,0.3); padding: 8px 15px; border-radius: 6px; cursor: pointer; }
         
-        /* 🌟 把你原本很酷的 Items CSS 加回来 */
         .qty-badge { background: rgba(0,242,254,0.1); padding: 2px 6px; border-radius: 4px; color: #00f2fe; font-weight: 900; margin-right: 8px; font-size: 11px; border: 1px solid rgba(0,242,254,0.3); }
         .item-row { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed rgba(255,255,255,0.05); font-size: 12px; color: #cbd5e1; }
         .item-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+        /* 🌟 超炫酷的 Hover Tooltip CSS */
+        .tooltip-container { position: relative; display: inline-block; cursor: help; border-bottom: 1px dotted #888; padding-bottom: 2px; }
+        .tooltip-text { 
+            visibility: hidden; opacity: 0; width: 260px; 
+            background: rgba(15, 15, 20, 0.95); color: #fff; 
+            text-align: left; border-radius: 8px; padding: 15px; 
+            position: absolute; z-index: 100; bottom: 125%; left: 50%; 
+            transform: translateX(-50%) translateY(10px); 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8); 
+            border: 1px solid rgba(0,242,254,0.3); font-size: 12px; line-height: 1.5; 
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); 
+            pointer-events: none;
+        }
+        .tooltip-text::after { 
+            content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; 
+            border-width: 6px; border-style: solid; 
+            border-color: rgba(0,242,254,0.3) transparent transparent transparent; 
+        }
+        .tooltip-container:hover .tooltip-text { 
+            visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); 
+        }
     </style>
 </head>
 <body>
@@ -139,19 +151,56 @@ if (isset($_POST['process_return'])) {
                         $res = $conn->query($sql);
                         while ($row = $res->fetch_assoc()) {
                             $status = $row['order_status'];
-                            $status_color = "#facc15"; // Pending Default
+                            $status_color = "#facc15"; 
                             
-                            // 🌟 为 Delivered 添加专属的高亮蓝色
                             if ($status == 'Processing') $status_color = "#00f2fe";
                             elseif ($status == 'Shipped') $status_color = "#a855f7";
-                            elseif ($status == 'Delivered') $status_color = "#3b82f6"; // Royal Blue
+                            elseif ($status == 'Delivered') $status_color = "#3b82f6";
                             elseif ($status == 'Completed') $status_color = "#00e676";
                             elseif ($status == 'Cancelled') $status_color = "#ff4d4d";
 
                             echo "<tr style='border-bottom: 1px solid rgba(255,255,255,0.05);'>";
                             echo "<td style='padding:15px; font-family: JetBrains Mono;'>#{$row['order_id']}</td>";
                             echo "<td style='padding:15px; font-weight:bold;'>" . htmlspecialchars($row['username']) . "</td>";
-                            echo "<td style='padding:15px; color:#888; font-size:12px;'>" . date('d M, Y', strtotime($row['order_date'])) . "</td>";
+                            
+                            // 🌟 核心计算：日期、具体时间、已流逝时间
+                            $order_time = strtotime($row['order_date']);
+                            $time_diff = time() - $order_time;
+                            $days = floor($time_diff / 86400);
+                            $hours = floor(($time_diff % 86400) / 3600);
+                            $mins = floor(($time_diff % 3600) / 60);
+                            
+                            $time_elapsed = "";
+                            if ($days > 0) $time_elapsed = "{$days} Days, {$hours} Hrs ago";
+                            elseif ($hours > 0) $time_elapsed = "{$hours} Hrs, {$mins} Mins ago";
+                            else $time_elapsed = "{$mins} Mins ago";
+
+                            $exact_time = date('h:i:s A', $order_time);
+                            $date_display = date('d M, Y', $order_time);
+                            
+                            // 安全抓取地址：如果在 orders 里有 shipping_address 最好，没有则提示
+                            $address = $row['shipping_address'] ?? 'Check customer profile for full address details.';
+                            
+                            // 🌟 注入 Tooltip HTML
+                            echo "<td style='padding:15px; color:#888; font-size:12px;'>
+                                    <div class='tooltip-container'>
+                                        <i class='far fa-clock'></i> {$date_display}
+                                        <div class='tooltip-text'>
+                                            <div style='margin-bottom:8px;'>
+                                                <strong style='color:#00f2fe;'><i class='fas fa-map-marker-alt'></i> Shipping Address:</strong><br>
+                                                <span style='color:#cbd5e1;'>" . htmlspecialchars($address) . "</span>
+                                            </div>
+                                            <div style='margin-bottom:8px;'>
+                                                <strong style='color:#00f2fe;'><i class='fas fa-calendar-check'></i> Exact Time:</strong><br>
+                                                <span style='color:#cbd5e1;'>{$date_display} at {$exact_time}</span>
+                                            </div>
+                                            <div>
+                                                <strong style='color:#00f2fe;'><i class='fas fa-stopwatch'></i> Time Elapsed:</strong><br>
+                                                <span style='color:#ff4d4d; font-weight:bold;'>{$time_elapsed}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                  </td>";
                             
                             echo "<td style='padding:15px;'>";
                             $order_id_val = $row['order_id'];
@@ -164,35 +213,28 @@ if (isset($_POST['process_return'])) {
                             $res_items = $conn->query($sql_items);
                             
                             while($item = $res_items->fetch_assoc()) {
-                                // 🌟 1. 抓取並顯示商品名稱與數量 (剛剛可能不小心刪到這行了！)
                                 $name = $item['product_name'] ?: ($item['package_name'] ? "[Package] ".$item['package_name'] : "[Custom PC] ".$item['build_name']);
                                 echo "<div class='item-row'><span class='qty-badge'>{$item['quantity']}x</span> ".htmlspecialchars($name);
                                 
-                                // 🌟 2. 顯示退貨警告框與審核機制 (美化版)
                                 if (!empty($item['return_status'])) {
                                     $bg_color = $item['return_status'] == 'Refunded' ? 'rgba(0, 230, 118, 0.05)' : ($item['return_status'] == 'Rejected' ? 'rgba(255, 77, 77, 0.05)' : 'rgba(235, 94, 40, 0.05)');
                                     $border_color = $item['return_status'] == 'Refunded' ? '#00e676' : ($item['return_status'] == 'Rejected' ? '#ff4d4d' : '#eb5e28');
                                     
                                     echo "<div style='margin-top:6px; margin-bottom:12px; margin-left:32px; padding:8px 12px; background:{$bg_color}; border-left:2px solid {$border_color}; border-radius:0 4px 4px 0;'>";
-                                    
                                     echo "<div style='display:flex; justify-content:space-between; align-items:flex-start;'>";
                                     echo "<div>";
                                     echo "<strong style='color:{$border_color}; font-size:11px;'><i class='fa-solid fa-triangle-exclamation'></i> Return: " . htmlspecialchars($item['return_status']) . "</strong><br>";
                                     echo "<span style='color:#888; font-size:11px;'>Reason: <span style='color:#bbb;'>" . htmlspecialchars($item['return_reason']) . "</span></span>";
                                     echo "</div>";
                                     
-                                    // 顯示顧客上傳的照片連結
                                     if (!empty($item['return_image'])) {
                                         echo "<a href='{$item['return_image']}' target='_blank' style='color:#00f2fe; text-decoration:none; font-size:11px; padding:4px 8px; border:1px solid rgba(0,242,254,0.3); border-radius:4px; transition:0.3s;' onmouseover='this.style.background=\"rgba(0,242,254,0.1)\"' onmouseout='this.style.background=\"transparent\"'><i class='fa-solid fa-image'></i> Evidence</a>";
                                     }
                                     echo "</div>";
                                     
-                                    // 如果狀態是 Pending，顯示精緻版的 Approve 和 Reject 按鈕
                                     if ($item['return_status'] === 'Pending') {
                                         $refund_val = number_format($item['unit_price'] * $item['quantity'], 2);
                                         echo "<div style='margin-top:10px; display:flex; gap:8px;'>";
-                                        
-                                        // Approve
                                         echo "<form method='POST' style='margin:0;' onsubmit=\"return confirm('Approve this return and refund RM {$refund_val} to the customer wallet?');\">
                                                 <input type='hidden' name='order_detail_id' value='{$item['order_detail_id']}'>
                                                 <input type='hidden' name='return_action' value='approve'>
@@ -200,19 +242,16 @@ if (isset($_POST['process_return'])) {
                                                 <button type='submit' name='process_return' style='background:transparent; color:#00e676; border:1px solid #00e676; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; transition:0.3s;' onmouseover='this.style.background=\"rgba(0,230,118,0.1)\"' onmouseout='this.style.background=\"transparent\"'><i class='fa-solid fa-check'></i> Approve (Refund RM {$refund_val})</button>
                                               </form>";
                                               
-                                        // Reject
                                         echo "<form method='POST' style='margin:0;' onsubmit=\"return confirm('Reject this return request?');\">
                                                 <input type='hidden' name='order_detail_id' value='{$item['order_detail_id']}'>
                                                 <input type='hidden' name='return_action' value='reject'>
                                                 <input type='hidden' name='current_sort' value='{$current_sort}'>
                                                 <button type='submit' name='process_return' style='background:transparent; color:#ff4d4d; border:1px solid #ff4d4d; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; transition:0.3s;' onmouseover='this.style.background=\"rgba(255,77,77,0.1)\"' onmouseout='this.style.background=\"transparent\"'><i class='fa-solid fa-xmark'></i> Reject</button>
                                               </form>";
-                                              
                                         echo "</div>";
                                     }
                                     echo "</div>";
                                 }
-                                // 🌟 3. 結束單一商品的 div
                                 echo "</div>";
                             }
                             echo "</td>";
