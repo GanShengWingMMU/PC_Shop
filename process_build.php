@@ -51,7 +51,7 @@ try {
 
     if (empty($valid_parts)) {
         throw new Exception("[SECURITY FAULT] Invalid payload detected. No structural components found.");
-    } // 🌟 核心修復 1：這裡漏掉了一個右大括號，補上了！
+    } 
 
 
     $stmt_build = $conn->prepare("INSERT INTO saved_builds (customer_id, build_name, total_price) VALUES (?, ?, ?)");
