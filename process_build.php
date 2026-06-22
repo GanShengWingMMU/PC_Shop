@@ -54,6 +54,7 @@ try {
 
     if (empty($valid_parts)) {
         throw new Exception("[SECURITY FAULT] Invalid payload detected. No structural components found.");
+    } // 🌟 核心修復 1：這裡漏掉了一個右大括號，補上了！
 
     // ==========================================
     // 💾 統一寫入裝機庫 (Single Source of Truth)
@@ -93,6 +94,10 @@ try {
     // 🌟 修复 SQL 语句，打通 4 个指数的写入
     $stmt_dna = $conn->prepare("UPDATE customers SET pref_gamer = pref_gamer + ?, pref_creator = pref_creator + ?, pref_student = pref_student + ?, pref_enthusiast = pref_enthusiast + ? WHERE customer_id = ?");
     $stmt_dna->bind_param("iiiii", $add_gamer, $add_creator, $add_student, $add_enthusiast, $customer_id);
+    
+    // 🌟 核心修復 2：你之前忘了執行 (execute) 這句 SQL，現在幫你補上了，否則 DNA 指數不會更新！
+    $stmt_dna->execute(); 
+    $stmt_dna->close();
 
     // ==========================================
     // 🚦 業務路由分流 (Routing based on Action)
