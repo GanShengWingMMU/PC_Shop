@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $new_filename = uniqid("return_") . "." . $file_extension;
             $target_file = $target_dir . $new_filename;
             
-            // 允許的圖片格式
+
             $allowed_types = array("jpg", "jpeg", "png", "gif");
             if (in_array($file_extension, $allowed_types)) {
                 if (move_uploaded_file($_FILES["return_image"]["tmp_name"], $target_file)) {
