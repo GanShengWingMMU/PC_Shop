@@ -13,21 +13,8 @@ $remaining_time = 0;
 
 require_once 'keys.php'; 
 
-<<<<<<< HEAD
 
-if (empty($_SESSION['oauth_state'])) {
-    $_SESSION['oauth_state'] = bin2hex(random_bytes(32));
-}
-$oauth_state = $_SESSION['oauth_state'];
 
-$google_redirect_uri = 'http://localhost/projects/google_callback.php';
-$google_login_url = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=" . $google_client_id . "&redirect_uri=" . urlencode($google_redirect_uri) . "&scope=email%20profile&state=" . $oauth_state;
-
-$discord_redirect_uri = 'http://localhost/projects/discord_callback.php';
-$discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=" . $discord_client_id . "&redirect_uri=" . urlencode($discord_redirect_uri) . "&response_type=code&scope=" . urlencode("identify email") . "&state=" . $oauth_state;
-
-=======
->>>>>>> 60cb031b9fd9b8794264a33611c770d45164e9b3
 if (!isset($_SESSION['login_attempts'])) { $_SESSION['login_attempts'] = 0; }
 
 $redirect_url = isset($_GET['redirect']) ? filter_var($_GET['redirect'], FILTER_SANITIZE_URL) : 'index.php';

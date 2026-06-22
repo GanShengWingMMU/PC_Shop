@@ -7,14 +7,7 @@ if (isset($_SESSION['customer_id'])) { header("Location: index.php"); exit(); }
 $error_msg = "";
 require_once 'keys.php'; 
 
-<<<<<<< HEAD
 
-if (empty($_SESSION['oauth_state'])) {
-    $_SESSION['oauth_state'] = bin2hex(random_bytes(32));
-}
-$oauth_state = $_SESSION['oauth_state'];
-=======
->>>>>>> 60cb031b9fd9b8794264a33611c770d45164e9b3
 
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
