@@ -203,8 +203,7 @@ if (isset($_GET['unban_user'])) {
                                 $title_icon = ($tier === 'VIP') ? '<i class="fas fa-crown"></i> Elite Citizen' : '<i class="fas fa-user"></i> Standard';
                                 
                                 $package_badge = ($row['package_count'] > 0) ? "<div class='badge-package' title='This user purchased a PC Package'><i class='fas fa-cube'></i> Pack Owner</div>" : "";
-                                
-                                // 改为 Muted
+
                                 $is_banned = ($row['account_status'] === 'Banned' || $row['account_status'] === 'Muted');
                                 $row_bg = ($row['is_pinned'] == 1) ? 'pinned-row' : '';
 

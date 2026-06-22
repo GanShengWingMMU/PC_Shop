@@ -11,7 +11,7 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $cid = intval($_POST['customer_id']);
-    $amount = abs(intval($_POST['coin_amount'])); // 强制转正数防呆
+    $amount = abs(intval($_POST['coin_amount'])); 
     $action = $_POST['action']; 
 
     if ($action === 'deduct') { $amount = -$amount; }
