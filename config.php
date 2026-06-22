@@ -4,7 +4,7 @@
 $host = "localhost";
 $db_user = "root";       
 $db_pass = "";           
-$db_name = "pcshop";    // 已经更新为你指定的数据库名
+$db_name = "pcshop";    
 
 $conn = new mysqli($host, $db_user, $db_pass, $db_name);
 

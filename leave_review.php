@@ -2,7 +2,7 @@
 session_start();
 require_once 'config.php';
 
-// 1. 檢查登入狀態
+
 if (!isset($_SESSION['customer_id'])) {
     header("Location: login.php");
     exit();
@@ -13,7 +13,7 @@ $product_id = isset($_GET['product_id']) ? intval($_GET['product_id']) : 0;
 $error_msg = "";
 $success_msg = "";
 
-// 2. 抓取要評價的商品資訊
+
 $stmt = $conn->prepare("SELECT product_name, image_url FROM products WHERE product_id = ?");
 $stmt->bind_param("i", $product_id);
 $stmt->execute();
@@ -24,7 +24,7 @@ if (!$product) {
     die("Product not found.");
 }
 
-// 🌟 安全修復 1：驗證「購買真實性」防禦越權刷評 (Broken Access Control)
+
 $verify_purchase = $conn->prepare("
     SELECT o.order_id FROM orders o 
     JOIN order_details od ON o.order_id = od.order_id 
@@ -36,22 +36,20 @@ $verify_purchase->execute();
 $has_purchased = $verify_purchase->get_result()->num_rows > 0;
 $verify_purchase->close();
 
-// ==========================================
-// 处理提交评价 (POST Request)
-// ==========================================
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 🌟 强类型转换防越权：确保评分在 1-5 之间，防止有人抓包提交 100 星或负数星
+
     $rating = isset($_POST['rating']) ? intval($_POST['rating']) : 5;
     if ($rating < 1) $rating = 1;
     if ($rating > 5) $rating = 5;
 
-    // 🌟 核心防线：对评论内容进行严格的 XSS 净化！
+   
     $comment = htmlspecialchars(trim($_POST['comment']));
 
     if (empty($comment)) {
         $error_msg = "Please write a comment.";
     } else {
-        // 使用 Prepared Statement 写入数据库
+      
         $insert_review = $conn->prepare("INSERT INTO reviews (product_id, customer_id, rating, comment) VALUES (?, ?, ?, ?)");
         $insert_review->bind_param("iiis", $product_id, $customer_id, $rating, $comment);
         
@@ -77,12 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="css/style.css">
 
     <style>
-        /* 隱藏原生圓形單選框 */
+        
         .star-rating input[type="radio"] {
             display: none; 
         }
 
-        /* 讓星星水平排列，並支援反向選取 */
+       
         .star-rating {
             display: flex;
             flex-direction: row-reverse; 
@@ -90,16 +88,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 20px;
         }
 
-        /* 預設星星顏色與大小 */
+        
         .star-rating label i {
-            color: #475569; /* 預設的暗灰色 */
+            color: #475569;
             font-size: 2rem;
             cursor: pointer;
             padding: 0 5px;
             transition: color 0.2s;
         }
 
-        /* 當被選中、或滑鼠懸停時，讓星星變成亮黃色 */
+        
         .star-rating input[type="radio"]:checked ~ label i,
         .star-rating label:hover i,
         .star-rating label:hover ~ label i {

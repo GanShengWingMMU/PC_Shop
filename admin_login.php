@@ -1,13 +1,12 @@
 <?php
 session_start();
-// 🌟 智慧相容：優先載入 config.php，若不存在則降級載入 db_connect.php
 if (file_exists('config.php')) {
     require_once 'config.php';
 } else {
     include 'db_connect.php';
 }
 
-// 防止已登入的管理員重複訪問登入頁
+
 if (isset($_SESSION['admin_id']) || isset($_SESSION['user_id'])) {
     header("Location: admin_dashboard.php");
     exit();
@@ -15,7 +14,6 @@ if (isset($_SESSION['admin_id']) || isset($_SESSION['user_id'])) {
 
 $error = '';
 
-// 初始化暴力破解攔截器
 if (!isset($_SESSION['admin_login_attempts'])) { 
     $_SESSION['admin_login_attempts'] = 0; 
 }
@@ -32,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($username) || empty($password)) {
             $error = "Please fill in all security credentials.";
         } else {
-            // 🌟 安全防線：全面實裝 Prepared Statement，攔截萬能密碼注入
+    
             $stmt = $conn->prepare("SELECT * FROM admins WHERE username = ? AND (role = 'admin' OR role = 'superadmin')");
             $stmt->bind_param("s", $username);
             $stmt->execute();
@@ -41,7 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if ($result->num_rows === 1) {
                 $user = $result->fetch_assoc();
                 
-                // 🌟 智慧相容：同時驗證加密哈希與開發期明文
+                
                 $is_password_correct = false;
                 if (password_verify($password, $user['password'])) {
                     $is_password_correct = true;
@@ -51,13 +49,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
 
                 if ($is_password_correct) {
-                    // 防禦會話固定攻擊
+                
                     session_regenerate_id(true);
                     
                     unset($_SESSION['admin_login_attempts']);
                     unset($_SESSION['admin_lockout_time']);
                     
-                    // 自動識別資料庫主鍵欄位名
+                   
                     $admin_pk = $user['admin_id'] ?? $user['user_id'] ?? 0;
                     
                     // 🌟 寫入 Session
@@ -68,11 +66,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $_SESSION['admin_role'] = $user['role'];
                     $_SESSION['role'] = $user['role']; 
                     
-                    // ==========================================
-                    // 🚨 新增：Security Audit Logging (寫入登入日誌)
-                    // ==========================================
-                    $ip_address = $_SERVER['REMOTE_ADDR']; // 獲取使用者的真實 IP
-                    // 防止在 localhost 測試時出現奇怪的 IPv6 地址 (::1)，將其轉換為標準的 127.0.0.1
+                    
+                    //Security Audit Logging logs
+                  
+                    $ip_address = $_SERVER['REMOTE_ADDR']; // check IP address
+                
                     if ($ip_address == '::1') { $ip_address = '127.0.0.1'; }
                     
                     $log_sql = "INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES (?, ?, ?, 'System Login', ?)";
@@ -96,7 +94,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
             $stmt->close();
 
-            // 觸發 5 次鎖死 60 秒的懲罰機制
+          
             if ($_SESSION['admin_login_attempts'] >= 5) {
                 $_SESSION['admin_lockout_time'] = time() + 60; 
                 $error = "Security Lockdown: Intrusive behavior detected. Gateway locked for 60 seconds.";

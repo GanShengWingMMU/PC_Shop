@@ -11,7 +11,7 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
     header("Location: admin_login.php"); exit();
 }
 
-// 🌟 1. 彻底删除帖子 (Purge)
+//Delete the post
 if (isset($_GET['delete_post'])) {
     $del_id = intval($_GET['delete_post']);
     $stmt = $conn->prepare("DELETE FROM community_posts WHERE post_id = ?");
@@ -26,7 +26,7 @@ if (isset($_GET['delete_post'])) {
     header("Location: manage_forum.php?msg=deleted"); exit();
 }
 
-// 🌟 2. 移动分区 (Move Section)
+//Move Section
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_post'])) {
     $pid = intval($_POST['post_id']);
     $new_type = $_POST['new_type'];
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_post'])) {
     header("Location: manage_forum.php?msg=moved"); exit();
 }
 
-// 🌟 3. 敏感词扫描与净化 (Censor Filter)
+// Censor Filter
 if (isset($_GET['scan_post'])) {
     $pid = intval($_GET['scan_post']);
     $bad_words = array('fuck', 'shit', 'scam', 'bitch', 'asshole');
@@ -57,10 +57,10 @@ if (isset($_GET['scan_post'])) {
     header("Location: manage_forum.php?msg=censored"); exit();
 }
 
-// 🌟 4. 禁言 (Mute User - 只禁言不封号)
+// Mute User
 if (isset($_GET['ban_user'])) {
     $uid = intval($_GET['ban_user']);
-    // 改为 Muted，这样 login.php 就不会阻止他们登录
+    
     $conn->query("UPDATE customers SET account_status = 'Muted' WHERE customer_id = $uid");
     
     $action_msg = "Muted User ID: $uid";
@@ -68,10 +68,10 @@ if (isset($_GET['ban_user'])) {
     header("Location: manage_forum.php?msg=muted"); exit();
 }
 
-// 🌟 5. 解除禁言 (Unmute User)
+// Unmute User
 if (isset($_GET['unban_user'])) {
     $uid = intval($_GET['unban_user']);
-    // 将状态改回 Active
+    // Active
     $conn->query("UPDATE customers SET account_status = 'Active' WHERE customer_id = $uid");
     
     $action_msg = "Unmuted User ID: $uid";
@@ -118,7 +118,7 @@ if (isset($_GET['unban_user'])) {
         .rank-vip { color: #ffd700; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255,215,0,0.4); }
         .rank-standard { color: #00f2fe; background: rgba(0, 242, 254, 0.1); border: 1px solid rgba(0,242,254,0.4); }
         
-        /* 改成了 Muted 专用的橙色警告徽章 */
+        /* Muted color */
         .banned-badge { color: #ff9800; background: rgba(255, 152, 0, 0.1); font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255, 152, 0, 0.4); }
         
         .badge-package { color: #10b981; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.4); font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px; margin-top: 5px; display: inline-block; margin-left: 5px; }
@@ -158,7 +158,7 @@ if (isset($_GET['unban_user'])) {
                 if ($msg == 'deleted') $text = "Signal Purged Successfully.";
                 if ($msg == 'moved') $text = "Post successfully migrated to new section.";
                 if ($msg == 'censored') $text = "Anomalies cleansed from post content.";
-                // 🌟 更新了弹窗的文案
+                
                 if ($msg == 'muted') $text = "Citizen silenced. (They can still log in and buy PCs, but cannot post).";
                 if ($msg == 'unmuted') $text = "Citizen speaking rights restored.";
                 
@@ -254,7 +254,7 @@ if (isset($_GET['unban_user'])) {
                                 echo "<td style='text-align: center; vertical-align: middle;'>
                                         <div class='action-group'>";
                                     
-                                    // 🌟 按钮文案改为 Mute 和 Unmute
+                                    // 🌟 Button Mute & Unmute
                                     if ($is_banned) {
                                         echo "<a href='manage_forum.php?unban_user={$cid}' class='action-btn btn-unban' onclick=\"return confirm('Restore this citizen\'s speaking rights?');\"><i class='fas fa-comment'></i> Unmute User</a>";
                                     } else {

@@ -18,7 +18,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'clear') {
     }
 } 
 else if (isset($_GET['id'])) {
-    // 🌟 升级：强制转换为整数，比 is_numeric 更安全，防止隐性注入
+
     $cart_id = intval($_GET['id']); 
     if ($cart_id > 0) {
         $sql = "DELETE FROM shopping_cart WHERE cart_id = ? AND customer_id = ?";

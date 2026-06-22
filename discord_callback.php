@@ -12,7 +12,7 @@ $redirect_uri = 'http://localhost/projects/discord_callback.php';
 
 if (isset($_GET['code'])) {
     
-    // 🌟 核心防线：CSRF State Token 校验 (防止恶意的钓鱼绑定)
+
     if (!isset($_GET['state']) || !isset($_SESSION['oauth_state']) || $_GET['state'] !== $_SESSION['oauth_state']) {
         die("Security Alert: Invalid OAuth state parameter. Possible CSRF attack intercepted.");
     }
@@ -64,28 +64,28 @@ if (isset($_GET['code'])) {
             $email = $profile_data['email'];
             $first_name = $profile_data['username'];
             $last_name = 'Discord';
-            $full_username = $first_name . '_' . rand(1000, 9999); // 为 Discord 用户自动生成一个带随机数的 username 以避免重复
+            $full_username = $first_name . '_' . rand(1000, 9999); 
 
-            // 🌟 A+ 安全修复：彻底抛弃旧的 mysqli_query() 拼接，改用 Prepared Statement 防止 SQL 注入
+           
             $check_stmt = $conn->prepare("SELECT customer_id, username FROM customers WHERE email = ?");
             $check_stmt->bind_param("s", $email);
             $check_stmt->execute();
             $result = $check_stmt->get_result();
 
             if ($result->num_rows > 0) {
-                // 已存在用户，直接登录
+            
                 $row = $result->fetch_assoc();
                 
-                // 🛡️ A+ 级修复：防止 Session Fixation 攻击
+               
                 session_regenerate_id(true);
                 
                 $_SESSION['customer_id'] = $row['customer_id'];
                 $_SESSION['username'] = $row['username'];
             } else {
-                // 🌟 A+ 安全修复：使用 bcrypt 强哈希生成随机密码，彻底废弃不安全的 md5()
+              
                 $random_secure_pass = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
                 
-                // 🌟 A+ 安全修复：使用 Prepared Statement 插入数据
+               
                 $insert_stmt = $conn->prepare("INSERT INTO customers (first_name, last_name, username, email, password, account_status) VALUES (?, ?, ?, ?, ?, 'Active')");
                 $insert_stmt->bind_param("sssss", $first_name, $last_name, $full_username, $email, $random_secure_pass);
                 

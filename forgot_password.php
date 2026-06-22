@@ -12,10 +12,10 @@ require 'PHPMailer/src/SMTP.php';
 $message = ""; 
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // 🌟 防呆升級：使用 trim() 自動去除前後多餘的隱形空白
+
 $email = mysqli_real_escape_string($conn, trim($_POST['email']));
     
-    // 🌟 A+ 级安全修复：使用 Prepared Statement
+    
     $stmt = $conn->prepare("SELECT customer_id, first_name FROM customers WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -28,7 +28,7 @@ $email = mysqli_real_escape_string($conn, trim($_POST['email']));
         $otp = sprintf("%06d", mt_rand(1, 999999)); 
         $expiry_time = date("Y-m-d H:i:s", time() + 3600); 
 
-        // 🌟 A+ 级安全修复：Prepared Statement 更新 OTP
+        
         $update_stmt = $conn->prepare("UPDATE customers SET reset_token = ?, reset_token_expire = ? WHERE email = ?");
         $update_stmt->bind_param("sss", $otp, $expiry_time, $email);
         
@@ -36,12 +36,11 @@ $email = mysqli_real_escape_string($conn, trim($_POST['email']));
             $mail = new PHPMailer(true);
 
             try {
-                // 保持你原本的 SMTP 配置不变
+                
                 $mail->isSMTP();
                 $mail->Host       = 'smtp.gmail.com'; 
                 $mail->SMTPAuth   = true;
                 $mail->Username   = 'ganshengwing1126@gmail.com'; 
-                // 🌟 核心修复：禁止密码硬编码！调用 config.php 中的变量
                 $mail->Password   = 'rigj fzjw wrcd nfog'; 
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port       = 587;

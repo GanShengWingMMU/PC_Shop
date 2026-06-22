@@ -2,7 +2,7 @@
 session_start();
 require_once 'config.php';
 
-// 1. 获取所有分类
+
 $categories = [];
 $cat_query = "SELECT * FROM categories ORDER BY category_name ASC";
 $cat_result = $conn->query($cat_query);
@@ -14,14 +14,14 @@ while ($row = $cat_result->fetch_assoc()) {
     }
 }
 
-// 2. 接收 GET 参数
+
 $active_category_id = isset($_GET['category']) ? intval($_GET['category']) : 0; 
 $min_price = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? max(0, floatval($_GET['min_price'])) : 0;
 $max_price = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? floatval($_GET['max_price']) : 0;
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $sort_option = isset($_GET['sort']) ? $_GET['sort'] : 'default';
 
-// 3. 构建 SQL 条件 (企业级数组防注入写法)
+
 $conditions = ["stock_quantity > 0"]; 
 $params = [];
 $types = "";
@@ -49,7 +49,7 @@ if (!empty($search_query)) {
 
 $where_clause = implode(" AND ", $conditions);
 
-// 4. 构建排序逻辑
+
 $order_by = "ORDER BY product_name ASC";
 if ($sort_option === 'price_asc') {
     $order_by = "ORDER BY price ASC";
@@ -61,7 +61,7 @@ if ($sort_option === 'price_asc') {
 
 $prod_query = "SELECT * FROM products WHERE $where_clause $order_by";
 
-// 5. 执行查询
+
 $stmt = $conn->prepare($prod_query);
 if (!empty($params)) {
     $stmt->bind_param($types, ...$params); 
@@ -91,19 +91,19 @@ $stmt->close();
         body { background-color: #030305; color: #fff; font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
         .cyber-grid-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-image: linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px); background-size: 40px 40px; z-index: -2; pointer-events: none;}
         
-        /* 🌟 升级：拓宽页面布局，解决拥挤感 */
-        .builder-dashboard { max-width: 95%; /* 以前是 1400px，现在占满屏幕的 95% */ margin: 40px auto 80px; display: grid; grid-template-columns: 320px 1fr; gap: 50px; align-items: start; }
+      
+        .builder-dashboard { max-width: 95%; margin: 40px auto 80px; display: grid; grid-template-columns: 320px 1fr; gap: 50px; align-items: start; }
         
-        /* 🌟 升级：Sidebar 独立滚动与粘性定位 */
+        
         .builder-sidebar-column { 
             position: sticky; top: 100px; 
-            max-height: calc(100vh - 120px); /* 让 Sidebar 不能超过屏幕高度 */
-            overflow-y: auto; /* 超出则产生内部滚动条 */
+            max-height: calc(100vh - 120px); 
+            overflow-y: auto; 
             background: rgba(10, 10, 15, 0.85); backdrop-filter: blur(20px); 
             border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 16px; 
             padding: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); 
         }
-        /* 科技感滚动条 */
+        
         .builder-sidebar-column::-webkit-scrollbar { width: 6px; }
         .builder-sidebar-column::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; }
         .builder-sidebar-column::-webkit-scrollbar-thumb { background: rgba(0, 242, 254, 0.3); border-radius: 10px; }
@@ -121,7 +121,7 @@ $stmt->close();
         .tech-input { width: 100%; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 12px 15px; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; transition: 0.3s; font-family: 'Inter', sans-serif;}
         .tech-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 15px rgba(0,242,254,0.15); }
 
-        /* 🌟 全新设计：高级赛博风自定义下拉选单 (Custom Sort Matrix) */
+        /* Custom Sort Matrix */
         .custom-select-wrapper { position: relative; width: 100%; user-select: none; }
         .custom-select { background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 12px 15px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
         .custom-select:hover { border-color: var(--accent); box-shadow: 0 0 15px rgba(0,242,254,0.15); }

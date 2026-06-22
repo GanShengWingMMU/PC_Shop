@@ -8,7 +8,7 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
     header("Location: admin_login.php"); exit();
 }
 
-// 🌟 智能加扣硬币逻辑
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $cid = intval($_POST['customer_id']);
     $amount = abs(intval($_POST['coin_amount'])); // 强制转正数防呆
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
     if ($action === 'deduct') { $amount = -$amount; }
     
-    // GREATEST(0) 确保顾客金币不会被扣成负数
+  
     $stmt = $conn->prepare("UPDATE customers SET reward_coins = GREATEST(0, reward_coins + ?) WHERE customer_id = ?");
     $stmt->bind_param("ii", $amount, $cid);
     if($stmt->execute()) {

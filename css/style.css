@@ -1,15 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
 
-/* =========================================
-   1. Global Variables (科技风配色引擎)
-   ========================================= */
+
 :root {
-    --bg-main: #0a0a0a;        /* 极夜黑背景 */
-    --bg-surface: #141414;     /* 卡片/板块的深灰底色 */
-    --bg-glass: rgba(20, 20, 20, 0.7); /* 毛玻璃透明底色 */
+    --bg-main: #0a0a0a;       
+    --bg-surface: #141414;    
+    --bg-glass: rgba(20, 20, 20, 0.7); 
     
-    --accent-blue: #00f2fe;    /* 电竞亮蓝 */
-    --accent-purple: #4facfe;  /* 科技紫蓝 */
+    --accent-blue: #00f2fe;    
+    --accent-purple: #4facfe;  
     --text-main: #ffffff;
     --text-muted: #888888;
     
@@ -19,9 +17,7 @@
     --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* =========================================
-   2. Base Reset & Typography
-   ========================================= */
+/*Base Reset & Typography*/
 * {
     margin: 0; padding: 0; box-sizing: border-box;
 }
@@ -38,9 +34,7 @@ body {
 
 a { text-decoration: none; color: inherit; }
 
-/* =========================================
-   3. Glassmorphism Navbar (毛玻璃导航栏)
-   ========================================= */
+/*Glassmorphism Navbar  */
 .navbar {
     position: sticky; top: 0; z-index: 1000;
     background: var(--bg-glass);
@@ -69,12 +63,10 @@ a { text-decoration: none; color: inherit; }
 
 .navbar a:not(.logo):hover { color: var(--text-main); }
 
-/* =========================================
-   3.5 Navbar Hover & Magic Line (魔术能量条)
-   ========================================= */
+/*Navbar Hover & Magic Line */
 .nav-links {
     display: flex; gap: 2.5rem; align-items: center;
-    position: relative; /* 🌟 核心：为绝对定位的能量条提供参考系 */
+    position: relative; 
 }
 
 .nav-links a {
@@ -87,14 +79,14 @@ a { text-decoration: none; color: inherit; }
     z-index: 2; /* 确保文字在能量条上方 */
 }
 
-/* 🌟 悬停时：仅仅文字高亮发光 */
+
 .nav-links a:hover, 
 .nav-links a.active { 
     color: var(--accent-blue); 
     text-shadow: 0 0 10px rgba(0, 242, 254, 0.4); 
 }
 
-/* 🌟 真正的能量条（极致干脆版） */
+
 .nav-indicator {
     position: absolute;
     bottom: -4px;
@@ -103,14 +95,11 @@ a { text-decoration: none; color: inherit; }
     box-shadow: 0 0 10px var(--accent-blue);
     border-radius: 2px;
     z-index: 1;
-    /* 仅保留弹射滑动，没有任何拖沓的形变 */
     transition: left 0.25s cubic-bezier(0.2, 1, 0.3, 1), 
                 width 0.25s cubic-bezier(0.2, 1, 0.3, 1);
 }
 
-/* =========================================
-   4. Buttons (渐变发光按钮)
-   ========================================= */
+
 .btn {
     display: inline-block; padding: 12px 28px;
     border-radius: 8px; font-weight: 600; text-align: center;
@@ -140,16 +129,14 @@ a { text-decoration: none; color: inherit; }
     color: var(--accent-blue);
 }
 
-/* =========================================
-   5. Layout & Cards (商品/套餐卡片)
-   ========================================= */
+/* Layout & Cards  */
 .main-container { 
     width: 90%; 
     max-width: 1200px; 
-    margin: 3rem auto 0 auto; /* 🌟 把 bottom margin 改成 0 */
+    margin: 3rem auto 0 auto; 
     flex: 1; 
-    display: flex;             /* 🌟 讓容器變成彈性盒子 */
-    flex-direction: column;    /* 🌟 內容直向排列 */
+    display: flex;             
+    flex-direction: column;   
 }
 
 .section-title {
@@ -183,18 +170,13 @@ a { text-decoration: none; color: inherit; }
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-.tech-card:hover::before { opacity: 1; } /* 悬停时顶部出现霓虹亮线 */
+.tech-card:hover::before { opacity: 1; } 
 
 .tech-card h3 { font-size: 1.4rem; margin-bottom: 0.5rem; }
 .tech-card .specs { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.6; }
 .tech-card .price { font-size: 1.8rem; font-weight: 800; color: var(--text-main); margin-bottom: 1.5rem; }
 
-/* =========================================
-   6. Footer (极简页脚)
-   ========================================= */
-/* =========================================
-   6. Footer (极简页脚) - 破牆而出完整版
-   ========================================= */
+/* Footer*/
 .footer {
     background: var(--bg-surface); 
     border-top: 1px solid var(--border-color);
@@ -202,18 +184,12 @@ a { text-decoration: none; color: inherit; }
     text-align: center; 
     color: var(--text-muted); 
     font-size: 0.9rem;
-
-    /* 全出血黑魔法 */
     width: 100vw;
     margin-left: calc(50% - 50vw);
-    
-    /* 🌟 終極殺招：利用 auto 把自己用力往下推到最底端 */
     margin-top: auto; 
 }
 
-/* =========================================
-   7. Forms & Inputs (科技风表单)
-   ========================================= */
+/*   7. Forms & Inputs */
 .auth-container {
     max-width: 450px;
     margin: 4rem auto;
@@ -225,7 +201,7 @@ a { text-decoration: none; color: inherit; }
     position: relative;
 }
 
-/* 顶部霓虹装饰线 */
+
 .auth-container::before {
     content: '';
     position: absolute;
@@ -266,7 +242,7 @@ a { text-decoration: none; color: inherit; }
     transition: var(--transition-fast);
 }
 
-/* 获得焦点时的发光效果 */
+
 .form-control:focus {
     outline: none;
     border-color: var(--accent-blue);
@@ -274,7 +250,7 @@ a { text-decoration: none; color: inherit; }
     background-color: rgba(0, 0, 0, 0.6);
 }
 
-/* 错误提示文字 */
+
 .text-danger {
     color: #ff4d4d;
     font-size: 0.85rem;
@@ -282,7 +258,7 @@ a { text-decoration: none; color: inherit; }
     display: block;
 }
 
-/* 成功提示文字 */
+
 .text-success {
     color: #00e676;
     background: rgba(0, 230, 118, 0.1);
@@ -293,9 +269,7 @@ a { text-decoration: none; color: inherit; }
     text-align: center;
 }
 
-/* =========================================
-   8. Cart Page (购物车页面)
-   ========================================= */
+/* Cart Page */
 .cart-page-wrapper {
     padding: 2rem 0;
 }
@@ -325,7 +299,7 @@ a { text-decoration: none; color: inherit; }
     align-items: flex-start;
 }
 
-/* 左侧商品栏 */
+/* Left column */
 .cart-items-column {
     flex: 2; 
     min-width: 300px; 
@@ -351,7 +325,7 @@ a { text-decoration: none; color: inherit; }
 .cart-empty-state h3 { color: var(--text-main); margin-bottom: 10px; }
 .cart-empty-state p { color: var(--text-muted); margin-bottom: 20px; }
 
-/* 商品卡片 & Hover 特效 */
+/* Item Card hover*/
 .cart-item-card {
     background: var(--bg-surface); 
     border: 1px solid var(--border-color); 
@@ -390,7 +364,7 @@ a { text-decoration: none; color: inherit; }
 .cart-item-info h4 { color: var(--text-main); margin: 0 0 10px 0; font-size: 1.1rem; }
 .cart-item-info .price { color: var(--accent-blue); font-weight: bold; font-size: 1.2rem; }
 
-/* 数量与操作 */
+
 .cart-item-controls { display: flex; align-items: center; gap: 20px; }
 .cart-item-controls .qty { color: var(--text-muted); font-size: 0.95rem; }
 .cart-item-controls .qty strong { color: var(--text-main); font-size: 1.1rem; margin-left: 5px; }
@@ -403,10 +377,10 @@ a { text-decoration: none; color: inherit; }
 
 .cart-item-controls .btn-remove:hover {
     color: #ff1a1a;
-    transform: scale(1.15); /* 鼠标移上去垃圾桶会变大 */
+    transform: scale(1.15); 
 }
 
-/* 右侧订单摘要 */
+/* order summary */
 .order-summary-column {
     flex: 1; 
     min-width: 300px; 
@@ -476,9 +450,7 @@ a { text-decoration: none; color: inherit; }
     text-shadow: 0 0 10px var(--accent-blue), 0 0 20px var(--accent-blue);
 }
 
-/* =========================================
-   Checkout Page Styles (結帳頁面專屬)
-   ========================================= */
+/*Checkout Page Styles */
 .checkout-grid {
     display: grid;
     grid-template-columns: 1.5fr 1fr;
@@ -514,9 +486,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 
-/* =========================================
-   E-Wallet Top-up Page Styles (虛擬錢包專屬)
-   ========================================= */
+/*E-Wallet Top-up Page Styles */
 .wallet-dashboard {
     display: flex;
     justify-content: space-between;
@@ -540,7 +510,7 @@ a { text-decoration: none; color: inherit; }
     color: var(--text-main);
 }
 
-/* 儲值選項卡片 (Radio 隱藏與發光特效) */
+/* topup grid */
 .topup-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -583,7 +553,7 @@ a { text-decoration: none; color: inherit; }
     box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
 }
 
-/* 自定義金額輸入框 (Custom Amount) */
+/* customer amount */
 .custom-amount-wrapper {
     display: flex;
     align-items: center;
@@ -616,11 +586,11 @@ a { text-decoration: none; color: inherit; }
 }
 
 select.form-control option {
-    background-color: var(--bg-surface); /* 強制設定為深灰底色 */
-    color: var(--text-main);             /* 強制設定為白字 */
+    background-color: var(--bg-surface); 
+    color: var(--text-main);             
 }
 
-/* Dropdown 科技感懸浮特效 */
+/* Dropdown */
 .dropdown-content {
     display: none;
     position: absolute;
@@ -664,7 +634,7 @@ select.form-control option {
         .order-tabs a:hover { color: var(--text-main); background: rgba(255,255,255,0.02); }
         .order-tabs a.active { color: var(--accent-blue); border-bottom: 3px solid var(--accent-blue); background: rgba(0, 243, 255, 0.05); }
 
-        /* 全域進度條 (放在 Tabs 下方) */
+    
         .global-timeline { background: rgba(15, 20, 30, 0.95); border: 1px solid rgba(0, 243, 255, 0.3); border-radius: 10px; padding: 25px 10px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); }
         .timeline { display: flex; justify-content: space-between; align-items: center; position: relative; max-width: 650px; margin: 0 auto; }
         .timeline::before { content: ''; position: absolute; top: 15px; left: 40px; right: 40px; height: 3px; background: rgba(255,255,255,0.1); z-index: 1; }

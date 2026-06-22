@@ -25,13 +25,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
     
-    // 🌟 接收所有装机核心属性
+   
     $performance_tier = intval($_POST['performance_tier'] ?? 1); 
     $tdp_wattage = intval($_POST['tdp_wattage'] ?? 0);
     $socket_type = trim($_POST['socket_type'] ?? '');
     $ram_type = trim($_POST['ram_type'] ?? '');
     
-    // 🌟 魔法转换区：兼容前台代码
+   
     $specs_raw = trim($_POST['specs']); 
     $description_input = trim($_POST['description'] ?? '');
 
@@ -66,7 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     }
 
     if ($upload_ok) {
-        // 🌟 更新 SQL 包含 tdp_wattage, socket_type, ram_type
+   
         $sql = "UPDATE products SET product_name=?, category_id=?, price=?, stock_quantity=?, specifications=?, description=?, image_url=?, performance_tier=?, tdp_wattage=?, socket_type=?, ram_type=? WHERE product_id=?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("sidssssiissi", $name, $category_id, $price, $stock_quantity, $specs_raw, $formatted_description, $image_url, $performance_tier, $tdp_wattage, $socket_type, $ram_type, $product_id);
@@ -89,7 +89,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_product'])) {
     }
 }
 
-// 解析数据库中存储的数据
+
 $db_desc = $prod['description'] ?? '';
 $marketing_text = '';
 $specs_text = '';

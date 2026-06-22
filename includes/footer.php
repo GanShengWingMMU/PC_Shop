@@ -1,6 +1,5 @@
 <style>
-    /* 🌟 GridCitY 高定 Footer 樣式 */
-    .site-footer {
+        .site-footer {
         background-color: #0b0f17;
         border-top: 1px solid #1e293b;
         padding: 60px 20px 20px;
@@ -8,7 +7,7 @@
         font-family: 'Inter', sans-serif;
         margin-top: auto;
         
-        /* 🚀 橫向強制滿版黑科技（即使被卡在 container 內也能完美填滿畫面） */
+      
         width: 100vw;
         position: relative;
         left: 50%;
@@ -18,7 +17,7 @@
         box-sizing: border-box;
     }
 
-    /* 🚀 同步清除全域 body 的瀏覽器預設邊距，並防止橫向出現滾動條 */
+  
     body {
         margin: 0 !important;
         padding: 0 !important;
@@ -89,7 +88,7 @@
     
     .footer-links a:hover {
         color: #00f2fe;
-        transform: translateX(4px); /* 🌟 高级悬浮交互：平滑右移 */
+        transform: translateX(4px); 
     }
     
     .footer-bottom {
@@ -125,7 +124,7 @@
         color: #a855f7;
     }
 
-    /* 移动端适配 */
+   
     @media (max-width: 900px) {
         .footer-grid { grid-template-columns: 1fr 1fr; }
     }

@@ -3,7 +3,7 @@ session_start();
 if (file_exists('config.php')) { require_once 'config.php'; } 
 else { include 'db_connect.php'; }
 
-// 🌟 权限验证
+
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
 $logged_in_id = $_SESSION['admin_id'] ?? 0;
 $staff_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -23,7 +23,7 @@ $stmt->close();
 
 if (!$staff) { header("Location: admin_dashboard.php"); exit(); }
 
-// 🌟 智能路由：如果是大老板，退回员工列表；如果是普通员工，退回 Dashboard
+// superadmin go to manage staff if admin go to dashboard
 $back_link = (strtolower($current_role) === 'superadmin') ? 'manage_staff.php' : 'admin_dashboard.php';
 $back_text = (strtolower($current_role) === 'superadmin') ? 'Back to Roster' : 'Back to Dashboard';
 
@@ -73,7 +73,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
                         $_SESSION['username'] = $username;
                     }
                     
-                    // 🌟 成功后自动判断退回哪里
+                    
                     if (strtolower($current_role) === 'superadmin') {
                         header("Location: manage_staff.php?msg=updated");
                     } else {

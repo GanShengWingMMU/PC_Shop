@@ -13,7 +13,7 @@ $remaining_time = 0;
 
 require_once 'keys.php'; 
 
-// 🌟 安全升级：生成强随机的 OAuth State Token 以防御 CSRF
+
 if (empty($_SESSION['oauth_state'])) {
     $_SESSION['oauth_state'] = bin2hex(random_bytes(32));
 }
@@ -29,14 +29,14 @@ if (!isset($_SESSION['login_attempts'])) { $_SESSION['login_attempts'] = 0; }
 
 $redirect_url = isset($_GET['redirect']) ? filter_var($_GET['redirect'], FILTER_SANITIZE_URL) : 'index.php';
 
-// 🌟 FYP 亮点：检查是否处于「锁定状态」
+
 if (isset($_SESSION['lockout_time'])) {
     if (time() < $_SESSION['lockout_time']) {
         $locked_out = true;
         $remaining_time = $_SESSION['lockout_time'] - time();
         $error_msg = "Your account is temporarily locked due to multiple failed attempts.";
     } else {
-        // 锁定时间结束，解除锁定
+
         unset($_SESSION['lockout_time'], $_SESSION['login_attempts']);
     }
 }
@@ -60,7 +60,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
             } else {
                 if (password_verify($password, $user['password'])) {
                     
-                    // 🛡️ A+ 级修复：防止 Session Fixation 攻击
+                   
                     session_regenerate_id(true);
                     
                     unset($_SESSION['login_attempts'], $_SESSION['lockout_time']);
@@ -68,7 +68,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
                     $_SESSION['username'] = $user['username'];
                     $_SESSION['role'] = 'customer';
                     
-                    // 🛡️ A+ 级修复：更严谨的 Open Redirect 拦截 (阻断 //evil.com)
+                    
                     $parsed = parse_url($redirect_url);
                     if (isset($parsed['host']) || isset($parsed['scheme'])) {
                         header("Location: index.php");
@@ -77,10 +77,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
                     }
                     exit();
                 } else {
-                    // 🌟 修复 Bug: 防止 Warning 报错
+                    
                     $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
                     if ($_SESSION['login_attempts'] >= 3) {
-                        // 触发锁定！锁定 60 秒
+                        
                         $_SESSION['lockout_time'] = time() + 60; 
                         $locked_out = true;
                         $remaining_time = 60;
@@ -91,7 +91,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
                 }
             }
         } else {
-            // 🌟 修复 Bug: 防止 Warning 报错
+           
             $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
             if ($_SESSION['login_attempts'] >= 3) {
                 $_SESSION['lockout_time'] = time() + 60; 
@@ -127,19 +127,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
         .tech-input { width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 14px 16px; border-radius: 6px; font-size: 0.95rem; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
         .tech-input:focus { outline: none; border-color: #00f2fe; background: rgba(0, 242, 254, 0.03); box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
         
-        /* 🌟 FYP 防呆锁死效果 */
+    
         .tech-input:disabled { background: rgba(255,77,77,0.05); border-color: rgba(255,77,77,0.2); color: #ff4d4d; cursor: not-allowed; }
         
         .tech-btn { background: transparent; color: #00f2fe; border: 1px solid #00f2fe; font-family: 'Inter', sans-serif; font-weight: 700; padding: 14px; width: 100%; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 1rem; }
         .tech-btn:hover:not(:disabled) { background: #00f2fe; color: #000; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
         
-        /* 🌟 按钮锁死效果 */
+      
         .tech-btn:disabled { background: rgba(255,77,77,0.1); color: #ff4d4d; border-color: rgba(255,77,77,0.3); cursor: not-allowed; box-shadow: none; transform: none; }
         
         .oauth-btn { flex: 1; text-align: center; padding: 12px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: 0.3s; }
         .oauth-btn:hover { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.2); }
         
-        /* 🌟 锁定计时器字体 */
+        
         .lockout-timer { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: bold; text-align: center; color: #ff4d4d; margin: 15px 0; text-shadow: 0 0 15px rgba(255,77,77,0.6); }
     </style>
 </head>
@@ -218,12 +218,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 密码眼睛开关
+    
     const toggleIcons = document.querySelectorAll('.toggle-password');
     toggleIcons.forEach(function(icon) {
         icon.addEventListener('click', function() {
             const inputField = this.previousElementSibling;
-            if(inputField.disabled) return; // 锁定状态下不能点击
+            if(inputField.disabled) return; 
             if (inputField.type === 'password') {
                 inputField.type = 'text';
                 this.classList.replace('fa-eye', 'fa-eye-slash');
@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     <?php if ($locked_out): ?>
-    // 🌟 FYP 即时倒数 JavaScript 引擎
+   
     let timeLeft = <?php echo $remaining_time; ?>;
     const timerDisplay = document.getElementById('countdown');
     
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
             timerDisplay.style.color = '#00e676';
             timerDisplay.style.textShadow = '0 0 15px rgba(0,230,118,0.6)';
             timerDisplay.textContent = "ACCOUNT UNLOCKED";
-            // 倒数结束，自动刷新页面解锁
+           
             setTimeout(function() {
                 window.location.reload();
             }, 1000);

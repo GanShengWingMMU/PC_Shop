@@ -16,13 +16,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
     $price = floatval($_POST['price']);
     $stock_quantity = intval($_POST['stock']);
     
-    // 🌟 接收所有装机核心属性
+  
     $performance_tier = intval($_POST['performance_tier'] ?? 1); 
     $tdp_wattage = intval($_POST['tdp_wattage'] ?? 0);
     $socket_type = trim($_POST['socket_type'] ?? '');
     $ram_type = trim($_POST['ram_type'] ?? '');
     
-    // 🌟 魔法转换区：将数据适配为前台系统支持的 | 分割格式
+   
     $specs_raw = trim($_POST['specs']); 
     $description_input = trim($_POST['description'] ?? '');
 
@@ -66,7 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_product'])) {
     }
 
     if ($upload_ok) {
-        // 🌟 更新 SQL 包含 tdp_wattage, socket_type, ram_type
+        // change SQL
         $sql = "INSERT INTO products (product_name, category_id, price, stock_quantity, specifications, description, image_url, performance_tier, tdp_wattage, socket_type, ram_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
         // bind_param: s(string), i(int), d(double) -> sidssssiiss

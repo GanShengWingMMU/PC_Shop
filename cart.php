@@ -11,15 +11,13 @@ $customer_id = $_SESSION['customer_id'];
 $cart_items = [];
 $total_price = 0;
 
-// ==========================================
-// 🚀 核心修复：带库存穿透检测的购物车增减算法
-// ==========================================
+
 if (isset($_POST['update_quantity'])) {
     $cart_id = intval($_POST['cart_id']);
     $qty_action = $_POST['qty_action'];
 
     if ($qty_action === 'plus') {
-        // 1. 抓取该购物车物品的身份
+       
         $check_type = $conn->prepare("SELECT product_id, package_id, pc_build, quantity FROM shopping_cart WHERE cart_id = ? AND customer_id = ?");
         $check_type->bind_param("ii", $cart_id, $customer_id);
         $check_type->execute();
@@ -30,24 +28,24 @@ if (isset($_POST['update_quantity'])) {
             $can_add = true;
             $new_qty = $c_data['quantity'] + 1;
             
-            // 2. 根据不同身份穿透查询真实剩余库存
+            
             if ($c_data['product_id']) {
                 $st_check = $conn->query("SELECT stock_quantity FROM products WHERE product_id = " . intval($c_data['product_id']));
                 $st = $st_check->fetch_assoc();
                 if ($new_qty > $st['stock_quantity']) $can_add = false;
             } elseif ($c_data['package_id']) {
-                // 套餐：找出底层最缺货的零件能拼出几套
+                
                 $st_check = $conn->query("SELECT MIN(FLOOR(p.stock_quantity / pi.quantity)) as max_pkg FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = " . intval($c_data['package_id']));
                 $st = $st_check->fetch_assoc();
                 if ($new_qty > $st['max_pkg']) $can_add = false;
             } elseif ($c_data['pc_build']) {
-                // 自组装：找出底层最缺货的零件能拼出几套
+                
                 $st_check = $conn->query("SELECT MIN(FLOOR(p.stock_quantity / bi.quantity)) as max_bld FROM build_items bi JOIN products p ON bi.product_id = p.product_id WHERE bi.pc_build = " . intval($c_data['pc_build']));
                 $st = $st_check->fetch_assoc();
                 if ($new_qty > $st['max_bld']) $can_add = false;
             }
             
-            // 3. 安全更新
+            
             if ($can_add) {
                 $conn->query("UPDATE shopping_cart SET quantity = $new_qty WHERE cart_id = $cart_id");
             } else {

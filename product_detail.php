@@ -9,7 +9,7 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 
 $product_id = intval($_GET['id']);
 
-// 1. 抓取主商品
+
 $prod_query = "SELECT p.*, c.category_name 
                FROM products p 
                LEFT JOIN categories c ON p.category_id = c.category_id 
@@ -26,7 +26,7 @@ if ($result->num_rows === 0) {
 $product = $result->fetch_assoc();
 $stmt->close();
 
-// 2. 抓取“一起购买”推荐算法
+
 $recommended_products = [];
 $algo_query = "
     SELECT 
@@ -53,7 +53,7 @@ if ($stmt_algo = $conn->prepare($algo_query)) {
     $stmt_algo->close();
 }
 
-// 3. 抓取评论 (包含生态徽章系统)
+
 $reviews = [];
 $total_rating = 0;
 $avg_rating = 0;
@@ -80,7 +80,7 @@ if (count($reviews) > 0) {
     $avg_rating = round($total_rating / count($reviews), 1);
 }
 
-// 生态等级徽章引擎
+
 function getRankBadge($coins, $tier = 'Basic') {
     if ($tier === 'VIP') return '<span class="rank-badge elite" title="Elite Subscriber"><i class="fas fa-crown"></i> Elite</span>';
     if ($coins >= 1000) return '<span class="rank-badge elite" title="Elite Architect"><i class="fas fa-crown"></i> Elite</span>';
@@ -99,7 +99,7 @@ function getRankBadge($coins, $tier = 'Basic') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* 极简深色主题规范 */
+
         :root {
             --bg-base: #0b0f17;
             --bg-panel: #111827;
@@ -121,15 +121,14 @@ function getRankBadge($coins, $tier = 'Basic') {
         .breadcrumb span { color: var(--text-main); }
         .breadcrumb i { font-size: 0.7rem; margin: 0 8px; opacity: 0.5; }
 
-        /* 布局：左图右文 */
         .product-hero { display: grid; grid-template-columns: 1fr 1.1fr; gap: 50px; margin-bottom: 60px; }
 
-        /* 精简：去边框的图库 */
+    
         .image-gallery { background: var(--bg-panel); border-radius: 12px; padding: 40px; display: flex; align-items: center; justify-content: center; position: relative; aspect-ratio: 1; cursor: zoom-in; }
         .main-image { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform 0.3s ease; }
         .image-gallery:hover .main-image { transform: scale(1.05); }
 
-        /* 产品信息区 */
+
         .product-info { display: flex; flex-direction: column; }
         
         .title-group { border-bottom: 1px solid var(--border-light); padding-bottom: 24px; margin-bottom: 24px; }
@@ -146,7 +145,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         .price-val { font-size: 2.5rem; font-weight: 800; color: var(--text-main); font-family: 'JetBrains Mono', monospace; letter-spacing: -1px; }
         .currency { font-size: 1.2rem; color: var(--text-muted); font-weight: 500; vertical-align: super; }
 
-        /* 购物车操作组 */
+    
         .action-group { display: flex; gap: 16px; margin-bottom: 30px; }
         .qty-box { display: flex; align-items: center; background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; height: 54px; }
         .qty-btn { background: transparent; border: none; color: var(--text-main); width: 45px; height: 100%; cursor: pointer; transition: 0.2s; font-size: 1rem; }
@@ -158,13 +157,12 @@ function getRankBadge($coins, $tier = 'Basic') {
         .btn-add:hover:not(:disabled) { background: var(--accent); transform: translateY(-2px); }
         .btn-add:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
 
-        /* 🌟 细节2：高定信任面板 */
+  
         .trust-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; border-top: 1px solid var(--border-light); padding-top: 24px; }
         .trust-item { display: flex; flex-direction: column; gap: 6px; }
         .trust-item i { font-size: 1.2rem; color: var(--accent); }
         .trust-item span { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; line-height: 1.3; }
 
-        /* 🌟 细节3：高定斑马线规格表 */
         .specs-section { margin-bottom: 60px; }
         .section-header { font-size: 1.4rem; font-weight: 800; margin-bottom: 24px; color: var(--text-main); padding-bottom: 12px; border-bottom: 1px solid var(--border-light); }
         .specs-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-light); }
@@ -173,7 +171,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         .specs-table td:last-child { border-bottom: none; }
         .specs-table td.key { color: var(--text-main); font-weight: 600; width: 30%; background: var(--bg-panel); }
 
-        /* 推荐商品区 (精简卡片) */
+    
         .rec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-bottom: 60px; }
         .rec-card { background: transparent; border: 1px solid var(--border-light); border-radius: 12px; padding: 20px; transition: all 0.2s; display: flex; flex-direction: column; text-decoration: none; }
         .rec-card:hover { border-color: var(--text-muted); background: var(--bg-panel); }
@@ -183,7 +181,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         .rec-price { color: var(--text-main); font-weight: 700; font-family: 'JetBrains Mono', monospace; }
         .rec-meta { margin-top: auto; padding-top: 15px; font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
 
-        /* 评论区排版优化 */
+       
         .reviews-section { margin-bottom: 40px; }
         .rating-overview { display: flex; align-items: center; gap: 24px; margin-bottom: 30px; background: var(--bg-panel); padding: 24px 30px; border-radius: 12px; border: 1px solid var(--border-light); }
         .rating-score { font-size: 3rem; font-weight: 800; color: var(--text-main); line-height: 1; }
@@ -199,7 +197,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         .review-date { font-size: 0.8rem; color: var(--text-muted); margin-left: auto; }
         .review-content { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-top: 10px; }
 
-        /* 等级徽章 */
+        
         .rank-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; letter-spacing: 0.5px; text-transform: uppercase;}
         .rank-badge.elite { background: rgba(245, 158, 11, 0.1); color: var(--gold); border: 1px solid rgba(245, 158, 11, 0.3); }
         .rank-badge.pro { background: rgba(168, 85, 247, 0.1); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
@@ -320,12 +318,12 @@ function getRankBadge($coins, $tier = 'Basic') {
                 $specs_data = trim($product['specifications'] ?? '');
                 $has_specs = false;
 
-                // 1. 智能提取并显示 Marketing Description (Overview)
+                // 1. Marketing Description (Overview)
                 if (!empty($desc)) {
-                    // 过滤掉后台自动添加的 'Overview: ' 前缀
+             
                     $clean_desc = preg_replace('/^Overview:\s*/i', '', $desc);
                     
-                    // 如果 description 里混杂了 '|' 符号（适配后台的混合写入逻辑），只提取第一段作为简介
+
                     if (strpos($clean_desc, '|') !== false) {
                         $desc_parts = explode('|', $clean_desc);
                         $clean_desc = trim($desc_parts[0]);
@@ -337,9 +335,9 @@ function getRankBadge($coins, $tier = 'Basic') {
                     }
                 }
 
-                // 2. 智能解析并显示详细规格 (Specifications)
+                // 2.Specifications
                 if (!empty($specs_data)) {
-                    // 自动判断是旧数据的换行符格式，还是新数据的 '|' 格式
+
                     if (strpos($specs_data, '|') !== false) {
                         $spec_lines = explode('|', $specs_data);
                     } else {
@@ -350,22 +348,22 @@ function getRankBadge($coins, $tier = 'Basic') {
                         $spec = trim($spec);
                         if (empty($spec)) continue;
 
-                        // 根据冒号拆分 Key 和 Value
+
                         if (strpos($spec, ':') !== false) {
-                            $parts = explode(':', $spec, 2); // 限制只切分第一个冒号，防止Value里有冒号被切断
+                            $parts = explode(':', $spec, 2); 
                             $key = trim($parts[0]);
                             $value = trim($parts[1]);
                             echo "<tr><td class='key'>".htmlspecialchars($key)."</td><td>".htmlspecialchars($value)."</td></tr>";
                             $has_specs = true;
                         } else {
-                            // 如果没有冒号，作为单独的特性展示
+                    
                             echo "<tr><td class='key'>Feature</td><td>".htmlspecialchars($spec)."</td></tr>";
                             $has_specs = true;
                         }
                     }
                 }
 
-                // 3. 空白数据处理
+       
                 if (!$has_specs) {
                     echo "<tr><td colspan='2'>No detailed specifications available.</td></tr>";
                 }
@@ -492,7 +490,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         });
     });
 
-    // Lightbox 控制
+
     function openLightbox() {
         const mainImgSrc = document.getElementById('mainProductImage').src;
         document.getElementById('lightbox-img').src = mainImgSrc;

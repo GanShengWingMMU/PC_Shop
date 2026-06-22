@@ -11,9 +11,7 @@ $card_msg = $card_err = "";
 
 $open_acc = 'account';
 
-// ==========================================
-// 🌟 核心逻辑 1：处理个人资料更新与密码安全验证
-// ==========================================
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     $new_user = trim($_POST['username']);
     $new_email = trim($_POST['email']);
@@ -99,9 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     }
 }
 
-// ==========================================
-// 🌟 核心逻辑 2：处理地址管理
-// ==========================================
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_address'])) {
     $open_acc = 'address'; 
     $recipient = htmlspecialchars(trim($_POST['recipient_name']));
@@ -156,9 +152,7 @@ if (isset($_GET['set_default'])) {
     header("Location: profile.php?tab=address"); exit();
 }
 
-// ==========================================
-// 🌟 核心逻辑 3：处理信用卡/支付方式管理
-// ==========================================
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_card'])) {
     $open_acc = 'cards';
     $cardholder = htmlspecialchars(trim($_POST['cardholder_name']));
@@ -226,20 +220,16 @@ if (isset($_GET['set_default_card'])) {
 
 if (isset($_GET['tab'])) { $open_acc = $_GET['tab']; }
 
-// ==========================================
-// 🌟 抓取数据
-// ==========================================
+
 $user = $conn->query("SELECT * FROM customers WHERE customer_id = $customer_id")->fetch_assoc();
 $addresses = $conn->query("SELECT * FROM customer_addresses WHERE customer_id = $customer_id ORDER BY is_default DESC, created_at DESC");
 $saved_cards = $conn->query("SELECT * FROM saved_cards WHERE customer_id = $customer_id ORDER BY is_default DESC, created_at DESC");
 
-// ==========================================
-// 🌟 核心进度条与身份逻辑 (完美同步)
-// ==========================================
+
 $coins = isset($user['lifetime_coins']) ? intval($user['lifetime_coins']) : intval($user['reward_coins'] ?? 0);
 $tier_status = $user['membership_tier'] ?? 'Standard';
 
-// 统一判定全局 Elite 状态（用于全站Voucher权限和本页的UI控制）
+
 $is_elite = ($tier_status === 'VIP' || $coins >= 1000);
 
 if ($coins < 500) {
@@ -535,7 +525,7 @@ if ($tier_status === 'VIP') {
                     </div>
                 </div>
 
-                <!-- 🌟 统一判断入口：修复 Accordion UI 逻辑漏洞 -->
+       
                 <div class="accordion-item <?php echo $open_acc == 'vouchers' ? 'active' : ''; ?>" id="acc-vouchers">
                     <div class="accordion-header" onclick="toggleAccordion('acc-vouchers')">
                         <span><i class="fas fa-crown" style="margin-right: 10px; color: #ffd700;"></i> Membership & Vouchers</span>
@@ -866,57 +856,57 @@ document.getElementById('new_password').addEventListener('input', function() {
     else { reqSym.className = ''; reqSym.innerHTML = cross + '1 Symbol'; }
 });
 
-// === 信用卡自動排版與防呆輸入 (Checkout.php 同款邏輯) ===
+
 document.addEventListener('DOMContentLoaded', function() {
     const cardNumberInput = document.querySelector('input[name="card_number"]');
     const expiryInput = document.querySelector('input[name="expiry_date"]');
     const cvcInput = document.querySelector('input[name="cvc"]');
 
-    // 1. 卡號防呆：使用與 checkout.php 完全相同的 for 迴圈空白切割法
+   
     if (cardNumberInput) {
         cardNumberInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, ''); // 移除非數字
+            let value = e.target.value.replace(/\D/g, ''); 
             let formattedValue = '';
             for (let i = 0; i < value.length; i++) {
                 if (i > 0 && i % 4 === 0) formattedValue += ' ';
                 formattedValue += value[i];
             }
-            // 限制最大長度為 19 (16個數字 + 3個空格)
+  
             e.target.value = formattedValue.substring(0, 19);
         });
     }
 
-    // 2. 到期日防呆：使用與 checkout.php 完全相同的 substring 與月份驗證
+
     if (expiryInput) {
         expiryInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, ''); // 移除非數字
+            let value = e.target.value.replace(/\D/g, '');
             
             if (value.length > 0) {
-                // 抓取前兩個數字 (月份)
+              
                 let month = value.substring(0, 2);
                 
                 if (value.length >= 2) {
-                    // 核心防呆：如果月份大於 12，強制改成 12；如果是 00，強制改成 01
+                   
                     if (parseInt(month) > 12) month = '12';
                     if (parseInt(month) === 0) month = '01';
                 }
                 
-                // 抓取後面的數字 (年份)
+           
                 let year = value.substring(2, 4);
                 
-                // 組合回去並加上斜線
+             
                 if (value.length > 2) {
                     value = month + '/' + year;
                 } else {
                     value = month;
                 }
             }
-            // 限制最大長度為 5 (MM/YY)
+          
             e.target.value = value.substring(0, 5);
         });
     }
 
-    // 3. CVC 防呆：強制只能输入数字，最高 4 码
+
     if (cvcInput) {
         cvcInput.addEventListener('input', function(e) {
             this.value = this.value.replace(/\D/g, '').substring(0, 4);

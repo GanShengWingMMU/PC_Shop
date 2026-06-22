@@ -11,7 +11,6 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
 
 $error = "";
 
-// 抓取全庫零件字典，供前端選擇
 $components_by_category = [];
 $sql_prod = "SELECT p.product_id, p.product_name, p.price, c.category_name 
              FROM products p JOIN categories c ON p.category_id = c.category_id 
@@ -21,14 +20,14 @@ while($row = $res_prod->fetch_assoc()){
     $components_by_category[$row['category_name']][] = $row;
 }
 
-// 處理新增邏輯
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $package_name = trim($_POST['package_name']);
     $description = trim($_POST['description']);
     $target_persona = trim($_POST['target_persona']);
     $stock_status = trim($_POST['stock_status']);
 
-    // 🌟 接收 4 个雷达分数
+  
     $score_gamer = intval($_POST['score_gamer'] ?? 0);
     $score_creator = intval($_POST['score_creator'] ?? 0);
     $score_student = intval($_POST['score_student'] ?? 0);
@@ -37,7 +36,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $image_url = ""; 
     $upload_ok = true;
 
-    // 圖片上傳處理
     if (isset($_FILES['image_file']) && $_FILES['image_file']['error'] == UPLOAD_ERR_OK) {
         $file_tmp = $_FILES['image_file']['tmp_name'];
         $ext = strtolower(pathinfo($_FILES["image_file"]["name"], PATHINFO_EXTENSION));
@@ -64,7 +62,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     if ($upload_ok && empty($error)) {
-        // 自動計算所有選中零件總價格
+        // auto calculate total price based on selected components
         $total_price = 0;
         if (isset($_POST['components']) && is_array($_POST['components'])) {
             foreach ($_POST['components'] as $prod_id) {
@@ -80,7 +78,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $conn->begin_transaction();
         try {
-            // 🌟 寫入 packages 主表 (包含 4 个分数)
             $insert_query = "INSERT INTO packages (package_name, description, price, image_url, target_persona, stock_status, score_gamer, score_creator, score_student, score_enthusiast) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $insert_pkg = $conn->prepare($insert_query);
             
@@ -93,7 +90,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $new_package_id = $insert_pkg->insert_id; // 獲取剛剛新增的 Package ID
             $insert_pkg->close();
 
-            // 寫入 package_items 關聯表
+         
             if (isset($_POST['components']) && is_array($_POST['components'])) {
                 $insert_item = $conn->prepare("INSERT INTO package_items (package_id, product_id, quantity) VALUES (?, ?, 1)");
                 foreach ($_POST['components'] as $prod_id) {
@@ -108,7 +105,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             $conn->commit();
 
-            // 🌟 记录动作到 Security Logs
+            // Insert into Security Logs
             $log_admin_id = $_SESSION['admin_id'];
             $log_username = $_SESSION['admin_username'];
             $log_role = $_SESSION['admin_role'];
@@ -135,7 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 🌟 终极滚动修复 (The Ultimate Scroll Fix) */
+        /* Scroll */
         html, body {
             height: auto; 
             min-height: 100vh;
@@ -162,7 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin-left: 250px; 
             flex: 1;
             padding: 30px !important;
-            padding-bottom: 120px !important; /* 底部留白，防止按钮被吃掉 */
+            padding-bottom: 120px !important; 
             min-height: 100vh;
             box-sizing: border-box;
         }

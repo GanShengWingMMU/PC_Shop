@@ -21,10 +21,9 @@ if ($pkg_result->num_rows === 0) {
 $package_name = $pkg_result->fetch_assoc()['package_name'];
 $stmt_pkg->close();
 
-// 🌟 强力洗消：不管里面有多脏，强制清空并变成干净的数组
 $_SESSION['pc_build'] = [];
 
-// 获取底层真实零件 
+
 $sql = "SELECT p.product_id, p.product_name, p.price, p.tdp_wattage, p.category_id, p.stock_quantity, p.status 
         FROM package_items pi
         JOIN products p ON pi.product_id = p.product_id
@@ -41,7 +40,7 @@ $out_of_stock_items = [];
 while ($row = $result->fetch_assoc()) {
     if ($row['stock_quantity'] > 0 && $row['status'] === 'Available') {
         $cat_id = $row['category_id'];
-        // 🌟 核心修复：只存整数 ID！绝对不要存价格和名字，让 builder 去处理
+     
         $_SESSION['pc_build'][$cat_id] = (int)$row['product_id'];
         $loaded_count++;
     } else {

@@ -6,7 +6,7 @@ else { include 'db_connect.php'; }
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
 $current_admin_id = $_SESSION['admin_id'] ?? 0;
 
-// 🌟 核心防线：只有 SuperAdmin 能进入员工列表！Admin 会被直接送去 Dashboard
+
 if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
     header("Location: admin_dashboard.php");
     exit();

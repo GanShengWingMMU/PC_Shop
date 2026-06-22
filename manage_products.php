@@ -11,7 +11,7 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
 
 $message = ""; 
 
-// 🌟 删除逻辑
+
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
     $check_stmt = $conn->prepare("SELECT product_id FROM order_details WHERE product_id = ? LIMIT 1");
@@ -29,11 +29,11 @@ if (isset($_GET['delete_id'])) {
 }
 if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'>✅ Node deleted.</div>";
 
-// 🌟 获取搜索和排序参数
+
 $search = $_GET['search'] ?? '';
 $sort = $_GET['sort'] ?? 'default';
 
-// 🌟 判断排序逻辑
+
 $order_by = 'p.product_id DESC'; 
 if ($sort === 'price_desc') $order_by = 'p.price DESC';
 elseif ($sort === 'price_asc') $order_by = 'p.price ASC';
@@ -61,7 +61,7 @@ elseif ($sort === 'name_desc') $order_by = 'p.product_name DESC';
         border: 1px solid #00f2fe; border-radius: 8px !important;
     }
 
-    /* 🌟 独立干净的搜索栏样式 */
+
     .search-form-clean {
         display: flex;
         flex-wrap: wrap;
@@ -77,7 +77,7 @@ elseif ($sort === 'name_desc') $order_by = 'p.product_name DESC';
     .search-form-clean select,
     .search-form-clean button,
     .btn-clear {
-        height: 42px !important; /* 统一小巧的高度 */
+        height: 42px !important; 
         padding: 0 15px !important;
         font-size: 14px !important;
         line-height: normal !important;
@@ -123,7 +123,7 @@ elseif ($sort === 'name_desc') $order_by = 'p.product_name DESC';
         box-shadow: 0 4px 12px rgba(0, 242, 254, 0.4) !important;
     }
     
-    /* 🌟 新增的 Clear 按钮样式 */
+
     .btn-clear {
         display: flex;
         align-items: center;

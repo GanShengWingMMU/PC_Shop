@@ -19,7 +19,7 @@ $message = "";
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 🌟 统一的赛博霓虹表格样式 */
+      
         .cyber-table { width: 100%; border-collapse: collapse; text-align: left; background: rgba(0,0,0,0.5); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
         .cyber-table th { padding: 18px 20px; color:#ffd700; font-size: 12px; text-transform: uppercase; background: rgba(255,215,0,0.05); border-bottom: 2px solid rgba(255,215,0,0.2); letter-spacing: 1px; }
         
@@ -27,7 +27,7 @@ $message = "";
         
         .status-badge { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; border: 1px solid; line-height: 1; }
 
-        /* 🌟 侧边栏 Hover 效果：保证鼠标滑过时亮起科技蓝 */
+       
         .admin-sidebar ul.sidebar-menu li a:hover {
             background-color: rgba(0, 242, 254, 0.05) !important;
             color: #00f2fe !important;

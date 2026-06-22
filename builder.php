@@ -4,15 +4,15 @@ session_start();
 require_once 'config.php';
 include 'includes/header.php'; 
 
-// 🚨 强制清理旧版本格式的脏 Session
+
 if (!empty($_SESSION['pc_build']) && is_array(reset($_SESSION['pc_build']))) {
     $_SESSION['pc_build'] = []; 
 }
 if (!isset($_SESSION['pc_build'])) { $_SESSION['pc_build'] = []; }
 
-// ==========================================
-// 1. 递归级联失效算法 (Cascade Invalidation)
-// ==========================================
+
+// 1.Cascade Invalidation
+
 $dependency_map = [
     1 => [2, 8],    // CPU -> Motherboard, Cooler
     2 => [3, 4],    // Motherboard -> RAM, GPU
@@ -31,9 +31,8 @@ function cascade_remove($cat_id, &$session_cart, $map) {
     }
 }
 
-// ==========================================
-// 2. 动作拦截器 (Action Interceptor)
-// ==========================================
+// 2. Action Interceptor
+
 if (isset($_GET['action'])) {
     if ($_GET['action'] == 'remove' && isset($_GET['cat_id'])) {
         $remove_id = intval($_GET['cat_id']);
@@ -49,9 +48,7 @@ if (isset($_GET['action'])) {
     }
 }
 
-// ==========================================
-// 🚀 3. 黑匣子恢复引擎 (安全加固版：防篡改与兼容性嗅探)
-// ==========================================
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])) {
     $backup_ids = json_decode($_POST['restore_backup_ids'], true);
     if (is_array($backup_ids) && !empty($backup_ids)) {
@@ -99,9 +96,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restore_backup_ids'])
     }
 }
 
-// ==========================================
-// 💎 4. 核心数据水合引擎 (Hydration Engine)
-// ==========================================
+
+//Hydration Engine
+
 $cart = []; 
 $total_price = 0; 
 $total_wattage = 0; 
@@ -154,9 +151,9 @@ if ($stock_issue_detected) {
 if ($total_wattage > 0) $total_wattage += 50; 
 $rec_psu = ceil(($total_wattage + 100) / 50) * 50;
 
-// ==========================================
-// 3.5 实时库存雷达 (精确拦截)
-// ==========================================
+
+// 3.5 Realtime stock radar
+
 $inventory_radar = [];
 $stock_check_sql = "SELECT category_id, COUNT(product_id) as available_count FROM products WHERE stock_quantity > 0 AND status = 'Available' GROUP BY category_id";
 $stock_res = mysqli_query($conn, $stock_check_sql);
@@ -166,9 +163,7 @@ if ($stock_res) {
     }
 }
 
-// ==========================================
-// 🚀 AI 瓶颈预警与商业 Upsell 引擎
-// ==========================================
+
 $system_tier = "Awaiting Core Parts";
 $tier_color = "#555"; 
 $bottleneck_warning = "";
@@ -193,9 +188,9 @@ if (isset($cart[1]) && isset($cart[4])) {
     }
 }
 
-// ==========================================
-// 5. DAG 有向无环图数据结构 (Workflow Matrix)
-// ==========================================
+
+//DAG Workflow Matrix
+
 $workflow = [
     'Step 1: Core Components' => [
         ['id' => 1, 'name' => 'Processor (CPU)', 'icon' => 'fa-microchip', 'req' => [], 'params' => '', 'desc' => 'The brain of your PC.'],
