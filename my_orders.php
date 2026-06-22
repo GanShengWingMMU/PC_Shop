@@ -15,7 +15,7 @@ $conn->query($auto_complete_query);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     
-    if ($_POST['action'] === 'complete_order') {
+   if ($_POST['action'] === 'complete_order') {
         $complete_order_id = intval($_POST['order_id']);
         $update_stmt = $conn->prepare("UPDATE orders SET order_status = 'Completed' WHERE order_id = ? AND customer_id = ? AND order_status = 'Delivered'");
         $update_stmt->bind_param("ii", $complete_order_id, $customer_id);
@@ -27,6 +27,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit();
     }
     
+    if ($_POST['action'] === 'cancel_order') {
+        $cancel_order_id = intval($_POST['order_id']);
+
+        $check_stmt = $conn->prepare("SELECT order_status, total_amount, coins_used FROM orders WHERE order_id = ? AND customer_id = ?");
+        $check_stmt->bind_param("ii", $cancel_order_id, $customer_id);
+        $check_stmt->execute();
+        $order_info = $check_stmt->get_result()->fetch_assoc();
+        $check_stmt->close();
+
+        if ($order_info && $order_info['order_status'] === 'Pending') {
+            $refund_amount = $order_info['total_amount'];
+            $refund_coins = $order_info['coins_used'];
+
+            $conn->begin_transaction();
+
+            try {
+                if ($refund_amount > 0 || $refund_coins > 0) {
+                    $update_cust = $conn->prepare("UPDATE customers SET wallet_balance = wallet_balance + ?, reward_coins = reward_coins + ? WHERE customer_id = ?");
+                    $update_cust->bind_param("dii", $refund_amount, $refund_coins, $customer_id);
+                    $update_cust->execute();
+                    $update_cust->close();
+                }
+
+                if ($refund_amount > 0) {
+                    $log_stmt = $conn->prepare("INSERT INTO wallet_transactions (customer_id, type, amount, coins_earned) VALUES (?, 'Refund', ?, 0)");
+                    $log_stmt->bind_param("id", $customer_id, $refund_amount);
+                    $log_stmt->execute();
+                    $log_stmt->close();
+                }
+
+                $update_stmt = $conn->prepare("UPDATE orders SET order_status = 'Cancelled' WHERE order_id = ?");
+                $update_stmt->bind_param("i", $cancel_order_id);
+                $update_stmt->execute();
+                $update_stmt->close();
+
+                $items_stmt = $conn->prepare("SELECT product_id, pc_build, package_id, quantity FROM order_details WHERE order_id = ?");
+                $items_stmt->bind_param("i", $cancel_order_id);
+                $items_stmt->execute();
+                $order_items = $items_stmt->get_result();
+
+                while ($item = $order_items->fetch_assoc()) {
+                    $ordered_qty = $item['quantity'];
+
+                    if (!empty($item['product_id'])) {
+                        $conn->query("UPDATE products SET stock_quantity = stock_quantity + {$ordered_qty} WHERE product_id = {$item['product_id']}");
+                    } elseif (!empty($item['package_id'])) {
+                        $pkg_id = intval($item['package_id']);
+                        $pkg_items = $conn->query("SELECT product_id, quantity FROM package_items WHERE package_id = {$pkg_id}");
+                        while ($p_item = $pkg_items->fetch_assoc()) {
+                            $restore_qty = $p_item['quantity'] * $ordered_qty;
+                            $conn->query("UPDATE products SET stock_quantity = stock_quantity + {$restore_qty} WHERE product_id = {$p_item['product_id']}");
+                        }
+                    } elseif (!empty($item['pc_build'])) {
+                        $build_id = intval($item['pc_build']);
+                        $build_items = $conn->query("SELECT product_id, quantity FROM build_items WHERE pc_build = {$build_id}");
+                        while ($b_item = $build_items->fetch_assoc()) {
+                            $restore_qty = $b_item['quantity'] * $ordered_qty;
+                            $conn->query("UPDATE products SET stock_quantity = stock_quantity + {$restore_qty} WHERE product_id = {$b_item['product_id']}");
+                        }
+                    }
+                }
+                $items_stmt->close();
+
+                $conn->commit();
+                $_SESSION['success_msg'] = "Order cancelled successfully. RM " . number_format($refund_amount, 2) . " has been refunded to your wallet.";
+            } catch (Exception $e) {
+                $conn->rollback();
+                $_SESSION['success_msg'] = "Failed to cancel the order. Please try again or contact support.";
+            }
+        }
+        $current_tab = isset($_POST['current_status']) ? $_POST['current_status'] : 'All';
+        header("Location: my_orders.php?status=" . urlencode($current_tab));
+        exit();
+    }
+
     if ($_POST['action'] === 'rename_order') {
         $rename_order_id = intval($_POST['order_id']);
         $new_name = htmlspecialchars(trim($_POST['new_order_name']));
@@ -433,8 +508,7 @@ switch($current_filter) {
 </div>
 
 <div class="order-footer" style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px;">
-    <div>
-        <?php if ($order['order_status'] == 'Delivered'): ?>
+    <div style="display: flex; gap: 10px;"> <?php if ($order['order_status'] == 'Delivered'): ?>
             <form method="POST" action="my_orders.php" style="margin: 0;">
                 <input type="hidden" name="action" value="complete_order">
                 <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
@@ -443,19 +517,22 @@ switch($current_filter) {
                 </button>
             </form>
         <?php endif; ?>
-    </div>
-    <div style="text-align: right;">
-        <span class="specs" style="margin-right: 15px;">Order Total:</span>
-        <span style="color: var(--accent-blue); font-size: 1.4rem; font-weight: bold;">RM <?php echo number_format($order['total_amount'], 2); ?></span>
-    </div>
-</div>
-                </div>
-            <?php endforeach; ?>
-
+        
+        <?php if ($order['order_status'] == 'Pending'): ?>
+            <form method="POST" action="my_orders.php" style="margin: 0;">
+                <input type="hidden" name="action" value="cancel_order">
+                <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
+                <input type="hidden" name="current_status" value="<?php echo htmlspecialchars($current_filter); ?>">
+                <button type="submit" class="btn-outline-muted" style="color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);" onclick="return confirm('Are you sure you want to cancel this order? RM <?php echo number_format($order['total_amount'], 2); ?> will be refunded to your wallet immediately.');">
+                    <i class="fa-solid fa-ban"></i> Cancel Order
+                </button>
+            </form>
         <?php endif; ?>
-    </main>
-
-    <?php include 'includes/footer.php'; ?>
+    </div> <div style="text-align: right;">
+        <span style="color: #aaa; font-size: 0.9rem;">Order Total:</span>
+        <strong style="color: #fff; font-size: 1.1rem; margin-left: 8px;">RM <?php echo number_format($order['total_amount'], 2); ?></strong>
+    </div>
+</div> </div> <?php endforeach; ?> <?php endif; ?> </main> <?php include 'includes/footer.php'; ?>
 
 
     <form id="renameForm" method="POST" action="my_orders.php" style="display: none;">
