@@ -200,7 +200,13 @@ function getRankBadge($coins, $tier = 'Basic') {
         .build-selector-grid::-webkit-scrollbar-thumb { background: #00f2fe; border-radius: 4px; }
         
         .build-option { position: relative; cursor: pointer; }
-        .build-option input[type="radio"] { display: none; }
+        .build-option input[type="radio"] { 
+            position: absolute; 
+            opacity: 0; 
+            pointer-events: none; 
+            width: 1px; 
+            height: 1px; 
+        }
         .build-card { background: rgba(0,0,0,0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center; transition: 0.3s; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
         .build-card:hover { border-color: #d8b4fe; background: rgba(168, 85, 247, 0.05); }
         .build-option input:checked + .build-card { border-color: #d8b4fe; background: rgba(168, 85, 247, 0.1); box-shadow: inset 0 0 15px rgba(168,85,247,0.2); }
@@ -421,6 +427,21 @@ function getRankBadge($coins, $tier = 'Basic') {
                         </a>
                         <div class="post-content"><?php echo nl2br(htmlspecialchars($p['content'])); ?></div>
                         
+                        <?php if ($p['post_type'] == 'Showcase' && !empty($p['build_name'])): ?>
+                            <div style="background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                                <div style="background: rgba(168, 85, 247, 0.1); padding: 12px; border-radius: 8px;">
+                                    <i class="fas fa-server" style="font-size: 1.8rem; color: #d8b4fe;"></i>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; margin-bottom: 3px;">Linked Blueprint</div>
+                                    <div style="color: #fff; font-weight: 800; font-size: 1.1rem;"><?php echo htmlspecialchars($p['build_name']); ?></div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="color: #00e676; font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: bold;">RM <?php echo number_format($p['total_price'], 2); ?></div>
+                                    <a href="post_detail.php?id=<?php echo $p['post_id']; ?>" style="color: #d8b4fe; font-size: 0.85rem; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 5px;">View Specs <i class="fas fa-arrow-right"></i></a>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                         <?php 
                         $imgs = !empty($p['post_images']) ? json_decode($p['post_images'], true) : [];
                         if (is_array($imgs) && count($imgs) > 0): 

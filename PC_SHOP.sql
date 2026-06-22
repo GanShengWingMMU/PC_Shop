@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `pcshop`
+-- 数据库： `pcshop`
 --
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `admins`
+-- 表的结构 `admins`
 --
 
 CREATE TABLE `admins` (
@@ -39,7 +39,7 @@ CREATE TABLE `admins` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `admins`
+-- 转存表中的数据 `admins`
 --
 
 INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `reset_token`, `reset_token_expire`, `created_at`) VALUES
@@ -50,7 +50,7 @@ INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `rese
 -- --------------------------------------------------------
 
 --
--- Table structure for table `admin_logs`
+-- 表的结构 `admin_logs`
 --
 
 CREATE TABLE `admin_logs` (
@@ -64,7 +64,7 @@ CREATE TABLE `admin_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `admin_logs`
+-- 转存表中的数据 `admin_logs`
 --
 
 INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_event`, `ip_address`, `login_time`) VALUES
@@ -217,7 +217,7 @@ INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_even
 -- --------------------------------------------------------
 
 --
--- Table structure for table `bank`
+-- 表的结构 `bank`
 --
 
 CREATE TABLE `bank` (
@@ -233,18 +233,18 @@ CREATE TABLE `bank` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `bank`
+-- 转存表中的数据 `bank`
 --
 
 INSERT INTO `bank` (`id`, `bank_name`, `cardholder_name`, `card_number`, `cvc`, `expiry_date`, `fpx_username`, `fpx_password`, `balance`) VALUES
 (1, 'Maybank', 'Ali Bin Abu', '1111222233334444', '123', '12/30', NULL, NULL, 8303.00),
-(2, 'Maybank', 'Gan Sheng Wing', '9999888877776666', '999', '12/30', NULL, NULL, 42270.10),
+(2, 'Maybank', 'Gan Sheng Wing', '9999888877776666', '999', '12/30', NULL, NULL, 928419.10),
 (3, 'Maybank', 'FPX User 1', '0000', '000', '12/30', 'ganshengwing', '123456', 76101.00);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `build_items`
+-- 表的结构 `build_items`
 --
 
 CREATE TABLE `build_items` (
@@ -255,7 +255,7 @@ CREATE TABLE `build_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `build_items`
+-- 转存表中的数据 `build_items`
 --
 
 INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`) VALUES
@@ -512,7 +512,7 @@ INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`
 -- --------------------------------------------------------
 
 --
--- Table structure for table `categories`
+-- 表的结构 `categories`
 --
 
 CREATE TABLE `categories` (
@@ -522,7 +522,7 @@ CREATE TABLE `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `categories`
+-- 转存表中的数据 `categories`
 --
 
 INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
@@ -541,7 +541,7 @@ INSERT INTO `categories` (`category_id`, `category_name`, `description`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `community_comments`
+-- 表的结构 `community_comments`
 --
 
 CREATE TABLE `community_comments` (
@@ -552,10 +552,17 @@ CREATE TABLE `community_comments` (
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- 转存表中的数据 `community_comments`
+--
+
+INSERT INTO `community_comments` (`comment_id`, `post_id`, `customer_id`, `comment`, `created_at`) VALUES
+(1, 8, 6, 'NICE', '2026-06-20 15:44:30');
+
 -- --------------------------------------------------------
 
 --
--- Table structure for table `community_likes`
+-- 表的结构 `community_likes`
 --
 
 CREATE TABLE `community_likes` (
@@ -566,7 +573,7 @@ CREATE TABLE `community_likes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `community_likes`
+-- 转存表中的数据 `community_likes`
 --
 
 INSERT INTO `community_likes` (`like_id`, `post_id`, `customer_id`, `created_at`) VALUES
@@ -578,7 +585,7 @@ INSERT INTO `community_likes` (`like_id`, `post_id`, `customer_id`, `created_at`
 -- --------------------------------------------------------
 
 --
--- Table structure for table `community_posts`
+-- 表的结构 `community_posts`
 --
 
 CREATE TABLE `community_posts` (
@@ -597,7 +604,7 @@ CREATE TABLE `community_posts` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `community_posts`
+-- 转存表中的数据 `community_posts`
 --
 
 INSERT INTO `community_posts` (`post_id`, `customer_id`, `pc_build_id`, `title`, `content`, `post_images`, `post_type`, `views`, `created_at`, `is_pinned`, `report_count`, `is_flagged`) VALUES
@@ -605,12 +612,15 @@ INSERT INTO `community_posts` (`post_id`, `customer_id`, `pc_build_id`, `title`,
 (2, 5, 28, 'god', '。。。', NULL, 'Showcase', 0, '2026-05-02 22:31:12', 0, 0, 0),
 (3, 6, NULL, 'hi dear suhaimi', 'i just wanna say ur build is godlike ahahhaha', NULL, 'Discussion', 0, '2026-05-18 01:56:15', 0, 0, 0),
 (4, 6, NULL, '3333', '3333', '[\"image\\/cmty_6a34064e79ba6_4355.png\",\"image\\/cmty_6a34064e7a0cf_2939.png\",\"image\\/cmty_6a34064e7a548_8811.png\",\"image\\/cmty_6a34064e7ae0e_8658.png\",\"image\\/cmty_6a34064e7b219_9907.png\",\"image\\/cmty_6a34064e7b63a_4140.png\"]', 'Discussion', 0, '2026-06-18 22:53:02', 0, 0, 0),
-(5, 6, NULL, '22342让', '44444', NULL, 'Discussion', 0, '2026-06-18 23:06:35', 0, 0, 0);
+(5, 6, NULL, '22342让', '44444', NULL, 'Discussion', 0, '2026-06-18 23:06:35', 0, 0, 0),
+(6, 11, NULL, '-', 'what&#039;s the good spec examples?', NULL, 'Discussion', 0, '2026-06-20 02:39:07', 0, 0, 0),
+(7, 13, NULL, 'HI', 'FINALLY I AM PRO NOW', NULL, 'Question', 0, '2026-06-20 03:01:46', 0, 0, 0),
+(8, 6, 41, 'SHOWCASES1', '-', NULL, 'Showcase', 0, '2026-06-20 15:43:58', 0, 0, 0);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `consultations`
+-- 表的结构 `consultations`
 --
 
 CREATE TABLE `consultations` (
@@ -625,7 +635,7 @@ CREATE TABLE `consultations` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `customers`
+-- 表的结构 `customers`
 --
 
 CREATE TABLE `customers` (
@@ -639,6 +649,7 @@ CREATE TABLE `customers` (
   `birthday` date DEFAULT NULL,
   `wallet_balance` decimal(10,2) NOT NULL DEFAULT 0.00,
   `reward_coins` int(11) NOT NULL DEFAULT 0,
+  `lifetime_coins` int(11) DEFAULT 0,
   `membership_tier` varchar(20) DEFAULT 'Standard',
   `vip_expiry_date` datetime DEFAULT NULL,
   `auto_renew` tinyint(1) DEFAULT 0,
@@ -654,21 +665,28 @@ CREATE TABLE `customers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `customers`
+-- 转存表中的数据 `customers`
 --
 
-INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `birthday`, `wallet_balance`, `reward_coins`, `membership_tier`, `vip_expiry_date`, `auto_renew`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`, `created_at`) VALUES
-(1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99972177.99, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
-(3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 6, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
-(5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 100455.00, 10002, 'VIP', '2026-07-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14'),
-(6, 'kskbl', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', '+60122222620', '2025-11-17', 1000.00, 550, 'VIP', '2026-07-18 17:07:34', 1, NULL, 'Active', NULL, NULL, 27, 44, 13, 0, '2026-05-09 21:32:45'),
-(7, 'XUANMING0126', NULL, NULL, 'chenweishen8733@gmail.com', '$2y$10$t1mb1tQakaIxjZZJG/2/RurpbpIpkGQ9mObmsvcM9AFz.I0ZskP3.', '', '2026-05-18', 0.00, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-18 16:39:41'),
-(8, 'Alvis', NULL, NULL, 'ocalvis88@gmail.com', '$2y$10$JHAUBkQ2sgoDKHebVWIvNe7uUqsr3XUVHonZzXlpWy83oOcnjen4W', '', '2005-10-07', 105.00, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-21 22:15:47');
+INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `birthday`, `wallet_balance`, `reward_coins`, `lifetime_coins`, `membership_tier`, `vip_expiry_date`, `auto_renew`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`, `created_at`) VALUES
+(1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99972177.99, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
+(3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 6, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29'),
+(5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 110105.00, 1502, 500, 'VIP', '2026-07-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14'),
+(6, 'kskbl', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', '+60122222620', '2025-11-17', 7391.00, 3877, 3377, 'VIP', '2026-07-18 17:07:34', 1, NULL, 'Active', NULL, NULL, 27, 44, 13, 0, '2026-05-09 21:32:45'),
+(7, 'XUANMING0126', NULL, NULL, 'chenweishen8733@gmail.com', '$2y$10$t1mb1tQakaIxjZZJG/2/RurpbpIpkGQ9mObmsvcM9AFz.I0ZskP3.', '', '2026-05-18', 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-18 16:39:41'),
+(8, 'Alvis', NULL, NULL, 'ocalvis88@gmail.com', '$2y$10$JHAUBkQ2sgoDKHebVWIvNe7uUqsr3XUVHonZzXlpWy83oOcnjen4W', '', '2005-10-07', 105.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-21 22:15:47'),
+(9, 'eee', NULL, NULL, 'qu22eit0126@gmail.com', '$2y$10$GjGIWiIk0yC5pcOWCjqiAutd8tFXSs7POpYJdJi/uvP/1j.C2.Pbu', NULL, NULL, 0.00, 0, 0, 'VIP', '2026-07-19 20:00:18', 1, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:00:13'),
+(10, 'prof', NULL, NULL, 'gg0126@gmail.com', '$2y$10$cHLLO2NbqdDqoItVVnEuNOFrNmUPIDUkHor54jt1KUgh5H5HHBX9G', NULL, NULL, 15500.00, 1550, 1050, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:02:47'),
+(11, 'seed', NULL, NULL, 'queit01226@gmail.com', '$2y$10$8np7BO0qZJYzIgMbZdY3Uu5pkXtVgqaCS0QfZxhY7WfFtJ3wKNCWi', NULL, NULL, 982.00, 0, 2000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:13:16'),
+(12, 'test2', NULL, NULL, 'quei22t0126@gmail.com', '$2y$10$7ZHRydnpFcZn68JvfUoCe.ggRkm50NUhBllCpw/HXuifIH0EpmODS', NULL, NULL, 20000.00, 2000, 2000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:52:55'),
+(13, 'SSSSSS', NULL, NULL, 'queit01X26@gmail.com', '$2y$10$MPeiirADAFUCt7Eqopaa2euWmpm.ljMj3DPnT7BxyFexEaWAUx2r2', NULL, NULL, 5000.00, 500, 500, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 03:00:20'),
+(14, 'kskbl22', NULL, NULL, 'queit220126@gmail.com', '$2y$10$Dhx7O886ykAP6haVez4b.ONmJNGnbKBdXn2Wwtbcg0tAdyxpO2LcW', NULL, NULL, 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 13:44:29'),
+(15, 'QIYUE', NULL, NULL, 'queit1234@gmail.com', '$2y$10$EgRvryjdEeF8Ydq5JZ.boujJVBUWjRYlLY0A1RK6qZgzqbT1eXPPi', NULL, NULL, 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 20:32:12');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `customer_addresses`
+-- 表的结构 `customer_addresses`
 --
 
 CREATE TABLE `customer_addresses` (
@@ -688,7 +706,7 @@ CREATE TABLE `customer_addresses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `customer_addresses`
+-- 转存表中的数据 `customer_addresses`
 --
 
 INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `recipient_name`, `phone_number`, `address_line1`, `address_line2`, `city`, `state`, `postcode`, `country`, `full_address`, `is_default`, `created_at`) VALUES
@@ -696,14 +714,16 @@ INSERT INTO `customer_addresses` (`address_id`, `customer_id`, `recipient_name`,
 (2, 1, '', '', '', NULL, '', '', '', 'Malaysia', 'Sheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', 1, '2026-04-09 17:17:21'),
 (4, 5, 'YEOH XUAN MING', '0122222620', '68,JALAN UTAMA28 TAMAN MUTIARA RINI', '', 'Johor Bahru', 'Johor', '81300', 'Malaysia', '68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', 0, '2026-05-01 21:35:32'),
 (5, 5, 'YYEYY', '0123456789', '58,Jalan Udara 22,Taman Universiti', '', 'perak', 'sembilan', '81365', 'Malaysia', '58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', 1, '2026-05-01 21:39:12'),
-(8, 6, 'YEOH XUAN MING', '+60122222620', '68,JALAN UTAMA28 TAMAN MUTIARA RINI', '', 'Johor Bahru', 'Johor', '81300', 'Malaysia', '68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', 0, '2026-05-18 02:03:47'),
+(8, 6, 'YEOH XUAN MING', '+60122222620', '68,JALAN UTAMA28 TAMAN MUTIARA RINI', '', 'Johor Bahru', 'Johor', '81300', 'Malaysia', '68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', 1, '2026-05-18 02:03:47'),
 (9, 7, 'Sheng Wing Gan', '+60162058560', '205 Short Rd', '', 'Berlin', 'VT', '81300', 'Malaysia', '205 Short Rd, 81300 Berlin, VT', 1, '2026-05-18 16:41:57'),
-(10, 8, 'Alvis', '+601158534889', '2812, Jalan Sri Putri 10/2', '', 'Kulai', 'Johor', '81000', 'Malaysia', '2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', 1, '2026-05-22 21:43:08');
+(10, 8, 'Alvis', '+601158534889', '2812, Jalan Sri Putri 10/2', '', 'Kulai', 'Johor', '81000', 'Malaysia', '2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', 1, '2026-05-22 21:43:08'),
+(11, 10, 'XUAN MING YEOH', '+60122222620', '68,JALAN UTAMA28 TAMAN MUTIARA RINI', '', 'Johor Bahru', 'Johor', '81300', 'Malaysia', '68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', 0, '2026-06-20 02:09:34'),
+(12, 11, 'XUAN MING YEOH', '+60122222620', '68,JALAN UTAMA28 TAMAN MUTIARA RINI', '', 'Johor Bahru', 'Johor', '81300', 'Malaysia', '68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', 0, '2026-06-20 02:15:24');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `fpx_accounts`
+-- 表的结构 `fpx_accounts`
 --
 
 CREATE TABLE `fpx_accounts` (
@@ -715,7 +735,7 @@ CREATE TABLE `fpx_accounts` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `fpx_accounts`
+-- 转存表中的数据 `fpx_accounts`
 --
 
 INSERT INTO `fpx_accounts` (`account_id`, `bank_name`, `username`, `password`, `balance`) VALUES
@@ -726,7 +746,7 @@ INSERT INTO `fpx_accounts` (`account_id`, `bank_name`, `username`, `password`, `
 -- --------------------------------------------------------
 
 --
--- Table structure for table `orders`
+-- 表的结构 `orders`
 --
 
 CREATE TABLE `orders` (
@@ -743,7 +763,7 @@ CREATE TABLE `orders` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `orders`
+-- 转存表中的数据 `orders`
 --
 
 INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `total_amount`, `coins_used`, `discount_amount`, `shipping_address`, `contact_number`, `order_status`) VALUES
@@ -767,12 +787,20 @@ INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `to
 (24, 'My Custom Order', 5, '2026-05-18 16:45:44', 33750.00, 0, 0.00, 'YYEYY | 0123456789\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', NULL, 'Shipped'),
 (25, 'My Custom Order', 8, '2026-05-22 21:44:38', 2550.00, 0, 0.00, 'Alvis | +601158534889\n2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', NULL, 'Completed'),
 (26, 'My Custom Order', 8, '2026-06-17 19:18:59', 45.00, 0, 0.00, 'Alvis | +601158534889\n2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', NULL, 'Shipped'),
-(27, 'My Custom Order', 8, '2026-06-18 21:41:10', 350.00, 10000, 1000.00, 'Alvis | +601158534889\n2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', NULL, 'Completed');
+(27, 'My Custom Order', 8, '2026-06-18 21:41:10', 350.00, 10000, 1000.00, 'Alvis | +601158534889\n2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', NULL, 'Completed'),
+(28, 'My Custom Order', 5, '2026-06-20 01:42:45', 350.00, 10000, 1000.00, 'YYEYY | 0123456789\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', NULL, 'Pending'),
+(29, 'My Custom Order', 6, '2026-06-20 01:52:03', 465.00, 550, 55.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
+(30, 'My Custom Order', 10, '2026-06-20 02:09:49', 1350.00, 0, 0.00, 'XUAN MING YEOH | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Completed'),
+(31, 'My Custom Order', 11, '2026-06-20 02:15:56', 1350.00, 0, 0.00, 'XUAN MING YEOH | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
+(32, 'My Custom Order', 11, '2026-06-20 02:18:44', 19018.00, 2000, 200.00, 'XUAN MING YEOH | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
+(33, 'My Custom Order', 6, '2026-06-20 20:50:36', 8609.00, 0, 150.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
+(34, 'My Custom Order', 6, '2026-06-20 21:54:48', 8759.00, 0, 0.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
+(35, 'My Custom Order', 6, '2026-06-20 21:55:54', 6427.00, 0, 0.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Cancelled');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `order_details`
+-- 表的结构 `order_details`
 --
 
 CREATE TABLE `order_details` (
@@ -790,7 +818,7 @@ CREATE TABLE `order_details` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `order_details`
+-- 转存表中的数据 `order_details`
 --
 
 INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_build`, `package_id`, `affiliate_id`, `quantity`, `unit_price`, `return_status`, `return_reason`, `return_image`) VALUES
@@ -822,12 +850,21 @@ INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_bu
 (26, 24, 48, NULL, NULL, NULL, 25, 1350.00, NULL, NULL, NULL),
 (27, 25, 44, NULL, NULL, NULL, 1, 2550.00, NULL, NULL, NULL),
 (28, 26, 24, NULL, NULL, NULL, 1, 45.00, NULL, NULL, NULL),
-(29, 27, 48, NULL, NULL, NULL, 1, 1350.00, NULL, NULL, NULL);
+(29, 27, 48, NULL, NULL, NULL, 1, 1350.00, NULL, NULL, NULL),
+(30, 28, 48, NULL, NULL, NULL, 1, 1350.00, NULL, NULL, NULL),
+(31, 29, 60, NULL, NULL, NULL, 1, 520.00, NULL, NULL, NULL),
+(32, 30, 48, NULL, NULL, NULL, 1, 1350.00, NULL, NULL, NULL),
+(33, 31, 48, NULL, NULL, NULL, 1, 1350.00, NULL, NULL, NULL),
+(34, 32, NULL, NULL, 14, NULL, 1, 16668.00, NULL, NULL, NULL),
+(35, 32, 44, NULL, NULL, NULL, 1, 2550.00, NULL, NULL, NULL),
+(36, 33, NULL, NULL, 9, NULL, 1, 8759.00, NULL, NULL, NULL),
+(37, 34, NULL, NULL, 9, NULL, 1, 8759.00, NULL, NULL, NULL),
+(38, 35, NULL, 28, NULL, 5, 1, 6427.00, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `packages`
+-- 表的结构 `packages`
 --
 
 CREATE TABLE `packages` (
@@ -846,7 +883,7 @@ CREATE TABLE `packages` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `packages`
+-- 转存表中的数据 `packages`
 --
 
 INSERT INTO `packages` (`package_id`, `package_name`, `description`, `price`, `image_url`, `target_persona`, `stock_status`, `score_gamer`, `score_creator`, `score_student`, `score_enthusiast`, `created_at`) VALUES
@@ -867,7 +904,7 @@ INSERT INTO `packages` (`package_id`, `package_name`, `description`, `price`, `i
 -- --------------------------------------------------------
 
 --
--- Table structure for table `package_items`
+-- 表的结构 `package_items`
 --
 
 CREATE TABLE `package_items` (
@@ -878,7 +915,7 @@ CREATE TABLE `package_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `package_items`
+-- 转存表中的数据 `package_items`
 --
 
 INSERT INTO `package_items` (`id`, `package_id`, `product_id`, `quantity`) VALUES
@@ -1000,7 +1037,7 @@ INSERT INTO `package_items` (`id`, `package_id`, `product_id`, `quantity`) VALUE
 -- --------------------------------------------------------
 
 --
--- Table structure for table `payments`
+-- 表的结构 `payments`
 --
 
 CREATE TABLE `payments` (
@@ -1013,7 +1050,7 @@ CREATE TABLE `payments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `payments`
+-- 转存表中的数据 `payments`
 --
 
 INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `reference_number`, `payment_status`, `transaction_date`) VALUES
@@ -1036,12 +1073,20 @@ INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `reference_n
 (17, 24, 'Visa ending in 6666', NULL, 'Paid', '2026-05-18 16:45:44'),
 (18, 25, 'Visa ending in 6666', NULL, 'Paid', '2026-05-22 21:44:38'),
 (19, 26, 'E-Wallet', NULL, 'Paid', '2026-06-17 19:18:59'),
-(20, 27, 'E-Wallet', NULL, 'Paid', '2026-06-18 21:41:10');
+(20, 27, 'E-Wallet', NULL, 'Paid', '2026-06-18 21:41:10'),
+(21, 28, 'E-Wallet', NULL, 'Paid', '2026-06-20 01:42:45'),
+(22, 29, 'Credit Card ending in 6666', NULL, 'Paid', '2026-06-20 01:52:03'),
+(23, 30, 'Credit Card ending in 6666', NULL, 'Paid', '2026-06-20 02:09:49'),
+(24, 31, 'Credit Card ending in 6666', NULL, 'Paid', '2026-06-20 02:15:56'),
+(25, 32, 'E-Wallet', NULL, 'Paid', '2026-06-20 02:18:44'),
+(26, 33, 'E-Wallet', NULL, 'Paid', '2026-06-20 20:50:36'),
+(27, 34, 'Credit Card ending in 6666', NULL, 'Paid', '2026-06-20 21:54:48'),
+(28, 35, 'Credit Card ending in 6666', NULL, 'Paid', '2026-06-20 21:55:54');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `products`
+-- 表的结构 `products`
 --
 
 CREATE TABLE `products` (
@@ -1062,7 +1107,7 @@ CREATE TABLE `products` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `products`
+-- 转存表中的数据 `products`
 --
 
 INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `description`, `price`, `stock_quantity`, `specifications`, `image_url`, `status`, `tdp_wattage`, `is_package`, `socket_type`, `ram_type`, `performance_tier`) VALUES
@@ -1086,52 +1131,52 @@ INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `descriptio
 (18, 7, 'NZXT H5 Flow Black', 'High airflow premium chassis.', 400.00, 7, 'Form Factor: Compact ATX Mid-Tower\r\nMaterials: SGCC Steel and Dark Tinted Tempered Glass\r\nMotherboard Support: E-ATX (up to 277mm wide), ATX, Micro-ATX, Mini-ITX\r\nColor: Black\r\nDimensions: 465 mm(H) x 225mm(W) x 430 mm(D)\r\nWeight: 7.28 kg\r\nMax CPU Cooler Height: Up to 170 mm\r\nMax GPU Clearance: Up to 410 mm\r\nMax PSU Length: Up to 200 mm', 'image/prod_6a26b9934d288.webp', 'Available', 0, 0, '', '', 7),
 (19, 8, 'Deepcool AK400 Air Cooler', 'Efficient standard air cooler.', 150.00, 20, '- Dimensions: 127×97×155 mm(L×W×H)\r\n- Heatsink Dimensions: 120×45×152 mm(L×W×H)\r\n- Net Weight: 661 g\r\n- Heatpipe: Ø6 mm×4 pcs\r\n- Fan Dimensions: 120×120×25 mm(L×W×H)\r\n- Fan Speed: 500~1850 RPM±10%\r\n- Fan Airflow: 66.47 CFM\r\n- Fan Air Pressure: 2.04 mmAq\r\n- Fan Noise: =29 dB(A)\r\n- Fan Connector: 4-pin PWM\r\n- Bearing Type: Fluid Dynamic Bearing\r\n- Fan Rated Voltage: 12 VDC\r\n- Fan Rated Current: 0.13 A\r\n- Fan Power Consumption: 1.56 W', 'image/prod_6a26b98980a9d.jpg', 'Available', 0, 0, '', '', 8),
 (20, 8, 'NZXT Kraken 360 RGB AIO', 'Premium liquid cooler with LCD.', 850.00, 8, 'Radiator Dimensions: 397 × 120 × 27 mm\r\nRadiator Material: Aluminum\r\nCold Plate Material: Copper\r\nTubing Length: 420 mm (CIIR+EPDM rubber with nylon braided sleeve)\r\nPump Motor Speed: 3,100 ± 310 RPM\r\nFan Dimensions: 120 × 120 × 26 mm (Three fans or single-frame depending on SKU)\r\nRotational Speed: 500 – 2,400 ± 250 RPM\r\nAirflow: 75.05 CFM (per fan)\r\nStatic Pressure: 3.07 mm H₂O (per fan)\r\nNoise Level: 31.9 dBA (Max)\r\nBearing: Fluid Dynamic Bearing (FDB)', 'image/prod_6a26b980b43e5.jpg', 'Available', 15, 0, '', '', 7),
-(21, 9, 'Microsoft Windows 11 Home 64-bit', 'Standard edition for gamers and home users. USB Flash Drive included.', 549.00, 6, 'Connectivity & Setup: Setting up Windows 11 Home for personal use strictly requires an active internet connection and a Microsoft Account.\r\nSecurity & Authentication: TPM 2.0 is mandatory for next-gen hardware tampering prevention. Windows Hello is supported for biometric logins (fingerprint or facial recognition)\r\nAdvanced Networking: Native support for Hyper-V, Firewall, and modern protocols including Wi-Fi 6, Wi-Fi 7 (when hardware is supported), and Bluetooth 5.3.\r\nAI Enhancements: Access to AI-powered features like Copilot, and for compatible Copilot+ PCs, enhanced hardware-accelerated NPU tasks', 'image/prod_6a26b977c660c.jpg', 'Available', 0, 0, '', '', 6),
-(22, 9, 'Microsoft Windows 11 Pro 64-bit', 'Advanced features for professionals and developers. BitLocker included.', 899.00, 8, 'Security: BitLocker device encryption and Windows Information Protection (WIP).\r\nManagement & Remote Access: Domain join, Azure Active Directory, Group Policy, and Remote Desktop support.\r\nVirtualization: Hyper-V and Windows Sandbox for secure, virtualized environments.', 'image/prod_6a26b96a0432e.jpg', 'Available', 0, 0, '', '', 7),
-(23, 10, 'Corsair iCUE AR120 RGB 120mm (3-Pack)', 'High performance cooling fans with customizable RGB lighting sync.', 229.00, 6, 'Fan Size: 120mm × 25mm\r\nBearing Type: Hydraulic bearing\r\nLighting: 8 Individually addressable RGB LEDs per fan\r\nRGB Control: Motherboard 3-pin ARGB header (adapter included) or Corsair iCUE controller\r\nFan Speed: 400 – 1,850 RPM (PWM Controlled)\r\nAirflow: Up to 59 CFM\r\nStatic Pressure: 2.83 mm H₂O\r\nNoise Level: 10.26 dBA to 27.3 dBA\r\nZero RPM Mode: Supported\r\nPower Connector: 4-pin PWM\r\nLighting Header: 3-pin +5V ARGB', 'image/prod_6a26b913d2ffa.jpg', 'Available', 5, 0, '', '', 7),
+(21, 9, 'Microsoft Windows 11 Home 64-bit', 'Standard edition for gamers and home users. USB Flash Drive included.', 549.00, 5, 'Connectivity & Setup: Setting up Windows 11 Home for personal use strictly requires an active internet connection and a Microsoft Account.\r\nSecurity & Authentication: TPM 2.0 is mandatory for next-gen hardware tampering prevention. Windows Hello is supported for biometric logins (fingerprint or facial recognition)\r\nAdvanced Networking: Native support for Hyper-V, Firewall, and modern protocols including Wi-Fi 6, Wi-Fi 7 (when hardware is supported), and Bluetooth 5.3.\r\nAI Enhancements: Access to AI-powered features like Copilot, and for compatible Copilot+ PCs, enhanced hardware-accelerated NPU tasks', 'image/prod_6a26b977c660c.jpg', 'Available', 0, 0, '', '', 6),
+(22, 9, 'Microsoft Windows 11 Pro 64-bit', 'Advanced features for professionals and developers. BitLocker included.', 899.00, 5, 'Security: BitLocker device encryption and Windows Information Protection (WIP).\r\nManagement & Remote Access: Domain join, Azure Active Directory, Group Policy, and Remote Desktop support.\r\nVirtualization: Hyper-V and Windows Sandbox for secure, virtualized environments.', 'image/prod_6a26b96a0432e.jpg', 'Available', 0, 0, '', '', 7),
+(23, 10, 'Corsair iCUE AR120 RGB 120mm (3-Pack)', 'High performance cooling fans with customizable RGB lighting sync.', 229.00, 5, 'Fan Size: 120mm × 25mm\r\nBearing Type: Hydraulic bearing\r\nLighting: 8 Individually addressable RGB LEDs per fan\r\nRGB Control: Motherboard 3-pin ARGB header (adapter included) or Corsair iCUE controller\r\nFan Speed: 400 – 1,850 RPM (PWM Controlled)\r\nAirflow: Up to 59 CFM\r\nStatic Pressure: 2.83 mm H₂O\r\nNoise Level: 10.26 dBA to 27.3 dBA\r\nZero RPM Mode: Supported\r\nPower Connector: 4-pin PWM\r\nLighting Header: 3-pin +5V ARGB', 'image/prod_6a26b913d2ffa.jpg', 'Available', 5, 0, '', '', 7),
 (24, 10, 'ARCTIC P12 PWM PST 120mm', 'Pressure-optimized quiet fan for excellent airflow and low noise.', 45.00, 8, '- Dimensions: 120 × 120 × 25 mm (Standard)\r\n- Fan Speed: 200 – 1,800 RPM (PWM controlled)\r\n- Zero RPM Mode: Yes (Stops spinning when PWM signal is < 5%)\r\n- Airflow: 56.3 CFM (95.7 m³/h)\r\n- Static Pressure: 2.20 mm H₂O\r\n- Noise Level: 0.3 Sone (extremely quiet)\r\n- Bearing Type: Fluid Dynamic Bearing (FDB)\r\n- Connector: 4-Pin Connector + 4-Pin Socket (for daisy-chaining)\r\n- Current / Voltage: 0.08 A / 12 V DC\r\n- Cable Length: 400 mm\r\n- Weight: 139g – 145g', 'image/prod_6a26b9081110e.jpg', 'Available', 2, 0, '', '', 7),
-(25, 11, 'ASUS TUF Gaming VG27AQ 27\" 165Hz', '27-inch WQHD (2560x1440) IPS gaming monitor with ultrafast 165Hz refresh rate.', 1299.00, 8, '- Screen Size: 27 inch\r\n- Resolution: WQHD (2560 x 1440)\r\n- Refresh Rate: 165Hz\r\n- Color Accuracy: 100% sRGB color space', 'image/prod_6a26b8fe98825.png', 'Available', 0, 0, '', '', 6),
+(25, 11, 'ASUS TUF Gaming VG27AQ 27\" 165Hz', '27-inch WQHD (2560x1440) IPS gaming monitor with ultrafast 165Hz refresh rate.', 1299.00, 7, '- Screen Size: 27 inch\r\n- Resolution: WQHD (2560 x 1440)\r\n- Refresh Rate: 165Hz\r\n- Color Accuracy: 100% sRGB color space', 'image/prod_6a26b8fe98825.png', 'Available', 0, 0, '', '', 6),
 (26, 11, 'AOC 24G2SP 24\" 165Hz IPS', '24-inch Full HD (1920x1080) gaming monitor, perfect for esports.', 649.00, 10, '- Screen size (inch): 23.8\r\n- Panel resolution: 1920x1080\r\n- Panel type: IPS\r\n- Blue Light Technology: Yes', 'image/prod_6a26b8f22a7d0.png', 'Available', 0, 0, '', '', 4),
 (27, 1, 'AMD Ryzen 7 7800X3D', 'The undisputed king of gaming CPUs. 3D V-Cache technology. Keyword: AM5', 1850.00, 24, 'Cores/Threads: 8 Cores / 16 Threads\r\nClock Speeds: 4.2 GHz Base / up to 5.0 GHz Boost\r\nCache: 96 MB L3 Cache\r\nSocket & Architecture: AM5, Zen 4 (TSMC 5nm)\r\nTDP: 120W (requires a capable cooler)\r\nMemory Support: Dual-channel DDR5', 'image/prod_6a26b8e5871c9.jpg', 'Available', 120, 0, 'AM5', '', 9),
-(28, 1, 'Intel Core i7-14700K', '20-core powerhouse for rendering and intense gaming. Keyword: LGA1700', 1980.00, 15, 'Total Cores / Threads: 20 / 28\r\nMax Turbo Frequency: Up to 5.6 GHz\r\nCache: 33 MB Intel Smart Cache\r\nSocket Compatibility: LGA 1700 (Intel 600 and 700 series chipsets)\r\nMemory Support: Up to DDR5-5600 or DDR4-3200\r\nIntegrated Graphics: Intel UHD Graphics 770\r\nPower Draw: 125 W Base Power / 253 W Maximum Turbo Power', 'image/prod_6a26b8dc5752a.jpg', 'Available', 253, 0, 'LGA1700', '', 9),
+(28, 1, 'Intel Core i7-14700K', '20-core powerhouse for rendering and intense gaming. Keyword: LGA1700', 1980.00, 13, 'Total Cores / Threads: 20 / 28\r\nMax Turbo Frequency: Up to 5.6 GHz\r\nCache: 33 MB Intel Smart Cache\r\nSocket Compatibility: LGA 1700 (Intel 600 and 700 series chipsets)\r\nMemory Support: Up to DDR5-5600 or DDR4-3200\r\nIntegrated Graphics: Intel UHD Graphics 770\r\nPower Draw: 125 W Base Power / 253 W Maximum Turbo Power', 'image/prod_6a26b8dc5752a.jpg', 'Available', 253, 0, 'LGA1700', '', 9),
 (29, 1, 'AMD Ryzen 5 7600', 'Incredible value for AM5 platform, excellent 1080p/1440p performer. Keyword: AM5', 1050.00, 40, 'Cores/Threads: 6 Cores / 12 Threads\r\nClock Speed: 3.8 GHz Base / 5.1 GHz \r\nBoostCache: 6MB L2 + 32MB L3\r\nSocket Type: AM5 (Requires DDR5 memory)\r\nIntegrated Graphics: Yes (AMD Radeon Graphics, 2 cores at 2200 MHz)\r\nTDP (Power): 65 Watts', 'image/prod_6a26b8a6f3f34.jpg', 'Available', 65, 0, 'AM5', '', 6),
-(30, 1, 'Intel Core i5-12400F', 'The ultimate budget 6-core processor. Keyword: LGA1700', 580.00, 50, 'Cores / Threads: 6 Cores / 12 Threads\r\nClock Speeds: 2.5 GHz Base, up to 4.4 GHz Turbo\r\nCache: 18 MB Intel Smart Cache\r\nPower (TDP): 65W Base, 117W Maximum Turbo\r\nSocket: LGA1700\r\nMemory Support: DDR4 (up to 3200 MT/s) and DDR5 (up to 4800 MT/s)\r\nIncluded Cooler: Yes', 'image/prod_6a26b89a9eda1.jpg', 'Available', 65, 0, 'LGA1700', '', 5),
-(31, 1, 'AMD Ryzen 9 7950X', '16-core rendering monster for ultimate creators. Keyword: AM5', 2850.00, 10, 'Architecture: TSMC 5nm FinFET (Zen 4)\r\nCores/Threads: 16 Cores / 32 Threads\r\nClock Speeds: 4.5 GHz Base, up to 5.7 GHz Max Boost\r\nCache: 80MB total (1MB L1, 16MB L2, 64MB L3)\r\nSocket: AM5 (Requires DDR5 memory)\r\nIntegrated Graphics: AMD Radeon Graphics included\r\nDefault TDP:170W', 'image/prod_6a26b86371d66.jpg', 'Available', 170, 0, 'AM5', '', 10),
+(30, 1, 'Intel Core i5-12400F', 'The ultimate budget 6-core processor. Keyword: LGA1700', 580.00, 49, 'Cores / Threads: 6 Cores / 12 Threads\r\nClock Speeds: 2.5 GHz Base, up to 4.4 GHz Turbo\r\nCache: 18 MB Intel Smart Cache\r\nPower (TDP): 65W Base, 117W Maximum Turbo\r\nSocket: LGA1700\r\nMemory Support: DDR4 (up to 3200 MT/s) and DDR5 (up to 4800 MT/s)\r\nIncluded Cooler: Yes', 'image/prod_6a26b89a9eda1.jpg', 'Available', 65, 0, 'LGA1700', '', 5),
+(31, 1, 'AMD Ryzen 9 7950X', '16-core rendering monster for ultimate creators. Keyword: AM5', 2850.00, 9, 'Architecture: TSMC 5nm FinFET (Zen 4)\r\nCores/Threads: 16 Cores / 32 Threads\r\nClock Speeds: 4.5 GHz Base, up to 5.7 GHz Max Boost\r\nCache: 80MB total (1MB L1, 16MB L2, 64MB L3)\r\nSocket: AM5 (Requires DDR5 memory)\r\nIntegrated Graphics: AMD Radeon Graphics included\r\nDefault TDP:170W', 'image/prod_6a26b86371d66.jpg', 'Available', 170, 0, 'AM5', '', 10),
 (32, 1, 'Intel Core i9-13900K', 'Previous gen flagship, still an absolute beast. Keyword: LGA1700', 2650.00, 12, 'Total Cores: 24 (8 Performance-cores, 16 Efficient-cores)\r\nTotal Threads: 32Max Turbo Frequency: Up to 5.80 GHz\r\nCache: 36 MB Intel Smart Cache\r\nLithography: Intel 7 (10nm)\r\nSocket Compatibility: LGA 1700\r\nProcessor Base Power: 125 W\r\nMaximum Turbo Power: 253 W\r\nUnlocked for Overclocking: Yes\r\nMax Memory Size: Up to 192 GB\r\nMemory Types: Up to DDR5 5600 MT/s, DDR4 3200 MT/s\r\nGPU Name: Intel UHD Graphics 770\r\nGraphics Max Dynamic Frequency: 1.65 GHz\r\nMax Resolution (HDMI): 4096 x 2160 @ 60Hz\r\nMax Resolution (DP): 7680 x 4320 @ 60Hz', 'image/prod_6a26b85ae8213.jpg', 'Available', 253, 0, 'LGA1700', '', 9),
 (33, 2, 'MSI MAG B650 TOMAHAWK WIFI', 'Premium AM5 board with heavy VRM heatsinks. DDR5 only.', 1150.00, 16, '- CPU Socket: AMD Socket AM5\r\n- Chipset: AMD B650\r\n- Memory: 4x DDR5 slots (up to 128GB, speeds 6400+ MHz OC)\r\n- Expansion Slots: 2x PCIe 4.0 x16 (primary slot reinforced with Steel Armor) 1x PCIe 3.0 x1\r\n- Storage: 3x M.2 slots (PCIe 4.0 x4) 6x SATA 6Gb/s\r\n- Networking: Wi-Fi 6E, Bluetooth 5.2 (or 5.3 depending on revision), 2.5G LAN\r\n- Audio: Realtek ALC4080 Codec (7.1 Channel HD Audio)\r\n- Form Factor: ATX (24.38 cm × 30.48 cm)', 'image/prod_6a26b8483b6d8.jpg', 'Available', 25, 0, 'AM5', 'DDR5', 5),
 (34, 2, 'ASUS ROG STRIX B760-A GAMING WIFI', 'High-end Intel B760 DDR5 motherboard with supreme aesthetics.', 1100.00, 18, '- CPU: Intel® Socket LGA1700 for Intel® Core™ 14th & 13th Gen Processors, Intel® Core™ 12th Gen, Pentium® Gold and Celeron® Processors\r\n- Chipset: Intel B760\r\n- Memory: 4 x DIMM, Max. 192GB, DDR5 (up to 7800+ MT/s OC)\r\n- Storage: 3 x M.2 slots (all PCIe 4.0 x4) and 4 x SATA 6Gb/s ports\r\n- Networking: Intel Wi-Fi 6E, Bluetooth 5.3, and Intel 2.5G Ethernet\r\n- Audio: ROG Supreme 7.1 Surround Sound High Definition Audio CODEC\r\n- Form Factor: ATX (30.5 cm x 24.4 cm)', 'image/prod_6a26b83ec2f84.png', 'Available', 25, 0, 'LGA1700', 'DDR5', 8),
 (35, 2, 'Gigabyte B550M DS3H', 'Budget king for older AM4 DDR4 builds.', 420.00, 30, '- CPU Socket: AMD AM4 (Supports Ryzen 3000, 4000, and 5000 Series Processors)\r\n- Memory (RAM): 4x DDR4 DIMMs (Dual-Channel, up to 128GB usually supported)\r\n- Expansion Slots: 1x PCIe 4.0 x16 (for graphics card) 1x PCIe 3.0 x16 (runs at x4) 1x PCIe 3.0 x1Storage 1x M.2 (PCIe 4.0 x4/x3) 1x M.2 (PCIe 3.0 x2) 4x SATA 6Gb/s\r\n- Networking: Realtek GbE LAN (Gigabit Ethernet)\r\n- Audio: Realtek Audio Codec with high-end audio capacitors', 'image/prod_6a26b835c7b28.jpg', 'Available', 15, 0, 'AM4', 'DDR4', 8),
-(36, 2, 'ASRock B760M PRO RS/D4', 'Solid budget board for Intel 12th/13th/14th gen. DDR4 only.', 650.00, 25, '- CPU Support: Intel® Core™ processors (14th, 13th, and 12th Gen)\r\n- Memory: 4 × DDR4 DIMM slots (Dual Channel) up to 128 GB\r\n- Expansion Slots: 2 × PCIe 4.0 x16 slots 1 × PCIe 4.0 x1 slot 1 × M.2 Key-E slot for Wi-Fi modules\r\n- Storage Connectors:: 4 × SATA3 6.0 Gb/s ports 2 × Hyper M.2 slots (both PCIe Gen4x4)', 'image/prod_6a26b82720acb.jpg', 'Available', 20, 0, 'LGA1700', 'DDR4', 6),
-(37, 2, 'ASUS ROG CROSSHAIR X670E HERO', 'Flagship AM5 board for extreme overclocking.', 3200.00, 5, '- CPU Support: AMD Socket AM5 for Ryzen 7000 series processors\r\n- Chipset: AMD X670E\r\n- Memory: 4 × DDR5 DIMM slots (Max 128GB)\r\n- Storage: 2 × onboard PCIe Gen 5 x4 M.2 slots 2 × onboard PCIe Gen 4 x4 M.2 slots 1 × PCIe Gen 5 M.2 via bundled expansion card 6 × SATA 6Gb/s ports\r\n- Rear I/O Ports: • 2 × USB4 Type-C ports • 1 × USB 3.2 Gen 2x2 Type-C port • 9 × USB 3.2 Gen 2 Type-A ports • 1 × HDMI 2.1• BIOS FlashBack & Clear CMOS buttons', 'image/prod_6a26b7d768ae2.png', 'Available', 35, 0, 'AM5', 'DDR5', 10),
+(36, 2, 'ASRock B760M PRO RS/D4', 'Solid budget board for Intel 12th/13th/14th gen. DDR4 only.', 650.00, 22, '- CPU Support: Intel® Core™ processors (14th, 13th, and 12th Gen)\r\n- Memory: 4 × DDR4 DIMM slots (Dual Channel) up to 128 GB\r\n- Expansion Slots: 2 × PCIe 4.0 x16 slots 1 × PCIe 4.0 x1 slot 1 × M.2 Key-E slot for Wi-Fi modules\r\n- Storage Connectors:: 4 × SATA3 6.0 Gb/s ports 2 × Hyper M.2 slots (both PCIe Gen4x4)', 'image/prod_6a26b82720acb.jpg', 'Available', 20, 0, 'LGA1700', 'DDR4', 6),
+(37, 2, 'ASUS ROG CROSSHAIR X670E HERO', 'Flagship AM5 board for extreme overclocking.', 3200.00, 4, '- CPU Support: AMD Socket AM5 for Ryzen 7000 series processors\r\n- Chipset: AMD X670E\r\n- Memory: 4 × DDR5 DIMM slots (Max 128GB)\r\n- Storage: 2 × onboard PCIe Gen 5 x4 M.2 slots 2 × onboard PCIe Gen 4 x4 M.2 slots 1 × PCIe Gen 5 M.2 via bundled expansion card 6 × SATA 6Gb/s ports\r\n- Rear I/O Ports: • 2 × USB4 Type-C ports • 1 × USB 3.2 Gen 2x2 Type-C port • 9 × USB 3.2 Gen 2 Type-A ports • 1 × HDMI 2.1• BIOS FlashBack & Clear CMOS buttons', 'image/prod_6a26b7d768ae2.png', 'Available', 35, 0, 'AM5', 'DDR5', 10),
 (38, 3, 'Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz CL30', 'The sweet spot speed and latency for Ryzen 7000 series.', 580.00, 39, 'Capacity: 32GB (2 x 16GB DIMMs)\r\nTested Speed: 6000 MT/s (PC5-48000)\r\nTested Latency: CL30 (specifically 30-36-36-76)\r\nTested Voltage: 1.4VMemory Type: DDR5\r\nProfiles: AMD EXPO & Intel XMP\r\nForm Factor: 288-pin DIMM\r\nHeat Spreader: Solid aluminum', 'image/prod_6a26b7cdc7614.jpg', 'Available', 10, 0, '', 'DDR5', 9),
-(39, 3, 'G.Skill Trident Z5 Neo RGB 64GB (2x32GB) DDR5 6000MHz', 'High-capacity, high-speed RAM for video editing.', 1150.00, 15, 'Capacity: 64GB (2 x 32GB)\r\nMemory Type: DDR5Tested Speed: 6000 MT/s (PC5-48000)\r\nLatency Timings: Available in ultra-low latency configurations, typically CL30 (30-40-40-96) or CL36 (36-36-36-96) depending on the specific model variationTested \r\nVoltage: 1.40V (for CL30 kits)\r\nLighting: Customizable RGB lighting across a streamlined dual-textured aluminum heat spreader', 'image/prod_6a26b7c554e34.webp', 'Available', 12, 0, '', 'DDR5', 7),
-(40, 3, 'Kingston FURY Beast 16GB (2x8GB) DDR4 3200MHz', 'Reliable budget DDR4 kit.', 190.00, 60, '- CapacitiesKits of 2: 16GB\r\n- Frequencies: 3200MT/s\r\n- Latencies: CL16\r\n- Voltage: 1.35V\r\n- Operating Temperature: 0°C to 85°C\r\n- Dimensions: 133.35mm x 34.1mm x 7.2mm', 'image/prod_6a26b7bc84007.jpg', 'Available', 5, 0, '', 'DDR4', 5),
+(39, 3, 'G.Skill Trident Z5 Neo RGB 64GB (2x32GB) DDR5 6000MHz', 'High-capacity, high-speed RAM for video editing.', 1150.00, 12, 'Capacity: 64GB (2 x 32GB)\r\nMemory Type: DDR5Tested Speed: 6000 MT/s (PC5-48000)\r\nLatency Timings: Available in ultra-low latency configurations, typically CL30 (30-40-40-96) or CL36 (36-36-36-96) depending on the specific model variationTested \r\nVoltage: 1.40V (for CL30 kits)\r\nLighting: Customizable RGB lighting across a streamlined dual-textured aluminum heat spreader', 'image/prod_6a26b7c554e34.webp', 'Available', 12, 0, '', 'DDR5', 7),
+(40, 3, 'Kingston FURY Beast 16GB (2x8GB) DDR4 3200MHz', 'Reliable budget DDR4 kit.', 190.00, 59, '- CapacitiesKits of 2: 16GB\r\n- Frequencies: 3200MT/s\r\n- Latencies: CL16\r\n- Voltage: 1.35V\r\n- Operating Temperature: 0°C to 85°C\r\n- Dimensions: 133.35mm x 34.1mm x 7.2mm', 'image/prod_6a26b7bc84007.jpg', 'Available', 5, 0, '', 'DDR4', 5),
 (41, 3, 'Corsair Dominator Titanium 32GB DDR5 7200MHz', 'Ultra-premium high-frequency memory for Intel builds.', 850.00, 10, 'Memory Type: DDR5\r\nForm Factor: U-DIMM\r\nColor: White\r\nHeat Spreader: Aluminum\r\nCapacity: 16GB per DIMM\r\nSpeed: 7200 MT/s\r\nTimings: 34-44-44-96 2T\r\nOperating Voltage: 1.45V\r\nDimensions: 135.9 x 56.75×7.7mm(LxHxW)\r\nWeight: 77 grams', 'image/prod_6a26b7b386114.jpg', 'Available', 12, 0, '', 'DDR5', 9),
 (42, 3, 'TeamGroup T-Force Delta RGB 32GB DDR4 3600MHz', 'Flashy RGB DDR4 kit for mid-range systems.', 380.00, 25, 'Capacity: 32GB (2 x 16GB dual-channel kit)\r\nMemory Type: DDR4 UDIMM (Desktop)\r\nTested Speed: 3600 MHz (PC4-28800)\r\nCAS Latency: CL18 (18-22-22-42)Voltage: 1.35V\r\nForm Factor: 288-pin \r\nDIMMLighting: 120° ultra-wide-angle, full-frame RGB Force Flow effect\r\nHeatsink: Geometric asymmetric aluminum alloy heat spreader\r\nColors Available: Typically offered in Black or White\r\nDimensions: 49mm (1.93 inches) in total height', 'image/prod_6a26b7a8e455f.jpg', 'Available', 8, 0, '', 'DDR4', 8),
-(43, 4, 'ASUS TUF Gaming GeForce RTX™ 4060 Ti 8GB GDDR6 OC Edition', 'Excellent 1080p Ultra gaming with DLSS 3 Frame Gen.', 1850.00, 20, '- Graphic Engine: NVIDIA® GeForce RTX™ 4060 Ti\r\n- AI Performance: 366\r\n- Bus Standard: PCI Express 4.0\r\n- OpenGL: OpenGL®4.6\r\n- Memory: 8GB GDDR6\r\n- Engine Clock: 2655MHz\r\n- CUDA Core: 4352\r\n- Memory Speed: 18 Gbps\r\n- Resolution: 7680 x 4320\r\n- Interface: Yes x 1 (Native HDMI 2.1a), Yes x 3 (Native DisplayPort 1.4a), HDCP Support Yes (2.3)', 'image/prod_6a26b7a00ec82.png', 'Available', 160, 0, '', '', 5),
-(44, 4, 'AMD Radeon RX 7800 XT 16GB', 'Unbeatable 1440p value, massive VRAM for textures.', 2550.00, 17, '- lock: GPU / Memory\r\n- Game Clock: 2169 MHz / 19.5 Gbps\r\n- Memory: 16GB GDDR6\r\n- Memory Speed: 19.5 Gbps\r\n- Power Supply Unit: 700 W', 'image/prod_6a26b796662e7.png', 'Available', 263, 0, '', '', 7),
+(43, 4, 'ASUS TUF Gaming GeForce RTX™ 4060 Ti 8GB GDDR6 OC Edition', 'Excellent 1080p Ultra gaming with DLSS 3 Frame Gen.', 1850.00, 17, '- Graphic Engine: NVIDIA® GeForce RTX™ 4060 Ti\r\n- AI Performance: 366\r\n- Bus Standard: PCI Express 4.0\r\n- OpenGL: OpenGL®4.6\r\n- Memory: 8GB GDDR6\r\n- Engine Clock: 2655MHz\r\n- CUDA Core: 4352\r\n- Memory Speed: 18 Gbps\r\n- Resolution: 7680 x 4320\r\n- Interface: Yes x 1 (Native HDMI 2.1a), Yes x 3 (Native DisplayPort 1.4a), HDCP Support Yes (2.3)', 'image/prod_6a26b7a00ec82.png', 'Available', 160, 0, '', '', 5),
+(44, 4, 'AMD Radeon RX 7800 XT 16GB', 'Unbeatable 1440p value, massive VRAM for textures.', 2550.00, 16, '- lock: GPU / Memory\r\n- Game Clock: 2169 MHz / 19.5 Gbps\r\n- Memory: 16GB GDDR6\r\n- Memory Speed: 19.5 Gbps\r\n- Power Supply Unit: 700 W', 'image/prod_6a26b796662e7.png', 'Available', 263, 0, '', '', 7),
 (45, 4, 'ROG Strix GeForce RTX™ 4080 SUPER 16GB GDDR6X OC Edition', 'Incredible 4K performance and ray tracing capabilities.', 4950.00, 10, '- Engine Clock: 2640 MHz\r\n- Memory: 16GB GDDR6X\r\n- Memory Speed: 23 Gbps\r\n- Resolution: 7680 × 4320\r\n- Dimensions: 357.6 x 149.3 x 70.1 mm\r\n- Power Supply Unit: 850W', 'image/prod_6a26b78ea28d7.png', 'Available', 320, 0, '', '', 9),
 (46, 4, 'AMD Radeon RX 7900 XTX 24GB', 'Raw rasterization monster, destroys 4K without breaking a sweat.', 4800.00, 8, '- Stream Processors: 6,144 (96 Compute Units)\r\n- Memory: 24GB GDDR6\r\n- Power Supply Unit: 750W to 850W\r\n- Display Outputs: DisplayPort 2.1, HDMI 2.1a, USB Type-C', 'image/prod_6a26b784937e8.png', 'Available', 355, 0, '', '', 9),
-(47, 4, 'ASUS Dual GeForce RTX™ 4070 Ti SUPER OC Edition 16GB GDDR6X', 'Perfect 1440p high-refresh rate card.', 6039.00, 14, '- AI Performance: 710\r\n- Bus Standard: PCI Express 4.0\r\n- OpenGL: OpenGL®4.6\r\n- Video Memory: 16GB GDDR6X\r\n- Default mode: 2625 MHz (boost)\r\n- CUDA Core: 8448\r\n- Memory Speed: 21 Gbps\r\n- Memory Interface: 256-bit\r\n- Resolution: Digital Max Resolution 7680 x 4320\r\n- Interface: Yes x 1 (Native HDMI 2.1a), Yes x 3 (Native DisplayPort 1.4a), HDCP Support Yes (2.3)', 'image/prod_6a26b77aec538.png', 'Available', 285, 0, '', '', 8),
-(48, 4, 'AMD Radeon RX 7600 8GB', 'Budget king for entry-level 1080p gaming.', 1350.00, 12, 'Video Memory: 8GB GDDR6\r\nMemory Interface: 128-bit\r\nInterface Type: PCI Express 4.0\r\nOutput Ports: HDMI, DisplayPort (varies by manufacturer)\r\nArchitecture: RDNA 3\r\nPower Connector: 8-pin (varies by model)\r\nRecommended PSU: 550W or higher', 'image/prod_6a26b76fcdfc0.png', 'Available', 165, 0, '', '', 4),
-(49, 5, 'WD Black SN850X 2TB Gen4 NVMe', 'Top-tier speeds up to 7300MB/s.', 780.00, 21, '- Capacity: 1 TB (Without Heatsink)\r\n- Form Factor: M.2 2280\r\n- Interface: PCIe Gen4 x4\r\n- Sequential Read Performance: 7300MB/s\r\n- Sequential Write Performance: 6300MB/s\r\n- Random Read: 8000004KB IOPS\r\n- Random Write: 11000004KB IOPS\r\n- Endurance (TBW): 600\r\n- Compatibility: Computer with M.2 (M-key) port\r\n- Dimensions: Length: 20mm Weight: 22mm Height: 2.38mm', 'image/prod_6a26b73aa2a97.jpg', 'Available', 8, 0, '', '', 9),
-(50, 5, 'Crucial P3 Plus 1TB Gen4 NVMe', 'Great balance of speed and affordability.', 280.00, 45, '- Storage Capacity: 1TB\r\n- Hard Disk Interface: NVMe\r\n- Connectivity Technology: NVMe\r\n- Additional Features: Portable\r\n- Hard Disk: Form Factor	2.5 Inches (6.4 cm)\r\n- Compatible Devices: Desktops & Laptops that accept PCIe NVMe Gen 4.0 drives\r\n- Read Speed: 5000MB/s\r\n- Media Speed: 4200 MB/S\r\n- Data Transfer Rate: 5000 MB/s\r\n- Form Factor: M.2\r\n- Hardware Connectivity: PCIE x 4\r\n- Hardware Platform: Linux, Mac, PC\r\n- Hard-Drive Size: 500 GB\r\n- Item Dimensions: L x W x Thickness	3.15\r\n- Color: Black\r\n- Enclosure Material: Aluminum', 'image/prod_6a26b72f9beef.jpg', 'Available', 5, 0, '', '', 8),
+(47, 4, 'ASUS Dual GeForce RTX™ 4070 Ti SUPER OC Edition 16GB GDDR6X', 'Perfect 1440p high-refresh rate card.', 6039.00, 13, '- AI Performance: 710\r\n- Bus Standard: PCI Express 4.0\r\n- OpenGL: OpenGL®4.6\r\n- Video Memory: 16GB GDDR6X\r\n- Default mode: 2625 MHz (boost)\r\n- CUDA Core: 8448\r\n- Memory Speed: 21 Gbps\r\n- Memory Interface: 256-bit\r\n- Resolution: Digital Max Resolution 7680 x 4320\r\n- Interface: Yes x 1 (Native HDMI 2.1a), Yes x 3 (Native DisplayPort 1.4a), HDCP Support Yes (2.3)', 'image/prod_6a26b77aec538.png', 'Available', 285, 0, '', '', 8),
+(48, 4, 'AMD Radeon RX 7600 8GB', 'Budget king for entry-level 1080p gaming.', 1350.00, 9, 'Video Memory: 8GB GDDR6\r\nMemory Interface: 128-bit\r\nInterface Type: PCI Express 4.0\r\nOutput Ports: HDMI, DisplayPort (varies by manufacturer)\r\nArchitecture: RDNA 3\r\nPower Connector: 8-pin (varies by model)\r\nRecommended PSU: 550W or higher', 'image/prod_6a26b76fcdfc0.png', 'Available', 165, 0, '', '', 4),
+(49, 5, 'WD Black SN850X 2TB Gen4 NVMe', 'Top-tier speeds up to 7300MB/s.', 780.00, 18, '- Capacity: 1 TB (Without Heatsink)\r\n- Form Factor: M.2 2280\r\n- Interface: PCIe Gen4 x4\r\n- Sequential Read Performance: 7300MB/s\r\n- Sequential Write Performance: 6300MB/s\r\n- Random Read: 8000004KB IOPS\r\n- Random Write: 11000004KB IOPS\r\n- Endurance (TBW): 600\r\n- Compatibility: Computer with M.2 (M-key) port\r\n- Dimensions: Length: 20mm Weight: 22mm Height: 2.38mm', 'image/prod_6a26b73aa2a97.jpg', 'Available', 8, 0, '', '', 9),
+(50, 5, 'Crucial P3 Plus 1TB Gen4 NVMe', 'Great balance of speed and affordability.', 280.00, 44, '- Storage Capacity: 1TB\r\n- Hard Disk Interface: NVMe\r\n- Connectivity Technology: NVMe\r\n- Additional Features: Portable\r\n- Hard Disk: Form Factor	2.5 Inches (6.4 cm)\r\n- Compatible Devices: Desktops & Laptops that accept PCIe NVMe Gen 4.0 drives\r\n- Read Speed: 5000MB/s\r\n- Media Speed: 4200 MB/S\r\n- Data Transfer Rate: 5000 MB/s\r\n- Form Factor: M.2\r\n- Hardware Connectivity: PCIE x 4\r\n- Hardware Platform: Linux, Mac, PC\r\n- Hard-Drive Size: 500 GB\r\n- Item Dimensions: L x W x Thickness	3.15\r\n- Color: Black\r\n- Enclosure Material: Aluminum', 'image/prod_6a26b72f9beef.jpg', 'Available', 5, 0, '', '', 8),
 (51, 5, 'Samsung 990 PRO 4TB NVMe', 'Massive fast storage for heavy video editors.', 1550.00, 8, '- Interface: PCIe Gen 4.0, x4, NVMe 2.0[5]\r\n- Form Factor: M.2 (2280)\r\n- Storage Memory: Samsung V-NAND 3-bit TLC\r\n- Controller: Samsung In-house controller\r\n- Capacity: 1TB\r\n- RAM: 4GB LPDDR4\r\n- Read/Write Speed[7]: up to 7,450 MB/s, up to 6,900 MB/s\r\n- Random Read/Write Speed: up to 1,600K IOPS, 1,550K IOPS', 'image/prod_6a26b727aebb2.jpg', 'Available', 10, 0, '', '', 10),
-(52, 6, 'Corsair RM850e 850W 80+ Gold', 'Fully modular, ATX 3.0 ready.', 550.00, 19, '- Compatible devices: Personal Computer\r\n- Connector type: EPS\r\n- Output wattage: 850 Watts\r\n- Form factor: ATX\r\n- Cooling method: Air Item dimensions L x W x H	15 x 14 x 8.6 centimetres Item weight	1.52 Kilograms', 'image/prod_6a26b71ca22a0.jpg', 'Available', 850, 0, '', '', 10),
-(53, 6, 'Seasonic Focus GX-1000 1000W Gold', 'Legendary reliability for high-end builds.', 850.00, 12, '- Compatible Devices: Personal Computer\r\n- Connector Type: ATX\r\n- Output Wattage: 1000 W\r\n- Form Factor: ATX\r\n- Cooling Method: Air Item dimensions L x W x H	12.13 x 7.48 x 4.65 inches Item Weight	2.12 Kilograms', 'image/prod_6a26b71433386.jpg', 'Available', 1000, 0, '', '', 9),
-(54, 6, 'MSI MAG A650BN 650W 80+ Bronze', 'Solid budget power supply.', 260.00, 30, '- Compatible Devices: Gaming Console\r\n- Connector Type: ATX\r\n- Form Factor: ATX\r\n- Wattage: 650 watts\r\n- Cooling Method	Air: Item dimensions L x W x H	8.66 x 3.15 x 1.18 inches Item Weight	1 Kilograms', 'image/prod_6a26b7097ab2e.jpg', 'Available', 650, 0, '', '', 8),
+(52, 6, 'Corsair RM850e 850W 80+ Gold', 'Fully modular, ATX 3.0 ready.', 550.00, 17, '- Compatible devices: Personal Computer\r\n- Connector type: EPS\r\n- Output wattage: 850 Watts\r\n- Form factor: ATX\r\n- Cooling method: Air Item dimensions L x W x H	15 x 14 x 8.6 centimetres Item weight	1.52 Kilograms', 'image/prod_6a26b71ca22a0.jpg', 'Available', 850, 0, '', '', 10),
+(53, 6, 'Seasonic Focus GX-1000 1000W Gold', 'Legendary reliability for high-end builds.', 850.00, 11, '- Compatible Devices: Personal Computer\r\n- Connector Type: ATX\r\n- Output Wattage: 1000 W\r\n- Form Factor: ATX\r\n- Cooling Method: Air Item dimensions L x W x H	12.13 x 7.48 x 4.65 inches Item Weight	2.12 Kilograms', 'image/prod_6a26b71433386.jpg', 'Available', 1000, 0, '', '', 9),
+(54, 6, 'MSI MAG A650BN 650W 80+ Bronze', 'Solid budget power supply.', 260.00, 29, '- Compatible Devices: Gaming Console\r\n- Connector Type: ATX\r\n- Form Factor: ATX\r\n- Wattage: 650 watts\r\n- Cooling Method	Air: Item dimensions L x W x H	8.66 x 3.15 x 1.18 inches Item Weight	1 Kilograms', 'image/prod_6a26b7097ab2e.jpg', 'Available', 650, 0, '', '', 8),
 (55, 6, 'FSP Hydro Ti PRO 1000W Titanium', 'Ultra-premium titanium efficiency.', 1150.00, 2, '- Max Power: 1000W\r\n- Form Factor: ATX\r\n- Efficiency Rating: 80 PLUS Titanium and Cybenetics Titanium ( ≥ 94% efficiency at typical loads)\r\n- AC Input: 100 – 240 VAC, 50 – 60 Hz\r\n- Cooling Fan: 135mm Fluid Dynamic Bearing (FDB) fan\r\n- Dimensions (W x H x D): Weight: 150 mm Height: 86 mm Distance: 150 mm', 'image/prod_6a26b70036a69.jpg', 'Available', 1000, 0, '', '', 5),
 (56, 7, 'Lian Li O11 Dynamic EVO Black', 'The iconic showcase dual-chamber case.', 750.00, 15, '- COLOR: Black\r\n- DIMENSION: D)465mm × (W)285mm × (H)459mm\r\n- MATERIAL: 4mm Aluminum,4mm Tempered Glass,1mm Steel Structure\r\n- MOTHERBOARD SUPPORT: E-ATX (width under 280mm)/ATX /M-ATX/ITX\r\n- PSU SUPPORT: 220mm\r\n- FAN SUPPORT: Top 120mm × 3 or 140mm × 2 Side 120mm × 3 or 140mm × 2 Bottom 120mm × 3 or 140mm × 2 Rear 120mm × 1\r\n- On Drive Cage: 60mm × 1\r\n- RADIATOR SUPPORT: Top 360mm × 1 or 280mm × 1\r\n- Total max thickness: 87.5mm\r\n- Side: 360mm × 1 or 280mm × 1\r\n- Inner scenario total max thickness: 83mm(120mm fan on top and bottom) 63mm(140mm fan on top and bottom)\r\n- Outer scenario total max. thickness: 120mm(120mm fan on top and bottom) 100mm(140mm fan on top and bottom) Bottom 360mm × 1\r\n- Total max thickness: 87.5mm\r\n- DRIVE SUPPORT	Bottom：2.5” SSD × 4 or 3.5” HDD × 2: Side：2.5” SSD × 4 or 3.5” HDD × 2 Drive Cage：2.5” SSD × 3 or 3.5” HDD × 2 + 2.5” SSD × 1\r\n- Cable Management Bar: 2.5” SSD × 2 9 sets of 2.5” SSD mounting pads are provided\r\n- GPU LENGTH: 426 mm\r\n- CPU HEIGHT: 167 mm\r\n- SLOTS: 8\r\n- I/O PORTS: 2 × USB 3.0 1 × USB 3.1 TYPE-C 1 × HD AUDIO/ MIC\r\n- LED Color: Yes\r\n- Mode button: Yes\r\n- Reset Button: Yes\r\n- Power Button: Yes', 'image/prod_6a26b6f78e6f7.jpg', 'Available', 0, 0, '', '', 6),
-(57, 7, 'Corsair 4000D Airflow Black', 'Classic high-airflow mid-tower.', 380.00, 24, '- Dimensions: 230mm(W) x 466mm(H) x 453mm(D)\r\n- Side Panel: Tempered Glass\r\n- Body Material: Steel\r\n- Drive Bay: 3.5\r\n- Fan Capacity: 120mm or 140mm fan x 2 (Top) 120mm fan x 3 / 140mm fan x 2 (Front) * 1 x Corsair AirGuide Fan included * 120mm fan x 1 (Rear) * 1 x Corsair AirGuide Fan included *\r\n- Radiator: 120-280mm (Top) 120-360mm (Front)\r\n- CPU Cooler Height: 170mm\r\n- GPU Length: 360mm\r\n- I/O Panel: USB 3.0 x 1 USB 3.1 Type-C x 1 Audio In & Out M/B Type ATX PSU Type ATX', 'image/prod_6a26b6eeaf9fe.jpg', 'Available', 0, 0, '', '', 8),
-(58, 7, 'Montech X3 Mesh Black', 'Insane budget value, includes 6 RGB fans.', 220.00, 35, '- Dimensions: 370*210*480mm (Case) / 530*265*425mm (Carton)\r\n- MB Support: ATX / Micro-ATX / Mini-ITX\r\n- Front I/O: Power Button / Mic*1 / Audio*1 / USB2.0*2 / Reset Button / LED Button / USB3.0*1\r\n- PCIe Slots: 7\r\n- CPU Cooler: 160mm\r\n- GPU: 305mm\r\n- Power supply unit: 160mm ATX\r\n- Drive Support / Maximum: 3.5” HDD	22.5” SSD*4\r\n- Pre-installed Fan (s): Top	120mm*2 (RGB Molex Fans)\r\n- Front: 140mm*3 (RGB Molex Fans)\r\n- Rear: 120mm*1 (RGB Molex Fan)\r\n- Fan Support: Top	120mm*2 / 140mm*2 Front 120mm*3 / 140mm*3\r\n- PSU Shroud: Front 120mm*2 Rear 120mm*1\r\n- Radiator Support: Top	120 / 240mm Rear	120mm\r\n- Dust Filter: Top  / Bottom', 'image/prod_6a26b6e41b78d.webp', 'Available', 0, 0, '', '', 5),
+(57, 7, 'Corsair 4000D Airflow Black', 'Classic high-airflow mid-tower.', 380.00, 21, '- Dimensions: 230mm(W) x 466mm(H) x 453mm(D)\r\n- Side Panel: Tempered Glass\r\n- Body Material: Steel\r\n- Drive Bay: 3.5\r\n- Fan Capacity: 120mm or 140mm fan x 2 (Top) 120mm fan x 3 / 140mm fan x 2 (Front) * 1 x Corsair AirGuide Fan included * 120mm fan x 1 (Rear) * 1 x Corsair AirGuide Fan included *\r\n- Radiator: 120-280mm (Top) 120-360mm (Front)\r\n- CPU Cooler Height: 170mm\r\n- GPU Length: 360mm\r\n- I/O Panel: USB 3.0 x 1 USB 3.1 Type-C x 1 Audio In & Out M/B Type ATX PSU Type ATX', 'image/prod_6a26b6eeaf9fe.jpg', 'Available', 0, 0, '', '', 8),
+(58, 7, 'Montech X3 Mesh Black', 'Insane budget value, includes 6 RGB fans.', 220.00, 34, '- Dimensions: 370*210*480mm (Case) / 530*265*425mm (Carton)\r\n- MB Support: ATX / Micro-ATX / Mini-ITX\r\n- Front I/O: Power Button / Mic*1 / Audio*1 / USB2.0*2 / Reset Button / LED Button / USB3.0*1\r\n- PCIe Slots: 7\r\n- CPU Cooler: 160mm\r\n- GPU: 305mm\r\n- Power supply unit: 160mm ATX\r\n- Drive Support / Maximum: 3.5” HDD	22.5” SSD*4\r\n- Pre-installed Fan (s): Top	120mm*2 (RGB Molex Fans)\r\n- Front: 140mm*3 (RGB Molex Fans)\r\n- Rear: 120mm*1 (RGB Molex Fan)\r\n- Fan Support: Top	120mm*2 / 140mm*2 Front 120mm*3 / 140mm*3\r\n- PSU Shroud: Front 120mm*2 Rear 120mm*1\r\n- Radiator Support: Top	120 / 240mm Rear	120mm\r\n- Dust Filter: Top  / Bottom', 'image/prod_6a26b6e41b78d.webp', 'Available', 0, 0, '', '', 5),
 (59, 8, 'Thermalright Peerless Assassin 120 SE', 'The dual-tower air cooler that beats 240mm AIOs.', 160.00, 40, 'Dimensions: 120 mm (L) x 120 mm (W) x 25 mm (H)\r\nWeight: 120 g\r\nRated Speed: 1550 RPM ± 10%\r\nNoise Level: 25.6 dBA (max)\r\nAir Flow: 66.17 CFM (max)\r\nAir Pressure: 1.53 mm H2O (max)\r\nConnector: 4-pin PWM fan connector\r\nARGB Connector: 3-pin 5V\r\nBearing Type: S-FDB Bearing', 'image/prod_6a26b6dce781a.png', 'Available', 0, 0, '', '', 7),
-(60, 8, 'Arctic Liquid Freezer III 360 AIO', 'Thick radiator, ultimate liquid cooling performance.', 520.00, 15, '- Speed: 600-3000 rpm\r\n- Static Pressure: 6.9 mmH2O\r\n- Bearing: Fluid Dynamic Bearing\r\n- Airflow: 77 cfm | 131 m3/h', 'image/prod_6a26b6d34a7f4.jpg', 'Available', 15, 0, '', '', 5),
-(61, 8, 'Deepcool AK620 Digital', 'Premium air cooling with a digital temp display.', 320.00, 16, '- Fan Dimensions: 120×120×25 mm\r\n- Fan Speed: 500~1850 RPM±10%\r\n- Fan Airflow: 68.99 CFM\r\n- Fan Air Pressure: 2.19 mmAq\r\n- Fan Noise: ≤28 dB(A)\r\n- Fan Connector: 4-pin PWM\r\n- Bearing Type: Fluid Dynamic Bearing\r\n- Fan Rated Voltage: 12 VDC\r\n- Fan Rated Current: 0.12 A\r\n- Fan Power Consumption: 1.44 W', 'image/prod_6a26b6cb45b95.webp', 'Available', 1, 0, '', '', 4);
+(60, 8, 'Arctic Liquid Freezer III 360 AIO', 'Thick radiator, ultimate liquid cooling performance.', 520.00, 11, '- Speed: 600-3000 rpm\r\n- Static Pressure: 6.9 mmH2O\r\n- Bearing: Fluid Dynamic Bearing\r\n- Airflow: 77 cfm | 131 m3/h', 'image/prod_6a26b6d34a7f4.jpg', 'Available', 15, 0, '', '', 5),
+(61, 8, 'Deepcool AK620 Digital', 'Premium air cooling with a digital temp display.', 320.00, 15, '- Fan Dimensions: 120×120×25 mm\r\n- Fan Speed: 500~1850 RPM±10%\r\n- Fan Airflow: 68.99 CFM\r\n- Fan Air Pressure: 2.19 mmAq\r\n- Fan Noise: ≤28 dB(A)\r\n- Fan Connector: 4-pin PWM\r\n- Bearing Type: Fluid Dynamic Bearing\r\n- Fan Rated Voltage: 12 VDC\r\n- Fan Rated Current: 0.12 A\r\n- Fan Power Consumption: 1.44 W', 'image/prod_6a26b6cb45b95.webp', 'Available', 1, 0, '', '', 4);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `promo_codes`
+-- 表的结构 `promo_codes`
 --
 
 CREATE TABLE `promo_codes` (
@@ -1148,7 +1193,7 @@ CREATE TABLE `promo_codes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `promo_codes`
+-- 转存表中的数据 `promo_codes`
 --
 
 INSERT INTO `promo_codes` (`promo_id`, `code_name`, `target_category`, `is_vip_only`, `status`, `created_at`, `discount_value`, `discount_type`, `min_spend`, `max_cap`) VALUES
@@ -1166,7 +1211,7 @@ INSERT INTO `promo_codes` (`promo_id`, `code_name`, `target_category`, `is_vip_o
 -- --------------------------------------------------------
 
 --
--- Table structure for table `reviews`
+-- 表的结构 `reviews`
 --
 
 CREATE TABLE `reviews` (
@@ -1179,16 +1224,17 @@ CREATE TABLE `reviews` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `reviews`
+-- 转存表中的数据 `reviews`
 --
 
 INSERT INTO `reviews` (`review_id`, `product_id`, `customer_id`, `rating`, `comment`, `review_date`) VALUES
-(1, 1, 1, 5, 'henbang', '2026-04-09 23:29:14');
+(1, 1, 1, 5, 'henbang', '2026-04-09 23:29:14'),
+(2, 48, 10, 5, 'works good.deserve to buy:)', '2026-06-20 02:11:13');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `saved_builds`
+-- 表的结构 `saved_builds`
 --
 
 CREATE TABLE `saved_builds` (
@@ -1200,7 +1246,7 @@ CREATE TABLE `saved_builds` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `saved_builds`
+-- 转存表中的数据 `saved_builds`
 --
 
 INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_price`, `created_at`) VALUES
@@ -1237,7 +1283,7 @@ INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_pric
 -- --------------------------------------------------------
 
 --
--- Table structure for table `saved_cards`
+-- 表的结构 `saved_cards`
 --
 
 CREATE TABLE `saved_cards` (
@@ -1253,19 +1299,24 @@ CREATE TABLE `saved_cards` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `saved_cards`
+-- 转存表中的数据 `saved_cards`
 --
 
 INSERT INTO `saved_cards` (`card_id`, `customer_id`, `bank_id`, `cardholder_name`, `last_four_digits`, `expiry_date`, `card_brand`, `is_default`, `created_at`) VALUES
 (1, 1, NULL, '22', '5353', '11/24', 'Credit Card', 0, '2026-04-09 23:11:21'),
 (2, 1, NULL, '日人人日r', '2331', '22/11', 'Credit Card', 1, '2026-04-11 17:06:45'),
 (4, 6, 2, 'Ali Bin Abu', '6666', '12/30', 'Credit Card', 1, '2026-05-18 00:13:55'),
-(5, 5, 2, 'GAN SHENG WING', '6666', '01/26', 'Credit Card', 1, '2026-05-18 16:45:44');
+(5, 5, 2, 'GAN SHENG WING', '6666', '01/26', 'Credit Card', 1, '2026-05-18 16:45:44'),
+(6, 9, 2, 'Gan Sheng Wing', '6666', '12/30', 'Credit Card', 0, '2026-06-20 02:01:52'),
+(7, 10, 2, 'Gan Sheng Wing', '6666', '12/30', 'Credit Card', 0, '2026-06-20 02:03:41'),
+(8, 11, 2, 'Gan Sheng Wing', '6666', '12/30', 'Credit Card', 0, '2026-06-20 02:13:55'),
+(9, 12, 2, 'Gan Sheng Wing', '6666', '12/30', 'Credit Card', 0, '2026-06-20 02:53:24'),
+(10, 13, 2, 'Gan Sheng Wing', '6666', '12/30', 'Credit Card', 0, '2026-06-20 03:01:01');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `shopping_cart`
+-- 表的结构 `shopping_cart`
 --
 
 CREATE TABLE `shopping_cart` (
@@ -1280,7 +1331,7 @@ CREATE TABLE `shopping_cart` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `shopping_cart`
+-- 转存表中的数据 `shopping_cart`
 --
 
 INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `package_id`, `affiliate_id`, `quantity`, `added_at`) VALUES
@@ -1288,12 +1339,13 @@ INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`,
 (19, 1, 4, NULL, NULL, NULL, 1, '2026-04-29 23:38:35'),
 (20, 1, NULL, NULL, 4, NULL, 2, '2026-04-30 00:06:55'),
 (51, 7, 48, NULL, NULL, NULL, 25, '2026-05-18 16:42:34'),
-(57, 6, NULL, NULL, 9, NULL, 1, '2026-06-19 00:17:55');
+(65, 11, 48, NULL, NULL, NULL, 1, '2026-06-20 02:32:32'),
+(69, 15, 48, NULL, NULL, NULL, 1, '2026-06-20 20:32:21');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `used_vouchers`
+-- 表的结构 `used_vouchers`
 --
 
 CREATE TABLE `used_vouchers` (
@@ -1304,10 +1356,17 @@ CREATE TABLE `used_vouchers` (
   `used_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- 转存表中的数据 `used_vouchers`
+--
+
+INSERT INTO `used_vouchers` (`used_id`, `customer_id`, `promo_id`, `order_id`, `used_at`) VALUES
+(1, 6, 5, 33, '2026-06-20 12:50:36');
+
 -- --------------------------------------------------------
 
 --
--- Table structure for table `wallet_transactions`
+-- 表的结构 `wallet_transactions`
 --
 
 CREATE TABLE `wallet_transactions` (
@@ -1320,7 +1379,7 @@ CREATE TABLE `wallet_transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `wallet_transactions`
+-- 转存表中的数据 `wallet_transactions`
 --
 
 INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amount`, `coins_earned`, `created_at`) VALUES
@@ -1338,14 +1397,29 @@ INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amo
 (12, 6, 'Top-up', 500.00, 50, '2026-05-18 00:32:41'),
 (13, 8, 'Top-up', 500.00, 50, '2026-06-17 19:18:22'),
 (14, 8, 'Payment', -45.00, 0, '2026-06-17 19:18:59'),
-(15, 8, 'Payment', -350.00, 0, '2026-06-18 21:41:10');
+(15, 8, 'Payment', -350.00, 0, '2026-06-18 21:41:10'),
+(16, 5, 'Payment', -350.00, 0, '2026-06-20 01:42:45'),
+(17, 5, 'Top-up', 10000.00, 1000, '2026-06-20 01:49:38'),
+(18, 6, 'Top-up', 5000.00, 500, '2026-06-20 01:59:22'),
+(19, 10, 'Top-up', 5000.00, 500, '2026-06-20 02:04:01'),
+(20, 10, 'Top-up', 500.00, 50, '2026-06-20 02:08:50'),
+(21, 10, 'Top-up', 10000.00, 1000, '2026-06-20 02:12:21'),
+(22, 11, 'Top-up', 5000.00, 500, '2026-06-20 02:14:14'),
+(23, 11, 'Top-up', 5000.00, 500, '2026-06-20 02:14:58'),
+(24, 11, 'Top-up', 10000.00, 1000, '2026-06-20 02:16:33'),
+(25, 11, 'Payment', -19018.00, 0, '2026-06-20 02:18:44'),
+(26, 12, 'Top-up', 20000.00, 2000, '2026-06-20 02:53:37'),
+(27, 13, 'Top-up', 5000.00, 500, '2026-06-20 03:01:13'),
+(28, 6, 'Top-up', 5000.00, 500, '2026-06-20 13:36:09'),
+(29, 6, 'Top-up', 5000.00, 500, '2026-06-20 13:36:26'),
+(30, 6, 'Payment', -8609.00, 0, '2026-06-20 20:50:36');
 
 --
--- Indexes for dumped tables
+-- 转储表的索引
 --
 
 --
--- Indexes for table `admins`
+-- 表的索引 `admins`
 --
 ALTER TABLE `admins`
   ADD PRIMARY KEY (`admin_id`),
@@ -1353,19 +1427,19 @@ ALTER TABLE `admins`
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- Indexes for table `admin_logs`
+-- 表的索引 `admin_logs`
 --
 ALTER TABLE `admin_logs`
   ADD PRIMARY KEY (`log_id`);
 
 --
--- Indexes for table `bank`
+-- 表的索引 `bank`
 --
 ALTER TABLE `bank`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `build_items`
+-- 表的索引 `build_items`
 --
 ALTER TABLE `build_items`
   ADD PRIMARY KEY (`build_item_id`),
@@ -1373,13 +1447,13 @@ ALTER TABLE `build_items`
   ADD KEY `product_id` (`product_id`);
 
 --
--- Indexes for table `categories`
+-- 表的索引 `categories`
 --
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`category_id`);
 
 --
--- Indexes for table `community_comments`
+-- 表的索引 `community_comments`
 --
 ALTER TABLE `community_comments`
   ADD PRIMARY KEY (`comment_id`),
@@ -1387,7 +1461,7 @@ ALTER TABLE `community_comments`
   ADD KEY `fk_community_comments_customer` (`customer_id`);
 
 --
--- Indexes for table `community_likes`
+-- 表的索引 `community_likes`
 --
 ALTER TABLE `community_likes`
   ADD PRIMARY KEY (`like_id`),
@@ -1395,7 +1469,7 @@ ALTER TABLE `community_likes`
   ADD KEY `fk_community_likes_customer` (`customer_id`);
 
 --
--- Indexes for table `community_posts`
+-- 表的索引 `community_posts`
 --
 ALTER TABLE `community_posts`
   ADD PRIMARY KEY (`post_id`),
@@ -1403,41 +1477,41 @@ ALTER TABLE `community_posts`
   ADD KEY `fk_community_posts_build` (`pc_build_id`);
 
 --
--- Indexes for table `consultations`
+-- 表的索引 `consultations`
 --
 ALTER TABLE `consultations`
   ADD PRIMARY KEY (`consultation_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `customers`
+-- 表的索引 `customers`
 --
 ALTER TABLE `customers`
   ADD PRIMARY KEY (`customer_id`),
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- Indexes for table `customer_addresses`
+-- 表的索引 `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   ADD PRIMARY KEY (`address_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `fpx_accounts`
+-- 表的索引 `fpx_accounts`
 --
 ALTER TABLE `fpx_accounts`
   ADD PRIMARY KEY (`account_id`);
 
 --
--- Indexes for table `orders`
+-- 表的索引 `orders`
 --
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`order_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `order_details`
+-- 表的索引 `order_details`
 --
 ALTER TABLE `order_details`
   ADD PRIMARY KEY (`order_detail_id`),
@@ -1447,13 +1521,13 @@ ALTER TABLE `order_details`
   ADD KEY `fk_order_affiliate` (`affiliate_id`);
 
 --
--- Indexes for table `packages`
+-- 表的索引 `packages`
 --
 ALTER TABLE `packages`
   ADD PRIMARY KEY (`package_id`);
 
 --
--- Indexes for table `package_items`
+-- 表的索引 `package_items`
 --
 ALTER TABLE `package_items`
   ADD PRIMARY KEY (`id`),
@@ -1461,14 +1535,14 @@ ALTER TABLE `package_items`
   ADD KEY `product_id` (`product_id`);
 
 --
--- Indexes for table `payments`
+-- 表的索引 `payments`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`payment_id`),
   ADD KEY `order_id` (`order_id`);
 
 --
--- Indexes for table `products`
+-- 表的索引 `products`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`product_id`),
@@ -1478,14 +1552,14 @@ ALTER TABLE `products`
   ADD KEY `idx_builder_tier` (`performance_tier`);
 
 --
--- Indexes for table `promo_codes`
+-- 表的索引 `promo_codes`
 --
 ALTER TABLE `promo_codes`
   ADD PRIMARY KEY (`promo_id`),
   ADD UNIQUE KEY `code_name` (`code_name`);
 
 --
--- Indexes for table `reviews`
+-- 表的索引 `reviews`
 --
 ALTER TABLE `reviews`
   ADD PRIMARY KEY (`review_id`),
@@ -1493,14 +1567,14 @@ ALTER TABLE `reviews`
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `saved_builds`
+-- 表的索引 `saved_builds`
 --
 ALTER TABLE `saved_builds`
   ADD PRIMARY KEY (`pc_build`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- Indexes for table `saved_cards`
+-- 表的索引 `saved_cards`
 --
 ALTER TABLE `saved_cards`
   ADD PRIMARY KEY (`card_id`),
@@ -1508,7 +1582,7 @@ ALTER TABLE `saved_cards`
   ADD KEY `fk_saved_cards_bank` (`bank_id`);
 
 --
--- Indexes for table `shopping_cart`
+-- 表的索引 `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
   ADD PRIMARY KEY (`cart_id`),
@@ -1518,7 +1592,7 @@ ALTER TABLE `shopping_cart`
   ADD KEY `fk_cart_affiliate` (`affiliate_id`);
 
 --
--- Indexes for table `used_vouchers`
+-- 表的索引 `used_vouchers`
 --
 ALTER TABLE `used_vouchers`
   ADD PRIMARY KEY (`used_id`),
@@ -1526,179 +1600,179 @@ ALTER TABLE `used_vouchers`
   ADD KEY `promo_id` (`promo_id`);
 
 --
--- Indexes for table `wallet_transactions`
+-- 表的索引 `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
   ADD PRIMARY KEY (`transaction_id`),
   ADD KEY `customer_id` (`customer_id`);
 
 --
--- AUTO_INCREMENT for dumped tables
+-- 在导出的表使用AUTO_INCREMENT
 --
 
 --
--- AUTO_INCREMENT for table `admins`
+-- 使用表AUTO_INCREMENT `admins`
 --
 ALTER TABLE `admins`
   MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT for table `admin_logs`
+-- 使用表AUTO_INCREMENT `admin_logs`
 --
 ALTER TABLE `admin_logs`
   MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=146;
 
 --
--- AUTO_INCREMENT for table `bank`
+-- 使用表AUTO_INCREMENT `bank`
 --
 ALTER TABLE `bank`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `build_items`
+-- 使用表AUTO_INCREMENT `build_items`
 --
 ALTER TABLE `build_items`
   MODIFY `build_item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=384;
 
 --
--- AUTO_INCREMENT for table `categories`
+-- 使用表AUTO_INCREMENT `categories`
 --
 ALTER TABLE `categories`
   MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
--- AUTO_INCREMENT for table `community_comments`
+-- 使用表AUTO_INCREMENT `community_comments`
 --
 ALTER TABLE `community_comments`
-  MODIFY `comment_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `comment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `community_likes`
+-- 使用表AUTO_INCREMENT `community_likes`
 --
 ALTER TABLE `community_likes`
-  MODIFY `like_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `like_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT for table `community_posts`
+-- 使用表AUTO_INCREMENT `community_posts`
 --
 ALTER TABLE `community_posts`
-  MODIFY `post_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `post_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT for table `consultations`
+-- 使用表AUTO_INCREMENT `consultations`
 --
 ALTER TABLE `consultations`
   MODIFY `consultation_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `customers`
+-- 使用表AUTO_INCREMENT `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `customer_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
--- AUTO_INCREMENT for table `customer_addresses`
+-- 使用表AUTO_INCREMENT `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
-  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `address_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
--- AUTO_INCREMENT for table `fpx_accounts`
+-- 使用表AUTO_INCREMENT `fpx_accounts`
 --
 ALTER TABLE `fpx_accounts`
   MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `orders`
+-- 使用表AUTO_INCREMENT `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
--- AUTO_INCREMENT for table `order_details`
+-- 使用表AUTO_INCREMENT `order_details`
 --
 ALTER TABLE `order_details`
-  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
--- AUTO_INCREMENT for table `packages`
+-- 使用表AUTO_INCREMENT `packages`
 --
 ALTER TABLE `packages`
   MODIFY `package_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
--- AUTO_INCREMENT for table `package_items`
+-- 使用表AUTO_INCREMENT `package_items`
 --
 ALTER TABLE `package_items`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=398;
 
 --
--- AUTO_INCREMENT for table `payments`
+-- 使用表AUTO_INCREMENT `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
--- AUTO_INCREMENT for table `products`
+-- 使用表AUTO_INCREMENT `products`
 --
 ALTER TABLE `products`
   MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
 
 --
--- AUTO_INCREMENT for table `promo_codes`
+-- 使用表AUTO_INCREMENT `promo_codes`
 --
 ALTER TABLE `promo_codes`
   MODIFY `promo_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
--- AUTO_INCREMENT for table `reviews`
+-- 使用表AUTO_INCREMENT `reviews`
 --
 ALTER TABLE `reviews`
-  MODIFY `review_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `review_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT for table `saved_builds`
+-- 使用表AUTO_INCREMENT `saved_builds`
 --
 ALTER TABLE `saved_builds`
   MODIFY `pc_build` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
--- AUTO_INCREMENT for table `saved_cards`
+-- 使用表AUTO_INCREMENT `saved_cards`
 --
 ALTER TABLE `saved_cards`
-  MODIFY `card_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `card_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
--- AUTO_INCREMENT for table `shopping_cart`
+-- 使用表AUTO_INCREMENT `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
-  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
+  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
 
 --
--- AUTO_INCREMENT for table `used_vouchers`
+-- 使用表AUTO_INCREMENT `used_vouchers`
 --
 ALTER TABLE `used_vouchers`
-  MODIFY `used_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `used_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `wallet_transactions`
+-- 使用表AUTO_INCREMENT `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
--- Constraints for dumped tables
+-- 限制导出的表
 --
 
 --
--- Constraints for table `build_items`
+-- 限制表 `build_items`
 --
 ALTER TABLE `build_items`
   ADD CONSTRAINT `build_items_ibfk_1` FOREIGN KEY (`pc_build`) REFERENCES `saved_builds` (`pc_build`) ON DELETE CASCADE,
   ADD CONSTRAINT `build_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `community_comments`
+-- 限制表 `community_comments`
 --
 ALTER TABLE `community_comments`
   ADD CONSTRAINT `community_comments_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE,
@@ -1707,7 +1781,7 @@ ALTER TABLE `community_comments`
   ADD CONSTRAINT `fk_community_comments_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `community_likes`
+-- 限制表 `community_likes`
 --
 ALTER TABLE `community_likes`
   ADD CONSTRAINT `community_likes_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE,
@@ -1716,7 +1790,7 @@ ALTER TABLE `community_likes`
   ADD CONSTRAINT `fk_community_likes_post` FOREIGN KEY (`post_id`) REFERENCES `community_posts` (`post_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `community_posts`
+-- 限制表 `community_posts`
 --
 ALTER TABLE `community_posts`
   ADD CONSTRAINT `community_posts_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE,
@@ -1725,25 +1799,25 @@ ALTER TABLE `community_posts`
   ADD CONSTRAINT `fk_community_posts_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `consultations`
+-- 限制表 `consultations`
 --
 ALTER TABLE `consultations`
   ADD CONSTRAINT `consultations_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `customer_addresses`
+-- 限制表 `customer_addresses`
 --
 ALTER TABLE `customer_addresses`
   ADD CONSTRAINT `customer_addresses_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `orders`
+-- 限制表 `orders`
 --
 ALTER TABLE `orders`
   ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `order_details`
+-- 限制表 `order_details`
 --
 ALTER TABLE `order_details`
   ADD CONSTRAINT `fk_order_affiliate` FOREIGN KEY (`affiliate_id`) REFERENCES `customers` (`customer_id`) ON DELETE SET NULL,
@@ -1752,39 +1826,39 @@ ALTER TABLE `order_details`
   ADD CONSTRAINT `order_details_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE SET NULL;
 
 --
--- Constraints for table `payments`
+-- 限制表 `payments`
 --
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `products`
+-- 限制表 `products`
 --
 ALTER TABLE `products`
   ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `reviews`
+-- 限制表 `reviews`
 --
 ALTER TABLE `reviews`
   ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `saved_builds`
+-- 限制表 `saved_builds`
 --
 ALTER TABLE `saved_builds`
   ADD CONSTRAINT `saved_builds_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `saved_cards`
+-- 限制表 `saved_cards`
 --
 ALTER TABLE `saved_cards`
   ADD CONSTRAINT `fk_saved_cards_bank` FOREIGN KEY (`bank_id`) REFERENCES `bank` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `saved_cards_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `shopping_cart`
+-- 限制表 `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
   ADD CONSTRAINT `fk_cart_affiliate` FOREIGN KEY (`affiliate_id`) REFERENCES `customers` (`customer_id`) ON DELETE SET NULL,
@@ -1793,14 +1867,14 @@ ALTER TABLE `shopping_cart`
   ADD CONSTRAINT `shopping_cart_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `used_vouchers`
+-- 限制表 `used_vouchers`
 --
 ALTER TABLE `used_vouchers`
   ADD CONSTRAINT `fk_used_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_used_promo` FOREIGN KEY (`promo_id`) REFERENCES `promo_codes` (`promo_id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `wallet_transactions`
+-- 限制表 `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
   ADD CONSTRAINT `wallet_transactions_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE CASCADE;

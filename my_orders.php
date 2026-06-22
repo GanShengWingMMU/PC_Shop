@@ -160,6 +160,9 @@ switch($current_filter) {
     case 'Shipped': $tab_index = 2; break;
     case 'Delivered': $tab_index = 3; break;
     case 'Completed': $tab_index = 4; break;
+    case 'Cancelled': 
+        $show_timeline = false; // 订单取消，隐藏时间轴
+        break;
     default: $show_timeline = false; 
 }
 ?>
@@ -298,6 +301,7 @@ switch($current_filter) {
             <a href="my_orders.php?status=Shipped" class="<?php echo $current_filter == 'Shipped' ? 'active' : ''; ?>">Shipped</a>
             <a href="my_orders.php?status=Delivered" class="<?php echo $current_filter == 'Delivered' ? 'active' : ''; ?>">Delivered</a>
             <a href="my_orders.php?status=Completed" class="<?php echo $current_filter == 'Completed' ? 'active' : ''; ?>">Completed</a>
+            <a href="my_orders.php?status=Cancelled" class="<?php echo $current_filter == 'Cancelled' ? 'active' : ''; ?>" style="color: #ff4d4d;">Cancelled</a>
         </div>
 
         <?php if ($show_timeline): ?>
