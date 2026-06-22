@@ -7,17 +7,7 @@ if (isset($_SESSION['customer_id'])) { header("Location: index.php"); exit(); }
 $error_msg = "";
 require_once 'keys.php'; 
 
-// 🌟 安全升级：生成强随机的 OAuth State Token 以防御 CSRF
-if (empty($_SESSION['oauth_state'])) {
-    $_SESSION['oauth_state'] = bin2hex(random_bytes(32));
-}
-$oauth_state = $_SESSION['oauth_state'];
 
-$google_redirect_uri = 'http://localhost/projects/google_callback.php';
-$google_login_url = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=" . $google_client_id . "&redirect_uri=" . urlencode($google_redirect_uri) . "&scope=email%20profile&state=" . $oauth_state;
-
-$discord_redirect_uri = 'http://localhost/projects/discord_callback.php';
-$discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=" . $discord_client_id . "&redirect_uri=" . urlencode($discord_redirect_uri) . "&response_type=code&scope=" . urlencode("identify email") . "&state=" . $oauth_state;
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = htmlspecialchars(trim($_POST['username']));
@@ -155,17 +145,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             <button type="submit" class="btn-submit">Sign Up</button>
         </form>
-
-        <div style="display: flex; align-items: center; margin: 25px 0; color: #475569; font-size: 0.8rem; text-transform: uppercase; font-weight: 800;">
-            <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.05);"></div>
-            <span style="padding: 0 15px;">OR AUTHENTICATE WITH</span>
-            <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.05);"></div>
-        </div>
-
-        <div style="display: flex; gap: 15px;">
-            <a href="<?php echo $google_login_url; ?>" class="oauth-btn"><i class="fa-brands fa-google" style="color: #EA4335;"></i> Google</a>
-            <a href="<?php echo $discord_login_url; ?>" class="oauth-btn"><i class="fa-brands fa-discord" style="color: #5865F2;"></i> Discord</a>
-        </div>
 
         <p style="text-align: center; margin-top: 35px; color: #64748b; font-size: 0.85rem;">Already established? <a href="login.php" style="color: #00f2fe; text-decoration: none; font-weight: 700;">Sign In</a></p>
     </div>

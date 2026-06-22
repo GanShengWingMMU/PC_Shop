@@ -13,18 +13,6 @@ $remaining_time = 0;
 
 require_once 'keys.php'; 
 
-// 🌟 安全升级：生成强随机的 OAuth State Token 以防御 CSRF
-if (empty($_SESSION['oauth_state'])) {
-    $_SESSION['oauth_state'] = bin2hex(random_bytes(32));
-}
-$oauth_state = $_SESSION['oauth_state'];
-
-$google_redirect_uri = 'http://localhost/projects/google_callback.php';
-$google_login_url = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=" . $google_client_id . "&redirect_uri=" . urlencode($google_redirect_uri) . "&scope=email%20profile&state=" . $oauth_state;
-
-$discord_redirect_uri = 'http://localhost/projects/discord_callback.php';
-$discord_login_url = "https://discord.com/api/oauth2/authorize?client_id=" . $discord_client_id . "&redirect_uri=" . urlencode($discord_redirect_uri) . "&response_type=code&scope=" . urlencode("identify email") . "&state=" . $oauth_state;
-
 if (!isset($_SESSION['login_attempts'])) { $_SESSION['login_attempts'] = 0; }
 
 $redirect_url = isset($_GET['redirect']) ? filter_var($_GET['redirect'], FILTER_SANITIZE_URL) : 'index.php';
@@ -197,16 +185,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
             </button>
         </form>
 
-        <div style="display: flex; align-items: center; margin: 30px 0;">
-            <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.05);"></div>
-            <span style="padding: 0 15px; font-size: 0.75rem; color: #64748b; font-weight: 600;">OR CONTINUE WITH</span>
-            <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.05);"></div>
-        </div>
 
-        <div style="display: flex; gap: 15px;">
-            <a href="<?php echo $locked_out ? '#' : $google_login_url; ?>" class="oauth-btn" style="<?php echo $locked_out ? 'opacity:0.5; cursor:not-allowed;' : ''; ?>"><i class="fa-brands fa-google" style="color: #EA4335;"></i> Google</a>
-            <a href="<?php echo $locked_out ? '#' : $discord_login_url; ?>" class="oauth-btn" style="<?php echo $locked_out ? 'opacity:0.5; cursor:not-allowed;' : ''; ?>"><i class="fa-brands fa-discord" style="color: #5865F2;"></i> Discord</a>
-        </div>
 
         <div style="text-align: center; margin-top: 30px; font-size: 0.85rem; color: #64748b;">
             Don't have an account? <a href="register.php" style="color: #00f2fe; text-decoration: none; font-weight: 700;">Sign Up</a>
