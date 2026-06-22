@@ -30,13 +30,99 @@ if (isset($_POST['update_status'])) {
     $saved_sort = isset($_POST['current_sort']) ? $_POST['current_sort'] : 'desc';
     
     if (in_array($new_status, $allowed)) {
-        $stmt = $conn->prepare("UPDATE orders SET order_status = ? WHERE order_id = ?");
-        $stmt->bind_param("si", $new_status, $order_id);
-        if ($stmt->execute()) {
-            header("Location: manage_orders.php?updated=1&sort=" . urlencode($saved_sort));
-            exit();
+        
+        $check_stmt = $conn->prepare("SELECT order_status, customer_id, total_amount, coins_used FROM orders WHERE order_id = ?");
+        $check_stmt->bind_param("i", $order_id);
+        $check_stmt->execute();
+        $order_info = $check_stmt->get_result()->fetch_assoc();
+        $check_stmt->close();
+
+        if ($order_info) {
+            $current_status = $order_info['order_status'];
+            $cust_id = $order_info['customer_id'];
+            $refund_amount = $order_info['total_amount'];
+            $refund_coins = $order_info['coins_used'];
+
+            if ($new_status === 'Cancelled' && $current_status !== 'Cancelled') {
+                
+                $conn->begin_transaction();
+                
+                try {
+                    $pay_stmt = $conn->prepare("SELECT payment_status FROM payments WHERE order_id = ?");
+                    $pay_stmt->bind_param("i", $order_id);
+                    $pay_stmt->execute();
+                    $pay_res = $pay_stmt->get_result()->fetch_assoc();
+                    $pay_stmt->close();
+
+                    $actual_refund_amount = ($pay_res && $pay_res['payment_status'] === 'Paid') ? $refund_amount : 0;
+
+                    if ($actual_refund_amount > 0 || $refund_coins > 0) {
+                        $update_cust = $conn->prepare("UPDATE customers SET wallet_balance = wallet_balance + ?, reward_coins = reward_coins + ? WHERE customer_id = ?");
+                        $update_cust->bind_param("dii", $actual_refund_amount, $refund_coins, $cust_id);
+                        $update_cust->execute();
+                        $update_cust->close();
+                    }
+
+                    if ($actual_refund_amount > 0) {
+                        $log_stmt = $conn->prepare("INSERT INTO wallet_transactions (customer_id, type, amount, coins_earned) VALUES (?, 'Refund', ?, 0)");
+                        $log_stmt->bind_param("id", $cust_id, $actual_refund_amount);
+                        $log_stmt->execute();
+                        $log_stmt->close();
+                    }
+
+                    $stmt = $conn->prepare("UPDATE orders SET order_status = ? WHERE order_id = ?");
+                    $stmt->bind_param("si", $new_status, $order_id);
+                    $stmt->execute();
+                    $stmt->close();
+
+                    $items_stmt = $conn->prepare("SELECT product_id, pc_build, package_id, quantity FROM order_details WHERE order_id = ?");
+                    $items_stmt->bind_param("i", $order_id);
+                    $items_stmt->execute();
+                    $order_items = $items_stmt->get_result();
+
+                    while ($item = $order_items->fetch_assoc()) {
+                        $ordered_qty = $item['quantity'];
+
+                        if (!empty($item['product_id'])) {
+                            $conn->query("UPDATE products SET stock_quantity = stock_quantity + {$ordered_qty} WHERE product_id = {$item['product_id']}");
+                        
+                        } elseif (!empty($item['package_id'])) {
+                            $pkg_id = intval($item['package_id']);
+                            $pkg_items = $conn->query("SELECT product_id, quantity FROM package_items WHERE package_id = {$pkg_id}");
+                            while ($p_item = $pkg_items->fetch_assoc()) {
+                                $restore_qty = $p_item['quantity'] * $ordered_qty;
+                                $conn->query("UPDATE products SET stock_quantity = stock_quantity + {$restore_qty} WHERE product_id = {$p_item['product_id']}");
+                            }
+                        
+                        } elseif (!empty($item['pc_build'])) {
+                            $build_id = intval($item['pc_build']);
+                            $build_items = $conn->query("SELECT product_id, quantity FROM build_items WHERE pc_build = {$build_id}");
+                            while ($b_item = $build_items->fetch_assoc()) {
+                                $restore_qty = $b_item['quantity'] * $ordered_qty;
+                                $conn->query("UPDATE products SET stock_quantity = stock_quantity + {$restore_qty} WHERE product_id = {$b_item['product_id']}");
+                            }
+                        }
+                    }
+                    $items_stmt->close();
+
+                    $conn->commit();
+                    header("Location: manage_orders.php?updated=1&sort=" . urlencode($saved_sort));
+                    exit();
+                    
+                } catch (Exception $e) {
+
+                    $conn->rollback();
+                }
+            } else {
+                $stmt = $conn->prepare("UPDATE orders SET order_status = ? WHERE order_id = ?");
+                $stmt->bind_param("si", $new_status, $order_id);
+                if ($stmt->execute()) {
+                    header("Location: manage_orders.php?updated=1&sort=" . urlencode($saved_sort));
+                    exit();
+                }
+                $stmt->close();
+            }
         }
-        $stmt->close();
     }
 }
 
