@@ -1,11 +1,8 @@
 <?php
 session_start();
 
-// 🌟 智慧相容：優先載入 config.php
 if (file_exists('config.php')) { require_once 'config.php'; } 
 else { include 'db_connect.php'; }
-
-// 🌟 統一安全准入
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
 if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
     header("Location: admin_login.php");
@@ -21,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($name)) {
         $message = "<div class='alert-error'><i class='fas fa-exclamation-triangle'></i> Category name cannot be empty.</div>";
     } else {
-        // 🌟 防呆：檢查是否已經有同名的分類 (精準對齊 category_name)
+        // check is that have same name
         $check_stmt = $conn->prepare("SELECT category_id FROM categories WHERE category_name = ?");
         $check_stmt->bind_param("s", $name);
         $check_stmt->execute();
@@ -33,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $insert_stmt->bind_param("ss", $name, $description);
             
             if ($insert_stmt->execute()) {
-                // 新增成功，跳轉回管理頁面並帶上成功訊息
+                //add success message
                 header("Location: manage_categories.php?msg=created");
                 exit();
             } else {

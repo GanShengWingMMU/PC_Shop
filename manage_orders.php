@@ -9,19 +9,19 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
     exit();
 }
 
-// 🌟 核心自动逻辑：实时检测 Processing 订单，超过 4 分钟自动改为 Shipped
+// Auto change from processing to shipped after 4 min
 $conn->query("UPDATE orders SET order_status = 'Shipped' 
               WHERE order_status = 'Processing' 
               AND order_date < NOW() - INTERVAL 4 MINUTE");
 
-// 🌟 1. 捕捉排序参数
+// sorting
 $current_sort = $_GET['sort'] ?? 'desc';
 $order_by = 'o.order_id DESC'; 
 if ($current_sort === 'asc') $order_by = 'o.order_id ASC';
 elseif ($current_sort === 'price_desc') $order_by = 'o.total_amount DESC';
 elseif ($current_sort === 'price_asc') $order_by = 'o.total_amount ASC';
 
-// 🌟 更新訂單狀態
+// 
 if (isset($_POST['update_status'])) {
     $order_id = intval($_POST['order_id']);
     $new_status = trim($_POST['new_status']);
@@ -88,7 +88,7 @@ if (isset($_POST['process_return'])) {
         .item-row { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed rgba(255,255,255,0.05); font-size: 12px; color: #cbd5e1; }
         .item-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
-        /* 🌟 超炫酷的 Hover Tooltip CSS */
+        /*Hover Tooltip CSS */
         .tooltip-container { position: relative; display: inline-block; cursor: help; border-bottom: 1px dotted #888; padding-bottom: 2px; }
         .tooltip-text { 
             visibility: hidden; opacity: 0; width: 260px; 
@@ -163,7 +163,7 @@ if (isset($_POST['process_return'])) {
                             echo "<td style='padding:15px; font-family: JetBrains Mono;'>#{$row['order_id']}</td>";
                             echo "<td style='padding:15px; font-weight:bold;'>" . htmlspecialchars($row['username']) . "</td>";
                             
-                            // 🌟 核心计算：日期、具体时间、已流逝时间
+                            // calculate date, realtime & pass time
                             $order_time = strtotime($row['order_date']);
                             $time_diff = time() - $order_time;
                             $days = floor($time_diff / 86400);
@@ -178,10 +178,10 @@ if (isset($_POST['process_return'])) {
                             $exact_time = date('h:i:s A', $order_time);
                             $date_display = date('d M, Y', $order_time);
                             
-                            // 安全抓取地址：如果在 orders 里有 shipping_address 最好，没有则提示
+                            // showing address
                             $address = $row['shipping_address'] ?? 'Check customer profile for full address details.';
                             
-                            // 🌟 注入 Tooltip HTML
+                            // Tooltip HTML
                             echo "<td style='padding:15px; color:#888; font-size:12px;'>
                                     <div class='tooltip-container'>
                                         <i class='far fa-clock'></i> {$date_display}

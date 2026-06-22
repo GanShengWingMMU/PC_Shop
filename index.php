@@ -2,9 +2,7 @@
 session_start();
 require_once 'config.php';
 
-// =========================================================
-// 🚀 [方案 A] 核心逻辑：获取用户数字 DNA 并判定 Persona
-// =========================================================
+
 $user_persona = 'Standard';
 $dna = ['g' => 0, 'c' => 0, 's' => 0, 'e' => 0];
 
@@ -35,9 +33,7 @@ $hero_config = [
 ];
 $current_hero = $hero_config[$user_persona] ?? $hero_config['Standard'];
 
-// =========================================================
-// 🚀 [方案 B] 核心逻辑：获取最近的社交装机动态 (Live Builds)
-// =========================================================
+
 $recent_builds = [];
 try {
     $recent_builds_sql = "SELECT sb.build_name, sb.total_price, c.username FROM saved_builds sb 
@@ -49,9 +45,7 @@ try {
     }
 } catch (Exception $e) {}
 
-// =========================================================
-// 🚀 前序功能：拉取跑马灯库存数据
-// =========================================================
+
 $ticker_sql = "SELECT product_name, stock_quantity FROM products WHERE stock_quantity > 0 AND stock_quantity <= 5 ORDER BY stock_quantity ASC LIMIT 5";
 $ticker_res = $conn->query($ticker_sql);
 $ticker_items = [];
@@ -59,9 +53,7 @@ if ($ticker_res) {
     while($row = $ticker_res->fetch_assoc()) { $ticker_items[] = $row; }
 }
 
-// =========================================================
-// 🚀 前序功能：拉取高端套餐并计算 AI 性能指标
-// =========================================================
+
 $feat_sql = "SELECT * FROM (
                 SELECT pk.*, 
                 (SELECT COALESCE(SUM(p.price * pi.quantity), pk.price) 
@@ -119,14 +111,14 @@ include 'includes/header.php';
     body { display: flex; flex-direction: column; min-height: 100vh; background-color: var(--bg-dark); color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; }
     .main-wrapper { flex: 1; }
     
-    /* --- 跑马灯 --- */
+  
     .market-ticker { width: 100vw; margin-left: calc(-50vw + 50%); background: #000; border-bottom: 1px solid rgba(255,255,255,0.05); color: #888; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 8px 0; overflow: hidden; white-space: nowrap; display: flex; }
     .ticker-content { display: inline-block; padding-left: 100%; animation: ticker-scroll 25s linear infinite; }
     @keyframes ticker-scroll { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
     .ticker-item { margin-right: 50px; display: inline-flex; align-items: center; gap: 8px; }
     .ticker-alert { color: #ef4444; border: 1px solid #ef4444; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
 
-    /* --- Hero 区域 --- */
+    
     .hero { width: 100vw; margin-left: calc(-50vw + 50%); position: relative; min-height: 85vh; display: flex; align-items: center; justify-content: center; overflow: hidden; background: radial-gradient(ellipse at 50% 0%, <?php echo $current_hero['bg']; ?> 0%, var(--bg-dark) 80%); transition: background 0.5s ease; }
     .hero::before { content: ''; position: absolute; width: 150vw; height: 600px; background: radial-gradient(ellipse at 50% 0%, <?php echo str_replace('0.15', '0.1', $current_hero['bg']); ?> 0%, transparent 70%); top: -200px; left: -25vw; border-radius: 50%; filter: blur(80px); z-index: 0; }
     .hero-content { position: relative; z-index: 2; text-align: center; max-width: 900px; padding: 0 20px; transform: translateY(-30px); }
@@ -143,13 +135,13 @@ include 'includes/header.php';
     .btn-secondary { background: var(--glass-bg); color: #fff; border: 1px solid var(--glass-border); backdrop-filter: blur(10px); }
     .btn-secondary:hover { border-color: #fff; background: rgba(255,255,255,0.05); transform: translateY(-3px); }
 
-    /* --- 社交状态条 --- */
+   
     .live-activity-bar { max-width: 1200px; margin: 0 auto 60px; padding: 0 20px; position: relative; z-index: 10; margin-top: -30px; }
     .activity-container { background: rgba(10,10,10,0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 15px 25px; display: flex; align-items: center; gap: 20px; font-size: 0.85rem; color: #888; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
     .activity-container::-webkit-scrollbar { display: none; }
     .pulse-icon { width: 8px; height: 8px; min-width: 8px; background: #34d399; border-radius: 50%; box-shadow: 0 0 10px #34d399; animation: pulse 2s infinite; }
 
-    /* --- Bento 网格 --- */
+    
     .bento-section { max-width: 1200px; margin: 0 auto 80px; padding: 0 20px; position: relative; z-index: 10; }
     .bento-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: minmax(240px, auto); gap: 20px; }
     .bento-card { background: rgba(20, 20, 20, 0.4); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 35px; display: flex; flex-direction: column; justify-content: center; transition: 0.3s; overflow: hidden; position: relative; }
@@ -161,7 +153,7 @@ include 'includes/header.php';
     .glow-cyan { position: absolute; bottom: -50%; right: -20%; width: 200px; height: 200px; background: var(--accent-cyan); filter: blur(80px); opacity: 0.1; }
     .glow-purple { position: absolute; top: -20%; left: -20%; width: 200px; height: 200px; background: var(--accent-purple); filter: blur(80px); opacity: 0.1; }
 
-    /* --- 商品网格矩阵 --- */
+    
     .matrix-section { max-width: 1200px; margin: 0 auto 80px; padding: 0 20px; }
     .section-header { margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
     .section-header h2 { font-size: 2.5rem; font-weight: 900; margin: 0; letter-spacing: -1px; }
@@ -188,7 +180,7 @@ include 'includes/header.php';
     .mc-title { font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 10px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 3rem;}
     .mc-price { font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 800; color: #00e676; margin-bottom: 0; }
     
-    /* 🌟 对齐 Packages 的配置按钮 (Specs) 与 弹窗样式 */
+   
     .btn-view-specs { background: transparent; border: 1px solid rgba(0, 242, 254, 0.3); color: #00f2fe; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace;}
     .btn-view-specs:hover { background: rgba(0, 242, 254, 0.1); border-color: #00f2fe; box-shadow: 0 0 10px rgba(0,242,254,0.2); }
 
@@ -213,7 +205,7 @@ include 'includes/header.php';
     .btn-cust { background: rgba(255,255,255,0.03); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); }
     .btn-cust:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
-    /* 算法白皮书布局样式 */
+   
     .algo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
     .algo-mini-card { background: rgba(20,20,25,0.6); border: 1px solid var(--glass-border); border-radius: 12px; padding: 25px; transition: 0.3s; position: relative; }
     .algo-mini-card::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--accent-cyan); border-radius: 12px 0 0 12px; }
@@ -448,7 +440,7 @@ include 'includes/header.php';
 </div>
 
 <script>
-    // 🌟 控制弹窗的 JS 逻辑
+    
     function openSpecsModal(pkgName, pkgId) {
         document.getElementById('modalPkgName').innerText = pkgName;
         // 把隐藏的内容复制到弹窗里
@@ -460,17 +452,16 @@ include 'includes/header.php';
         // 强制回流以触发 CSS 动画
         modal.offsetHeight; 
         modal.classList.add('show');
-        document.body.style.overflow = 'hidden'; // 防止背景滚动
+        document.body.style.overflow = 'hidden';
     }
 
     function closeSpecsModal(e) {
-        // 如果点击了关闭按钮，或者点击了背景遮罩层
         const modal = document.getElementById('specsModal');
         modal.classList.remove('show');
         setTimeout(() => {
             modal.style.display = 'none';
             document.body.style.overflow = 'auto';
-        }, 300); // 等待动画播完
+        }, 300); 
     }
 </script>
 

@@ -16,12 +16,10 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 }
 $post_id = intval($_GET['id']);
 
-// ==========================================
-// 🌟 评论处理区域
-// ==========================================
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_comment'])) {
     
-    // 🚨 MUTE 拦截器：检测用户是否被禁言
+
     $check_cid = intval($_SESSION['customer_id']);
     $mute_check = $conn->query("SELECT account_status FROM customers WHERE customer_id = $check_cid");
     if ($mute_check && $mute_check->num_rows > 0) {
@@ -31,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_comment'])) {
                 alert('🚫 SYSTEM ALERT: You have been MUTED by an Admin. You can still browse and buy PCs, but you cannot post or comment.');
                 window.history.back();
             </script>";
-            exit(); // 🛑 触发禁言，立即停止后续留言逻辑！
+            exit();
         }
     }
 
@@ -53,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_comment'])) {
     }
 }
 
-// 🌟 修复点 1：详情页抓取带上 membership_tier
+
 $query_post = "
     SELECT cp.*, c.username, c.reward_coins, c.membership_tier,
            (SELECT COUNT(*) FROM community_likes WHERE post_id = cp.post_id) AS like_count,
@@ -75,7 +73,7 @@ if ($post_result->num_rows === 0) {
 }
 $post = $post_result->fetch_assoc();
 
-// 🌟 修复点 2：评论区抓取带上 membership_tier
+
 $query_comments = "
     SELECT cc.*, c.username, c.reward_coins, c.membership_tier 
     FROM community_comments cc
@@ -88,7 +86,7 @@ $stmt_comments->bind_param("i", $post_id);
 $stmt_comments->execute();
 $comments_result = $stmt_comments->get_result(); 
 
-// 🌟 修复点 3：算法重写
+
 function getRankBadge($coins, $tier = 'Basic') {
     if ($tier === 'VIP') return '<span class="rank-badge elite" title="Elite Subscriber"><i class="fas fa-crown"></i> Elite</span>';
     if ($coins >= 1000) return '<span class="rank-badge elite" title="Elite Architect"><i class="fas fa-crown"></i> Elite</span>';

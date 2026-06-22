@@ -1,13 +1,9 @@
-/* =========================================
-   PC Builder 专属样式 (GridCitY 赛博朋克风)
-   ========================================= */
-
 .builder-container {
     max-width: 900px;
     margin: 2rem auto 8rem auto; /* 底部留出 8rem 空间给悬浮条，防止内容被遮挡 */
 }
 
-/* --- 配件插槽 (Slot) --- */
+/* (Slot) */
 .slot-card {
     background: var(--bg-surface); /* 继承 style.css 里的极夜黑 */
     border: 1px solid var(--border-color);
@@ -58,7 +54,7 @@
     margin: 0;
 }
 
-/* --- 选择按钮 --- */
+/*select button */
 .btn-select {
     background: transparent;
     border: 2px dashed var(--text-muted);
@@ -82,7 +78,7 @@
     box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
 }
 
-/* --- 底部悬浮计价条 (Sticky Summary Bar) --- */
+
 .sticky-footer {
     position: fixed;
     bottom: 0;

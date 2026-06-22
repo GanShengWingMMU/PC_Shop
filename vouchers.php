@@ -9,7 +9,7 @@ if (!isset($_SESSION['customer_id'])) {
 
 $customer_id = $_SESSION['customer_id'];
 
-// 🌟 1. 抓取 lifetime_coins 来做真假 Elite 验证
+
 $stmt = $conn->prepare("SELECT membership_tier, username, lifetime_coins FROM customers WHERE customer_id = ?");
 $stmt->bind_param("i", $customer_id);
 $stmt->execute();
@@ -20,10 +20,9 @@ $current_tier = $user_data['membership_tier'];
 $username = $user_data['username'];
 $lifetime_coins = $user_data['lifetime_coins'] ?? 0;
 
-// 🌟 2. 核心修复：定义真正的 ELITE
 $is_elite = ($current_tier === 'VIP' || $lifetime_coins >= 1000);
 
-// 🌟 3. 查询可用券时，只看是不是 Elite，而不是是不是 VIP
+
 $count_query = "
     SELECT COUNT(p.promo_id) as total FROM promo_codes p 
     LEFT JOIN used_vouchers uv ON p.promo_id = uv.promo_id AND uv.customer_id = ? 
@@ -31,7 +30,7 @@ $count_query = "
     AND (p.is_vip_only = 0 OR (p.is_vip_only = 1 AND ? = 1))
 ";
 $count_stmt = $conn->prepare($count_query);
-$elite_int = $is_elite ? 1 : 0; // 转换成 0 或 1 传给 SQL
+$elite_int = $is_elite ? 1 : 0;
 $count_stmt->bind_param("ii", $customer_id, $elite_int);
 $count_stmt->execute();
 $total_vouchers = $count_stmt->get_result()->fetch_assoc()['total'];
@@ -50,7 +49,7 @@ $count_stmt->close();
         .page-header { margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 20px; }
         .page-header h1 { color: #fff; font-size: 2rem; margin: 0; }
         
-        /* 🌟 錢包總覽 Dashboard */
+
         .wallet-dashboard {
             background: linear-gradient(90deg, rgba(0, 242, 254, 0.05), rgba(0,0,0,0));
             padding: 25px 30px;
@@ -69,7 +68,7 @@ $count_stmt->close();
         .section-title { color: #888; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
         .section-title span { flex: 1; height: 1px; background: #333; }
 
-        /* 票根樣式 */
+  
         .voucher-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); gap: 20px; }
         .voucher-card { display: flex; background: #1a1a1a; border-radius: 12px; overflow: hidden; border: 1px solid #333; transition: 0.3s; position: relative; }
         .voucher-card:hover { border-color: #00f2fe; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,242,254,0.1); }
@@ -133,7 +132,7 @@ $count_stmt->close();
             $vip_res = $vip_stmt->get_result();
             
             while ($v = $vip_res->fetch_assoc()):
-                // 🌟 5. 判断卡片是否锁定，只看是不是 Elite
+   
                 $is_locked = !$is_elite;
             ?>
                 <div class="voucher-card <?php echo $is_locked ? 'locked' : ''; ?>" style="<?php echo $is_locked ? 'opacity: 0.6; filter: grayscale(0.8);' : 'border-color: rgba(255,215,0,0.3);'; ?>">

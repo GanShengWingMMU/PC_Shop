@@ -34,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_voucher'])) {
         $stmt->bind_param("ssdsddis", $code_name, $discount_type, $discount_value, $target_category, $min_spend, $max_cap, $is_vip_only, $status);
         
         if ($stmt->execute()) {
-            // 🌟 写入 Log
             $action_msg = "Forged New Promo Code: $code_name";
             $ip_address = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
             $log_stmt = $conn->prepare("INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES (?, ?, ?, ?, ?)");
@@ -61,7 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_voucher'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 🌟 强制破除外部 CSS 限制，释放滚动条 */
         html, body {
             height: 100% !important;
             overflow: auto !important; 

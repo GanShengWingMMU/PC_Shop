@@ -3,7 +3,7 @@ session_start();
 if (file_exists('config.php')) { require_once 'config.php'; } 
 else { include 'db_connect.php'; }
 
-// 🌟 权限验证
+
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
 
 if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
@@ -15,7 +15,6 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
 $user_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($user_id <= 0) { header("Location: manage_users.php"); exit(); }
 
-// 🌟 1. 获取顾客基础资料
 $stmt = $conn->prepare("SELECT * FROM customers WHERE customer_id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -24,7 +23,7 @@ $stmt->close();
 
 if (!$customer) { header("Location: manage_users.php"); exit(); }
 
-// 🌟 2. 抓取地址簿
+
 $address_data = null;
 $addr_query = "SELECT * FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC LIMIT 1"; 
 $addr_stmt = $conn->prepare($addr_query);
@@ -39,7 +38,7 @@ if ($addr_stmt) {
     $addr_stmt->close();
 }
 
-// 🌟 3. 精准抓取电话 (根据真实的数据库列名 phone_number)
+
 $display_phone = '';
 if (!empty($address_data['phone_number'])) {
     $display_phone = trim($address_data['phone_number']);
@@ -47,7 +46,7 @@ if (!empty($address_data['phone_number'])) {
     $display_phone = trim($customer['phone_number']);
 }
 
-// 🌟 4. 处理地址显示
+
 $display_address = '';
 if (!empty($address_data['full_address'])) {
     $raw_addr = str_replace(array("\r\n", "\n\r", "\r", "<br>", "<br/>"), "\n", $address_data['full_address']);
@@ -60,7 +59,7 @@ if (!empty($address_data['full_address'])) {
     }
     
     if (count($clean_lines) > 0) {
-        // 兼容极少数带有 "|" 的旧格式数据
+ 
         if (strpos($clean_lines[0], '|') !== false) {
             $name_and_phone = array_shift($clean_lines); 
             $np_parts = explode("|", $name_and_phone);
@@ -72,7 +71,7 @@ if (!empty($address_data['full_address'])) {
     }
 }
 
-// 🌟 5. 精准计算年龄 (根据真实的数据库列名 birthday)
+
 $age_display = '<span style="color:#555; font-style:italic; font-weight: normal;">Not provided</span>';
 if (!empty($customer['birthday']) && $customer['birthday'] !== '0000-00-00') {
     try {

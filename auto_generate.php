@@ -3,7 +3,7 @@ ob_start();
 session_start();
 require_once 'config.php';
 
-// 1. 拦截非法访问
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_POST['budget'])) {
     header("Location: packages.php");
     exit();
@@ -38,7 +38,7 @@ foreach ($execution_order as $cat_id) {
     $current_weight = $weights[$cat_id];
     $target_budget = $remaining_budget * ($current_weight / $remaining_weight);
 
-    // 🌟 核心修复 3：使用参数化数组解包，彻底根除 SQL 注入风险警告
+    
     $params = [];
     $types = "";
     $extra_sql = "";
@@ -61,7 +61,6 @@ foreach ($execution_order as $cat_id) {
         $target_budget = max($target_budget, 150); 
     }
 
-    // 尝试 1：预算内找最强的
     $sql_find = "SELECT * FROM products WHERE category_id = ? AND stock_quantity > 0 AND price <= ? $extra_sql ORDER BY price DESC LIMIT 1";
     $stmt_find = $conn->prepare($sql_find);
     $bind_params_find = array_merge([$cat_id, $target_budget], $params);
@@ -72,7 +71,7 @@ foreach ($execution_order as $cat_id) {
     if ($res && $res->num_rows > 0) {
         $part = $res->fetch_assoc();
     } else {
-        // 尝试 2：保底生存模式
+   
         $sql_fb = "SELECT * FROM products WHERE category_id = ? AND stock_quantity > 0 $extra_sql ORDER BY price ASC LIMIT 1";
         $stmt_fb = $conn->prepare($sql_fb);
         $bind_params_fb = array_merge([$cat_id], $params);

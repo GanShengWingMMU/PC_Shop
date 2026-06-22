@@ -11,14 +11,14 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
     header("Location: admin_login.php"); exit();
 }
 
-// 🌟 软删除 Voucher + 记录 Log
+
 if (isset($_GET['delete_id']) && strtolower($current_role) === 'superadmin') {
     $del_id = intval($_GET['delete_id']);
     
-    // 把状态更新为 Inactive
+
     $conn->query("UPDATE promo_codes SET status = 'Inactive' WHERE promo_id = $del_id");
     
-    // 🌟 写入 Log
+
     $action_msg = "Deactivated Promo Code ID: $del_id";
     $ip_address = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
     $log_stmt = $conn->prepare("INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES (?, ?, ?, ?, ?)");

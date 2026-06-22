@@ -13,7 +13,7 @@ $message = "";
 
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
-    // 防呆检查：确保订单中没有使用这个 Package
+    // check doesn't use the Package
     $check_stmt = $conn->prepare("SELECT package_id FROM order_details WHERE package_id = ? LIMIT 1");
     $check_stmt->bind_param("i", $delete_id);
     $check_stmt->execute();
@@ -21,9 +21,9 @@ if (isset($_GET['delete_id'])) {
     if ($check_stmt->get_result()->num_rows > 0) {
         $message = "<div style='color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid rgba(255,77,77,0.3);'><i class='fas fa-lock'></i> Cannot delete! Linked to active orders.</div>";
     } else {
-        // 先删除 package_items 里的关联组件
+
         $conn->query("DELETE FROM package_items WHERE package_id = $delete_id");
-        // 再删除 package 本身
+        
         $stmt_del = $conn->prepare("DELETE FROM packages WHERE package_id = ?");
         $stmt_del->bind_param("i", $delete_id);
         if ($stmt_del->execute()) { header("Location: manage_packages.php?deleted=1"); exit(); }
@@ -32,11 +32,11 @@ if (isset($_GET['delete_id'])) {
 }
 if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background: rgba(0,230,118,0.1); padding: 15px; border-radius: 6px; margin-bottom: 20px;'>✅ Package deleted.</div>";
 
-// 🌟 捕获搜索和排序参数
+
 $search = $_GET['search'] ?? '';
 $sort = $_GET['sort'] ?? 'default';
 
-// 🌟 判断排序逻辑 (使用 real_price 别名进行价格排序)
+
 $order_by = 'pk.package_id DESC'; 
 if ($sort === 'price_desc') $order_by = 'real_price DESC';
 elseif ($sort === 'price_asc') $order_by = 'real_price ASC';
@@ -54,7 +54,7 @@ elseif ($sort === 'name_desc') $order_by = 'pk.package_name DESC';
     <style>
         body { font-family: 'Inter', 'JetBrains Mono', sans-serif !important; }
 
-        /* 🌟 图片悬浮放大的赛博黑科技 CSS (紫钻专属版) */
+      
         .zoom-img {
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
@@ -69,7 +69,7 @@ elseif ($sort === 'name_desc') $order_by = 'pk.package_name DESC';
             border-radius: 8px !important;
         }
 
-        /* 🌟 独立干净的搜索栏样式 (完美的对齐和紫色主题) */
+       
         .search-form-clean {
             display: flex;
             flex-wrap: wrap;
@@ -84,7 +84,7 @@ elseif ($sort === 'name_desc') $order_by = 'pk.package_name DESC';
         .search-form-clean input,
         .search-form-clean select,
         .search-form-clean button {
-            height: 42px !important; /* 统一小巧的高度 */
+            height: 42px !important; 
             padding: 0 15px !important;
             font-size: 14px !important;
             line-height: normal !important;
@@ -98,7 +98,7 @@ elseif ($sort === 'name_desc') $order_by = 'pk.package_name DESC';
             flex: 1;
             min-width: 200px;
             background: rgba(0, 0, 0, 0.5) !important;
-            border: 1px solid rgba(168, 85, 247, 0.3) !important; /* 紫色边框 */
+            border: 1px solid rgba(168, 85, 247, 0.3) !important; 
             color: #fff !important;
         }
         .search-form-clean input:focus {
@@ -108,7 +108,7 @@ elseif ($sort === 'name_desc') $order_by = 'pk.package_name DESC';
         .search-form-clean select {
             width: 180px;
             background: rgba(0, 0, 0, 0.5) !important;
-            border: 1px solid rgba(168, 85, 247, 0.3) !important; /* 紫色边框 */
+            border: 1px solid rgba(168, 85, 247, 0.3) !important; 
             color: #fff !important;
             cursor: pointer;
         }
@@ -177,7 +177,6 @@ elseif ($sort === 'name_desc') $order_by = 'pk.package_name DESC';
                     </thead>
                     <tbody>
                         <?php
-                        // 🌟 智能分词搜索逻辑 (Packages) + 排序逻辑
                         if ($search !== '') {
                             $keywords = explode(' ', trim($search));
                             $conditions = [];
@@ -224,7 +223,7 @@ elseif ($sort === 'name_desc') $order_by = 'pk.package_name DESC';
                                 echo "<td style='padding:15px; color:#00e676;'>RM ".number_format($row['real_price'], 2)."</td>";
                                 echo "<td style='padding:15px; color:#fff;'>".htmlspecialchars($row['stock_status'])."</td>";
                                 
-                                // 🌟 动作按钮也统一调整了间距和不换行属性
+                               
                                 echo "<td style='padding:15px; text-align:right; white-space:nowrap;'>
                                         <a href='edit_package.php?package_id={$row['package_id']}' 
                                            style='background: transparent; color: #a855f7; border: 1px solid #a855f7; padding: 6px 18px; font-size: 14px; border-radius: 4px; text-decoration: none; margin-right: 8px; font-weight: 600; display: inline-block;'>

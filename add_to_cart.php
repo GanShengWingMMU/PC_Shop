@@ -1,8 +1,6 @@
 <?php
 session_start();
 require_once 'config.php';
-
-// 1. 權限防護
 if (!isset($_SESSION['customer_id'])) {
     $_SESSION['error_msg'] = "Please login to add items to your cart.";
     header("Location: login.php");
@@ -11,7 +9,7 @@ if (!isset($_SESSION['customer_id'])) {
 
 $customer_id = $_SESSION['customer_id'];
 
-// 🌟 全局底层零件需求拆解器 (Global Cart Resolution)
+// (Global Cart Resolution)
 function get_global_cart_requirements($conn, $customer_id) {
     $reqs = [];
     $query = "SELECT c.quantity, c.product_id, c.package_id, c.pc_build 
@@ -57,13 +55,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($quantity <= 0) $quantity = 1;
 
     $is_buy_now = (isset($_POST['action']) && $_POST['action'] === 'buy_now');
-    
-    // 🌟 获取当前购物车内所有零件的全局真实占用量
     $global_cart = get_global_cart_requirements($conn, $customer_id);
 
-    // ==========================================
-    // 🌟 情境 A：加入的是「單一零件 (Components)」
-    // ==========================================
+  
+    // Add single item (Components)」
+
     if (isset($_POST['product_id'])) {
         $product_id = intval($_POST['product_id']);
 
@@ -86,7 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $cart_row = ($cart_result->num_rows > 0) ? $cart_result->fetch_assoc() : null;
             
-            // 🌟 核心修复 1：对比全局总需求
             $current_in_cart = $global_cart[$product_id] ?? 0;
 
             if (($current_in_cart + $quantity) > $available_stock) {
@@ -113,9 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-    // ==========================================
-    // 🌟 情境 B：加入的是「整機套餐 (Packages)」
-    // ==========================================
+
+    // Add the package
+
     elseif (isset($_POST['package_id'])) {
         $package_id = intval($_POST['package_id']);
 
@@ -151,8 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_parts->bind_param("i", $package_id);
                 $stmt_parts->execute();
                 $parts_res = $stmt_parts->get_result();
-                
-                // 🌟 核心修复 2：将套餐内的零件与全局购物车内的零件进行交叉比对
+            
                 while ($part = $parts_res->fetch_assoc()) {
                     $pid = $part['product_id'];
                     $current_in_cart = $global_cart[$pid] ?? 0;

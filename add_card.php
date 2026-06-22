@@ -10,23 +10,15 @@ if (!isset($_SESSION['customer_id'])) {
 
 $customer_id = $_SESSION['customer_id'];
 $error_msg = "";
-
-// ==========================================
-// 2. 處理新增卡片請求 (POST Request)
-// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 🌟 A+ 级安全修复：防御持卡人姓名的 XSS 注入
     $cardholder_name = htmlspecialchars(trim($_POST['cardholder_name']));
     $expiry_date = htmlspecialchars(trim($_POST['expiry_date']));
     $is_default = isset($_POST['is_default']) ? 1 : 0;
-    
-    // 取得卡號並移除所有空白
+
     $raw_card_number = str_replace(' ', '', $_POST['card_number']);
-    
-    // 🌟 資安防禦機制：絕對不存完整卡號，只存最後四碼！
+
     $last_four_digits = substr($raw_card_number, -4);
-    
-    // 🌟 智能辨識：透過卡號第一個數字判斷發卡組織
+
     $card_brand = 'Unknown';
     $first_digit = substr($raw_card_number, 0, 1);
     if ($first_digit === '4') {
@@ -36,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($first_digit === '3') {
         $card_brand = 'American Express';
     } else {
-        $card_brand = 'Credit Card'; // 預設值
+        $card_brand = 'Credit Card'; 
     }
 
     if (strlen($raw_card_number) >= 15 && strlen($last_four_digits) === 4) {
@@ -44,14 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->begin_transaction();
 
         try {
-            // 邏輯 A：檢查是否為該顧客的第一張卡
             $check_first = $conn->query("SELECT COUNT(*) as count FROM saved_cards WHERE customer_id = $customer_id");
             $row = $check_first->fetch_assoc();
             if ($row['count'] == 0) {
-                $is_default = 1; // 第一張卡強制設為預設
+                $is_default = 1; 
             }
 
-            // 邏輯 B：如果勾選了設為預設，先把其他卡片降級
+      
             if ($is_default == 1) {
                 $remove_default = "UPDATE saved_cards SET is_default = 0 WHERE customer_id = ?";
                 $stmt_remove = $conn->prepare($remove_default);
@@ -60,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_remove->close();
             }
 
-            // 邏輯 C：寫入資料庫 (注意：我們沒有把 CVV 傳給後端，這非常安全！)
+        
             $insert_query = "INSERT INTO saved_cards (customer_id, cardholder_name, last_four_digits, expiry_date, card_brand, is_default) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt_insert = $conn->prepare($insert_query);
             $stmt_insert->bind_param("issssi", $customer_id, $cardholder_name, $last_four_digits, $expiry_date, $card_brand, $is_default);
@@ -160,11 +151,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const expiryInput = document.getElementById('expiry_date');
             const cardIcon = document.getElementById('card-icon');
 
-            // 自動加上空白與辨識卡片品牌
+            
             cardInput.addEventListener('input', function(e) {
                 let value = e.target.value.replace(/\D/g, ''); // 移除非數字
                 
-                // 判斷品牌並更換 Icon
+                // Icon
                 if (value.startsWith('4')) {
                     cardIcon.className = 'fa-brands fa-cc-visa';
                     cardIcon.style.color = '#1a1f71';
@@ -176,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     cardIcon.style.color = 'var(--text-muted)';
                 }
 
-                // 每 4 個數字加一個空白
+               
                 let formattedValue = '';
                 for (let i = 0; i < value.length; i++) {
                     if (i > 0 && i % 4 === 0) formattedValue += ' ';
@@ -185,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 e.target.value = formattedValue;
             });
 
-            // 自動幫 MM/YY 加上斜線
+            
             expiryInput.addEventListener('input', function(e) {
                 let value = e.target.value.replace(/\D/g, '');
                 if (value.length > 2) {

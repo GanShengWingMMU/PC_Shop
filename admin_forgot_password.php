@@ -37,7 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $mail->Host       = 'smtp.gmail.com'; 
                 $mail->SMTPAuth   = true;
                 
-                // 🌟 你的邮箱设定
+                // gmail setup
                 $mail->Username   = 'ahaa3153@gmail.com'; 
                 $mail->Password   = 'ojhnofgqawsvclvq';
                 

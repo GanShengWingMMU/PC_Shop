@@ -2,8 +2,6 @@
 session_start();
 if (file_exists('config.php')) { require_once 'config.php'; } 
 else { include 'db_connect.php'; }
-
-// 🌟 只有老板才能进入
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
 if (empty($current_role) || strtolower($current_role) !== 'superadmin') {
     die("<div style='background:#000; color:#ff4d4d; padding:50px; text-align:center; font-family:monospace;'>ACCESS DENIED: ALPHA REQUIRED.</div>");
@@ -20,23 +18,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
     if (empty($username) || empty($password) || empty($role)) {
         $error = "Please fill in all required fields.";
     } else {
-        // 🌟 后端二次严格验证 (防止黑客绕过前端直接发包)
+    
         if (strlen($password) < 12 || !preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password) || !preg_match('/[\W_]/', $password)) {
             $error = "⚠️ Password does not meet the high-security requirements.";
         } else {
-            // 检查用户名是否重复
+           
             $check_stmt = $conn->prepare("SELECT admin_id FROM admins WHERE username = ?");
             $check_stmt->bind_param("s", $username);
             $check_stmt->execute();
             if ($check_stmt->get_result()->num_rows > 0) {
                 $error = "⚠️ Username already exists. Please choose another.";
             } else {
-                // 新增员工
+                
                 $stmt = $conn->prepare("INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)");
                 $stmt->bind_param("ssss", $username, $password, $email, $role);
                 if ($stmt->execute()) {
                     
-                    // 🌟 记录动作到 Security Logs
+                    
                     $log_admin_id = $_SESSION['admin_id'];
                     $log_username = $_SESSION['admin_username'];
                     $log_role = $_SESSION['admin_role'];
@@ -66,7 +64,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 🌟 终极滚动修复 */
+       
         html, body {
             height: auto; 
             min-height: 100vh;
@@ -93,12 +91,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
             margin-left: 250px; 
             flex: 1;
             padding: 30px !important;
-            padding-bottom: 120px !important; /* 给底部按钮留足空间 */
+            padding-bottom: 120px !important;
             min-height: 100vh;
             box-sizing: border-box;
         }
         
-        /* 表单卡片移除绝对定位 */
+      
         .form-card {
             background: rgba(0,0,0,0.5); 
             padding: 30px; 
@@ -125,7 +123,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
             box-shadow: 0 0 10px rgba(255, 77, 77, 0.2);
         }
 
-        /* 🌟 动态密码提示框的专属 CSS */
+        /*Dynamic password rules CSS */
         .pwd-rules {
             display: none;
             background: rgba(0,0,0,0.8);
@@ -230,7 +228,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
             spc: { el: document.getElementById('req-spc'), regex: /[\W_]/ }
         };
 
-        // 点击眼睛显示/隐藏密码
+        // check password
         togglePwd.addEventListener('click', function () {
             const type = pwdInput.getAttribute('type') === 'password' ? 'text' : 'password';
             pwdInput.setAttribute('type', type);
@@ -238,12 +236,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
             this.style.color = type === 'text' ? '#ff4d4d' : '#888';
         });
 
-        // 聚焦时显示规则框
+       
         pwdInput.addEventListener('focus', () => {
             rulesBox.style.display = 'block';
         });
 
-        // 实时打字验证逻辑
+       
         pwdInput.addEventListener('input', function () {
             const val = this.value;
             let allValid = true;

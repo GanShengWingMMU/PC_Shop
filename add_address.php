@@ -1,8 +1,6 @@
 <?php
 session_start();
 require_once 'config.php';
-
-// 1. 檢查登入狀態
 if (!isset($_SESSION['customer_id'])) {
     header("Location: login.php");
     exit();
@@ -11,12 +9,8 @@ if (!isset($_SESSION['customer_id'])) {
 $customer_id = $_SESSION['customer_id'];
 $error_msg = "";
 
-// ==========================================
-// 2. 處理新增地址請求 (POST Request)
-// ==========================================
+// (POST Request)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 🌟 A+ 级安全修复：全面使用 htmlspecialchars 防御 XSS 注入！
-    // 既然下方已使用 Prepared Statement，无需再用 real_escape_string
     $recipient_name = htmlspecialchars(trim($_POST['recipient_name']));
     $phone_number   = htmlspecialchars(trim($_POST['phone_number']));
     $unit_number    = htmlspecialchars(trim($_POST['unit_number']));
@@ -27,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $is_default = isset($_POST['is_default']) ? 1 : 0;
 
-    // 🌟 核心魔法：將所有欄位組合成一個完美排版的完整地址
+    // All address components are combined into a single string for storage
     $full_address = "$recipient_name | $phone_number\n";
     if (!empty($unit_number)) {
         $full_address .= "$unit_number, ";
@@ -53,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_remove->close();
             }
 
-            // 寫入組合好的 full_address
+            // Insert the full_address
             $insert_query = "INSERT INTO customer_addresses (customer_id, full_address, is_default) VALUES (?, ?, ?)";
             $stmt_insert = $conn->prepare($insert_query);
             $stmt_insert->bind_param("isi", $customer_id, $full_address, $is_default);
@@ -84,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* 雙欄排版小幫手 */
+        /*grid 2 columns */
         .grid-2-cols {
             display: grid;
             grid-template-columns: 1fr 1fr;

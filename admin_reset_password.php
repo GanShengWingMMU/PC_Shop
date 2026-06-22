@@ -2,7 +2,6 @@
 session_start();
 require_once 'config.php';
 
-// 这里假设你写了一个 admin_verify_otp.php (逻辑跟客户的一样，只是查 admins 表)
 if (!isset($_SESSION['otp_verified']) || $_SESSION['otp_verified'] !== true || !isset($_SESSION['reset_email'])) {
     header("Location: admin_forgot_password.php");
     exit();
@@ -31,13 +30,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
             
-            // 更新密码，清空 Token
+            // change password and clear reset token
             $stmt = $conn->prepare("UPDATE admins SET password = ?, reset_token = NULL, reset_token_expire = NULL WHERE email = ?");
             $stmt->bind_param("ss", $hashed_password, $email);
             if ($stmt->execute()) {
                 unset($_SESSION['otp_verified']);
                 unset($_SESSION['reset_email']);
-                // 成功后导向登录页
+                //success change back to admin login page
                 echo "<script>alert('Password updated successfully! Please login again.'); window.location.href='admin_login.php';</script>";
                 exit();
             }

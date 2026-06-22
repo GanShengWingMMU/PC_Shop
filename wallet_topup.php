@@ -14,7 +14,7 @@ $error_msg = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $amount = 0;
     if (!empty($_POST['custom_amount']) && is_numeric($_POST['custom_amount'])) {
-        // 修复：限制金额为两位小数，防止浮点数篡改
+
         $amount = round((float) $_POST['custom_amount'], 2);
     } elseif (!empty($_POST['topup_option']) && is_numeric($_POST['topup_option'])) {
         $amount = round((float) $_POST['topup_option'], 2);
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $auth_success = false;
         $bank_id = null;
 
-        // 🌟 1. 仅做身份验证，不先扣款！
+     
         if ($method === 'Online Banking (FPX)') {
             $fpx_user = trim($_POST['fpx_username'] ?? '');
             $fpx_pass = trim($_POST['fpx_password'] ?? '');
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($selected_card === 'new') {
                 $card_num = str_replace([' ', '-'], '', $_POST['dummy_card_number']);
                 $card_cvc = trim($_POST['dummy_card_cvc']);
-                $card_exp = trim($_POST['dummy_card_expiry']); // 🌟 接收到期日
+                $card_exp = trim($_POST['dummy_card_expiry']); 
                 $stmt_bank = $conn->prepare("SELECT id, balance FROM bank WHERE card_number = ? AND cvc = ? AND expiry_date = ?");
                 $stmt_bank->bind_param("sss", $card_num, $card_cvc, $card_exp);
             } else {
@@ -79,13 +79,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error_msg = "Please select a payment method.";
         }
 
-        // 🌟 2. 验证成功后，启动「原子化事务 (Atomic Transaction)」
+
         if ($auth_success && $bank_id !== null) {
             $coins_earned = floor($amount / 10);
             $conn->begin_transaction();
 
             try {
-                // 🌟 核心修复：无论是 FPX 还是 Credit Card，都要在事务内扣除真实银行资金
+              
                 $deduct_stmt = $conn->prepare("UPDATE bank SET balance = balance - ? WHERE id = ? AND balance >= ?");
                 $deduct_stmt->bind_param("did", $amount, $bank_id, $amount);
                 $deduct_stmt->execute();
@@ -94,16 +94,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $deduct_stmt->close();
 
-                // (2) 增加顾客钱包余额与金币
-                // (2) 增加顾客钱包余额、可消费金币 (reward_coins) 以及永久经验值 (lifetime_coins)
+
                 $update_sql = "UPDATE customers SET wallet_balance = wallet_balance + ?, reward_coins = reward_coins + ?, lifetime_coins = lifetime_coins + ? WHERE customer_id = ?";
                 $stmt_update = $conn->prepare($update_sql);
-                // 注意绑定参数变成了 diii (1个浮点数，3个整数)
+          
                 $stmt_update->bind_param("diii", $amount, $coins_earned, $coins_earned, $customer_id);
                 $stmt_update->execute();
                 $stmt_update->close();
 
-                // (3) 记录交易历史
+     
                 $type = 'Top-up';
                 $insert_sql = "INSERT INTO wallet_transactions (customer_id, type, amount, coins_earned) VALUES (?, ?, ?, ?)";
                 $stmt_insert = $conn->prepare($insert_sql);
@@ -111,12 +110,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_insert->execute();
                 $stmt_insert->close();
 
-                // 全部成功，提交事务
+     
                 $conn->commit();
                 $success_msg = "Successfully topped up RM " . number_format($amount, 2) . "! You earned $coins_earned Coins. 🪙";
                 
             } catch (Exception $e) {
-                // 发生任何意外，立刻回滚
+      
                 $conn->rollback();
                 $error_msg = "Transaction interrupted safely. No funds were lost. Error: " . $e->getMessage();
             }
@@ -126,7 +125,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 取得顾客最新的钱包余额与金币
 $query = "SELECT wallet_balance, reward_coins FROM customers WHERE customer_id = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $customer_id);

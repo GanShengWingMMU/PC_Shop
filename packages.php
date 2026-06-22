@@ -3,9 +3,7 @@ ob_start();
 session_start();
 require_once 'config.php';
 
-// ==========================================
-// 🧠 引擎一：余弦相似度算法 (Cosine Similarity)
-// ==========================================
+
 $user_dna = ['g' => 0, 'c' => 0, 's' => 0, 'e' => 0];
 $is_logged_in = isset($_SESSION['customer_id']);
 
@@ -56,9 +54,7 @@ if (array_sum($user_dna) > 0) {
     }
 }
 
-// ==========================================
-// 🔍 模块二：动态多维筛选器
-// ==========================================
+
 $search_query = isset($_GET['search']) ? trim($_GET['search']) : '';
 $persona_filter = isset($_GET['persona']) ? trim($_GET['persona']) : '';
 $sort_by = isset($_GET['sort']) ? $_GET['sort'] : 'new';
@@ -121,7 +117,6 @@ $stmt->execute();
 $catalog_result = $stmt->get_result();
 $stmt->close();
 
-// 🌟 动态计算 Hover 特效所需的 FPS 和 Premiere 分数
 $packages_data = [];
 if ($catalog_result->num_rows > 0) {
     $cpu_stmt = $conn->prepare("SELECT p.price FROM package_items pi JOIN products p ON pi.product_id = p.product_id WHERE pi.package_id = ? AND p.category_id = 1 LIMIT 1");
@@ -160,11 +155,11 @@ include 'includes/header.php';
     
     .page-container { max-width: 1300px; margin: 2rem auto; padding: 0 20px; position: relative; z-index: 1;}
 
-    /* AI 英雄区 */
+
     .ai-hero { background: linear-gradient(135deg, rgba(0,242,254,0.1) 0%, rgba(10,10,10,0.8) 100%); border: 1px solid var(--accent); border-radius: 12px; padding: 30px; margin-bottom: 40px; display: flex; gap: 30px; align-items: center; box-shadow: 0 0 30px rgba(0,242,254,0.15); position: relative; overflow: hidden; }
     .ai-badge { position: absolute; top: 0; left: 0; background: var(--accent); color: #000; padding: 5px 15px; font-weight: 900; font-size: 0.8rem; border-bottom-right-radius: 10px; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;}
     
-    /* 过滤器 */
+
     .filter-panel { background: rgba(10, 10, 15, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(0,242,254,0.2); padding: 25px; border-radius: 12px; margin-bottom: 30px; display: flex; flex-direction: column; gap: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
     .filter-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
     
@@ -206,7 +201,7 @@ include 'includes/header.php';
     .pulse-icon { color: #00f2fe; font-size: 1.5rem; animation: pulse-alert 2s infinite; }
     @keyframes pulse-alert { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
 
-    /* 🌟 恢复 Grid 默认拉伸对齐，配合 Modal 食用更佳 */
+
     .pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
     .pkg-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; transition: 0.3s; display: flex; flex-direction: column; position: relative;}
     .pkg-card:hover { transform: translateY(-8px); border-color: var(--accent); box-shadow: 0 15px 30px rgba(0,0,0,0.5), inset 0 0 15px rgba(0,242,254,0.05); }
@@ -227,11 +222,11 @@ include 'includes/header.php';
     .pkg-title { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 10px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 3.2rem;}
     .pkg-price { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 900; color: #00e676; margin-bottom: 0; }
     
-    /* 🌟 查看配置按钮 (取代手风琴) */
+
     .btn-view-specs { background: transparent; border: 1px solid rgba(0, 242, 254, 0.3); color: #00f2fe; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace;}
     .btn-view-specs:hover { background: rgba(0, 242, 254, 0.1); border-color: #00f2fe; box-shadow: 0 0 10px rgba(0,242,254,0.2); }
 
-    /* 🌟 极简高定弹窗 Modal */
+
     #specsModal { display: none; position: fixed; inset: 0; background: rgba(3, 3, 5, 0.85); backdrop-filter: blur(15px); z-index: 9999; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;}
     #specsModal.show { display: flex; opacity: 1; }
     .specs-modal-content { background: #0b0f16; border: 1px solid #00f2fe; width: 90%; max-width: 500px; border-radius: 12px; box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,242,254,0.05); overflow: hidden; transform: translateY(20px); transition: transform 0.3s ease;}
@@ -255,7 +250,7 @@ include 'includes/header.php';
     .btn-cust { background: rgba(255,255,255,0.05); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1); }
     .btn-cust:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.3); }
 
-    /* AI 控制台 */
+
     .ai-command-center { margin: 60px auto 40px; max-width: 900px; background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 16px; padding: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
     .ai-cc-header { text-align: center; margin-bottom: 40px; }
     .ai-cc-badge-top { display: inline-block; background: rgba(0,242,254,0.1); color: var(--accent); padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; font-weight: 900; border: 1px solid var(--accent); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; }
@@ -591,7 +586,7 @@ include 'includes/header.php';
 <?php include 'includes/footer.php'; ?>
 
 <script>
-// 🌟 控制弹窗的 JS 逻辑
+
 function openSpecsModal(pkgName, pkgId) {
     document.getElementById('modalPkgName').innerText = pkgName;
     const specsHtml = document.getElementById('hidden_specs_' + pkgId).innerHTML;
@@ -599,7 +594,7 @@ function openSpecsModal(pkgName, pkgId) {
     
     const modal = document.getElementById('specsModal');
     modal.style.display = 'flex';
-    modal.offsetHeight; // 强制回流以触发动画
+    modal.offsetHeight; 
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
 }
@@ -654,7 +649,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // === 2. AI 预算滑块 (Max 50,000) ===
+
     const aiSlider = document.getElementById("ai-budget-slider");
     const aiDisplay = document.getElementById("ai-budget-value");
     const aiHiddenInput = document.getElementById("ai-hidden-budget");
@@ -681,7 +676,7 @@ document.addEventListener("DOMContentLoaded", function() {
         updateAIFeedback(aiSlider.value);
     }
 
-    // === 3. 过滤器双向价格滑块逻辑 ===
+
     const rangeInputs = document.querySelectorAll(".range-inputs input");
     const priceInputs = document.querySelectorAll(".price-inputs input");
     const trackFill = document.querySelector(".slider-track-fill");

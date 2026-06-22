@@ -10,7 +10,7 @@ if (!isset($_SESSION['customer_id'])) {
 $customer_id = $_SESSION['customer_id'];
 $error_message = "";
 
-// 🌟 1. 取得顾客目前的钱包余额、金币，以及最重要的 lifetime_coins
+
 $user_query = "SELECT wallet_balance, reward_coins, lifetime_coins, membership_tier FROM customers WHERE customer_id = ?";
 $stmt_user = $conn->prepare($user_query);
 $stmt_user->bind_param("i", $customer_id);
@@ -23,7 +23,7 @@ $current_coins = $user_data['reward_coins'];
 $lifetime_coins = $user_data['lifetime_coins'] ?? 0;
 $current_tier = $user_data['membership_tier'];
 
-// 🌟 2. 全局定义：什么是真正的 Elite？（买VIP 或 积分满1000）
+
 $is_elite = ($current_tier === 'VIP' || $lifetime_coins >= 1000);
 
 $saved_addresses = [];
@@ -37,7 +37,7 @@ while ($addr = $addr_result->fetch_assoc()) {
 }
 $stmt_addr->close();
 
-// 预先计算默认地址 HTML
+
 $default_address_html = "<span style='color: #ff4d4d;'><i class='fa-solid fa-triangle-exclamation'></i> Please select a shipping address below.</span>";
 if (!empty($saved_addresses)) {
     $default_addr = $saved_addresses[0]; 
@@ -64,7 +64,7 @@ while ($card = $res_cards->fetch_assoc()) {
 }
 $stmt_cards->close();
 
-// 抓取购物车内容
+
 $cart_query = "SELECT c.cart_id, c.quantity, c.affiliate_id, 
                       p.product_id, p.product_name, p.price AS product_price,
                       b.pc_build, b.build_name, b.total_price AS build_price,
@@ -131,9 +131,7 @@ $stmt->close();
 $promo_discount = 0;
 $applied_promo_code = '';
 
-// ==========================================
-// 🛡️ 严格安全的 POST 处理逻辑
-// ==========================================
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn->begin_transaction();
     try {
@@ -186,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $promo_res = $promo_stmt->get_result();
             
             if ($promo_row = $promo_res->fetch_assoc()) {
-                // 🌟 3. 后台验证修复：只拦截非 Elite 玩家
+                
                 if ($promo_row['is_vip_only'] == 1 && !$is_elite) {
                     throw new Exception("[ACCESS DENIED] The promo code '{$applied_promo_code}' is exclusive to ELITE members only.");
                 }
@@ -382,8 +380,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $insert_detail = $conn->prepare("INSERT INTO order_details (order_id, product_id, pc_build, package_id, affiliate_id, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?, ?)");
         
-        // 🌟 4. 修复金币发放漏洞：不仅发给创作者，买家结账也该拿金币！
-        // 给买家发金币
+      
         $buyer_coins_earned = floor($final_amount / 10);
         if ($buyer_coins_earned > 0) {
             $buyer_reward = $conn->prepare("UPDATE customers SET reward_coins = reward_coins + ?, lifetime_coins = lifetime_coins + ? WHERE customer_id = ?");
@@ -391,7 +388,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $buyer_reward->execute();
         }
 
-        // 给创作者发金币
         $affiliate_reward_stmt = $conn->prepare("UPDATE customers SET reward_coins = reward_coins + ?, lifetime_coins = lifetime_coins + ? WHERE customer_id = ?");
         $bounty_per_build = 500; 
 
@@ -847,7 +843,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ?>
         };
 
-        // 🌟 7. JS 端逻辑修复，传入 $is_elite 的判断
         const isElite = <?php echo $is_elite ? 'true' : 'false'; ?>;
         const baseSubtotal = <?php echo (float)$total_amount; ?>;
         const maxUserCoins = <?php echo (int)$current_coins; ?>;
@@ -926,7 +921,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (code && activeVouchers[code]) {
                 const v = activeVouchers[code];
                 const targetSubtotal = cartSubtotals[v.cat] || cartSubtotals['All'];
-                const isVipValid = (v.vip === 0 || (v.vip === 1 && isElite)); // JS 也修复
+                const isVipValid = (v.vip === 0 || (v.vip === 1 && isElite)); 
                 const isSpendValid = (targetSubtotal >= v.min);
 
                 if (isVipValid && isSpendValid && targetSubtotal > 0) {

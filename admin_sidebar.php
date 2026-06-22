@@ -1,9 +1,8 @@
 <?php
-// 自动获取当前所在的文件名
 $current_page = basename($_SERVER['PHP_SELF']);
 $sidebar_role = strtolower($_SESSION['admin_role'] ?? $_SESSION['role'] ?? '');
 
-// 自动判断高亮的黑科技函数
+
 if (!function_exists('isActive')) {
     function isActive($page, $current) { return ($page === $current) ? 'active' : ''; }
     function getStyle($page, $current) { return ($page === $current) ? 'color: #facc15; border-left-color: #facc15;' : ''; }

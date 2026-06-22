@@ -9,7 +9,7 @@ if (!isset($_SESSION['customer_id'])) {
 
 $customer_id = $_SESSION['customer_id'];
 
-// 自動將送達超過7天的訂單標記為完成
+
 $auto_complete_query = "UPDATE orders SET order_status = 'Completed' WHERE order_status = 'Delivered' AND order_date <= DATE_SUB(NOW(), INTERVAL 7 DAY)";
 $conn->query($auto_complete_query);
 
@@ -44,31 +44,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit();
     }
 
-    // === 新增：處理退貨/退款請求 ===
-  // === 升級版：處理退貨/退款請求 (包含圖片上傳) ===
+
     if ($_POST['action'] === 'request_return') {
         $return_order_id = intval($_POST['order_id']);
         $return_detail_id = intval($_POST['order_detail_id']); 
         $return_reason = htmlspecialchars(trim($_POST['return_reason']));
         
-        // 處理圖片上傳邏輯
+
         $image_path = NULL;
         if (isset($_FILES['return_image']) && $_FILES['return_image']['error'] == 0) {
             $target_dir = "uploads/returns/";
-            // 如果資料夾不存在，就自動建立它
+    
             if (!file_exists($target_dir)) {
                 mkdir($target_dir, 0777, true);
             }
             $file_extension = strtolower(pathinfo($_FILES["return_image"]["name"], PATHINFO_EXTENSION));
-            // 產生唯一檔名避免覆蓋
+      
             $new_filename = uniqid("return_") . "." . $file_extension;
             $target_file = $target_dir . $new_filename;
             
-            // 允許的圖片格式
+
             $allowed_types = array("jpg", "jpeg", "png", "gif");
             if (in_array($file_extension, $allowed_types)) {
                 if (move_uploaded_file($_FILES["return_image"]["tmp_name"], $target_file)) {
-                    $image_path = $target_file; // 上傳成功，記錄路徑
+                    $image_path = $target_file;
                 }
             }
         }
@@ -78,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $check_order->bind_param("ii", $return_order_id, $customer_id);
             $check_order->execute();
             if ($check_order->get_result()->num_rows > 0) {
-                // 更新資料庫，包含 return_image
+              
                 $return_stmt = $conn->prepare("UPDATE order_details SET return_status = 'Pending', return_reason = ?, return_image = ? WHERE order_detail_id = ? AND order_id = ?");
                 $return_stmt->bind_param("ssii", $return_reason, $image_path, $return_detail_id, $return_order_id);
                 if ($return_stmt->execute()) {
@@ -115,7 +114,7 @@ $result_orders = $stmt->get_result();
 while ($row = $result_orders->fetch_assoc()) {
     $order_id = $row['order_id'];
     
-    // 改良 SQL 查詢：新增了 packages (pk) 的 Join，這樣買套裝主機也能正確顯示名稱了！
+  
     $query_details = "
         SELECT od.*, p.product_name, sb.build_name, pk.package_name,
                (SELECT COUNT(*) FROM reviews r WHERE r.product_id = od.product_id AND r.customer_id = ?) AS is_reviewed
@@ -132,7 +131,7 @@ while ($row = $result_orders->fetch_assoc()) {
     
     $items = [];
     while ($item = $result_details->fetch_assoc()) {
-        // 動態決定商品名稱 (普通商品 / 自組電腦 / 套裝主機)
+     
         $item_display_name = $item['product_name'];
         if (!$item_display_name) {
             if ($item['build_name']) {
@@ -178,7 +177,7 @@ switch($current_filter) {
     <link rel="stylesheet" href="css/style.css">
 
     <style>
-    /* 動作按鈕區域容器 */
+  
     .item-action-row {
         display: flex;
         justify-content: flex-end;
@@ -189,7 +188,7 @@ switch($current_filter) {
         border-top: 1px dashed rgba(255, 255, 255, 0.1);
     }
 
-    /* 退貨按鈕 (可點擊) */
+  
     .btn-outline-muted {
         background: transparent;
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -209,25 +208,25 @@ switch($current_filter) {
         color: #fff;
     }
 
-    /* 退貨處理中標籤 (不可點擊) */
+    
    .badge-outline-orange {
         background: rgba(235, 94, 40, 0.1); border: 1px solid rgba(235, 94, 40, 0.4); color: #eb5e28;
         padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; user-select: none;
     }
 
-    /* 退款成功 (新增的綠色) */
+    
     .badge-outline-green {
         background: rgba(0, 230, 118, 0.1); border: 1px solid rgba(0, 230, 118, 0.4); color: #00e676;
         padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; user-select: none;
     }
 
-    /* 拒絕退貨 (新增的紅色) */
+   
     .badge-outline-red {
         background: rgba(255, 77, 77, 0.1); border: 1px solid rgba(255, 77, 77, 0.4); color: #ff4d4d;
         padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; user-select: none;
     }
 
-    /* 評價按鈕 */
+   
     .btn-solid-orange {
         background: #eb5e28;
         color: #fff;
@@ -366,7 +365,7 @@ switch($current_filter) {
 
 <div class="order-body" style="display: flex; flex-direction: column; width: 100%;">
     <?php 
-    $all_returned = true; // 用來檢查是不是所有東西都已經退貨了
+    $all_returned = true;
     foreach ($order['items'] as $item): 
         if (empty($item['return_status'])) $all_returned = false;
     ?>
@@ -400,11 +399,11 @@ switch($current_filter) {
 
 <?php if (!empty($item['return_status'])): ?>
                             <?php 
-                                // 預設為處理中 (橘色 + 時鐘圖示)
+                               
                                 $badge_class = 'badge-outline-orange';
                                 $icon_class = 'fa-clock-rotate-left';
                                 
-                                // 判斷狀態改變顏色和圖示
+                              
                                 if ($item['return_status'] == 'Refunded') {
                                     $badge_class = 'badge-outline-green';
                                     $icon_class = 'fa-circle-check'; // 打勾
@@ -458,7 +457,7 @@ switch($current_filter) {
 
     <?php include 'includes/footer.php'; ?>
 
-    <!-- 重新命名表單 -->
+
     <form id="renameForm" method="POST" action="my_orders.php" style="display: none;">
         <input type="hidden" name="action" value="rename_order">
         <input type="hidden" name="order_id" id="renameOrderId">
@@ -519,24 +518,23 @@ switch($current_filter) {
             }
         }
 
-        // === 新增：觸發退貨的 JavaScript ===
-// === 修改：打開自製的退貨視窗 ===
+
         function promptReturn(orderId, orderDetailId) {
-            // 將 ID 塞進視窗裡的隱藏欄位
+       
             document.getElementById('modalOrderId').value = orderId;
             document.getElementById('modalDetailId').value = orderDetailId;
             document.getElementById('modalReason').value = ""; // 清空上次填寫的理由
             
-            // 顯示視窗
+        
             document.getElementById('returnModal').style.display = 'flex';
         }
 
-        // === 新增：關閉退貨視窗 ===
+     
         function closeReturnModal() {
             document.getElementById('returnModal').style.display = 'none';
         }
 
-        // === 新增：觸發整筆退貨的 JavaScript ===
+
  
     </script>
 </body>

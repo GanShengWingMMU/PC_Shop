@@ -3,7 +3,7 @@ session_start();
 if (file_exists('config.php')) { require_once 'config.php'; } 
 else { include 'db_connect.php'; }
 
-// 🌟 统一安全准入
+
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
 if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
     header("Location: admin_login.php"); exit();
@@ -14,7 +14,7 @@ $category_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($category_id <= 0) { header("Location: manage_categories.php"); exit(); }
 
-// 🌟 获取现有分类资料
+
 $stmt = $conn->prepare("SELECT * FROM categories WHERE category_id = ?");
 $stmt->bind_param("i", $category_id);
 $stmt->execute();
@@ -23,7 +23,7 @@ $stmt->close();
 
 if (!$cat) { header("Location: manage_categories.php"); exit(); }
 
-// 🌟 处理表单更新
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_category'])) {
     $name = trim($_POST['category_name']);
     $description = trim($_POST['description']);
@@ -54,7 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_category'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 🌟 高级居中卡片样式，加入了 width:100% 防止被挤压 */
+       
         .form-card { background: rgba(0,0,0,0.4); padding: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); max-width: 800px; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; box-sizing: border-box; }
         .form-control { background: rgba(0,0,0,0.5); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; font-family: 'Inter', sans-serif; transition: 0.3s; }
         .form-control:focus { border-color: #00f2fe; outline: none; box-shadow: 0 0 10px rgba(0,242,254,0.2); }

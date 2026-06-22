@@ -11,18 +11,18 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
 
 $message = "";
 
-// 🌟 1. 捕捉搜索和排序参数
+
 $search = $_GET['search'] ?? '';
 $current_sort = $_GET['sort'] ?? 'default';
 
-$order_by = 'c.category_id ASC'; // 默认按 ID 排序
+$order_by = 'c.category_id ASC'; 
 if ($current_sort === 'az') {
     $order_by = 'c.category_name ASC';
 } elseif ($current_sort === 'za') {
     $order_by = 'c.category_name DESC';
 }
 
-// 🌟 安全防呆刪除邏輯
+
 if (isset($_GET['delete_id'])) {
     $delete_id = intval($_GET['delete_id']);
     
@@ -58,7 +58,7 @@ if (isset($_GET['deleted'])) $message = "<div style='color: #00e676; background:
     <style>
         body { font-family: 'Inter', sans-serif !important; }
 
-        /* 🌟 统一的搜索栏样式 (完全对齐 Products 页面) */
+        
         .search-form-clean {
             display: flex;
             flex-wrap: wrap;

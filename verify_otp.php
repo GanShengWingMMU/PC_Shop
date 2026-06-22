@@ -10,13 +10,13 @@ if (!isset($_SESSION['reset_email'])) {
 $email = $_SESSION['reset_email'];
 $message = "";
 
-// 🛡️ 初始化 OTP 尝试次数
+
 if (!isset($_SESSION['otp_attempts'])) {
     $_SESSION['otp_attempts'] = 0;
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // 🚨 防爆破拦截 (超 5 次直接踢出)
+
     if ($_SESSION['otp_attempts'] >= 5) {
         $message = "SECURITY LOCK: Maximum attempts reached. Please request a new OTP.";
     } else {
@@ -29,7 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $result = $stmt->get_result();
 
         if ($result->num_rows > 0) {
-            unset($_SESSION['otp_attempts']); // 验证成功，清除尝试次数
+            unset($_SESSION['otp_attempts']);
             $_SESSION['otp_verified'] = true;
             header("Location: reset_password.php");
             exit();

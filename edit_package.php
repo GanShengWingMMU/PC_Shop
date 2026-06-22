@@ -13,7 +13,7 @@ $error = "";
 $package_id = isset($_GET['package_id']) ? intval($_GET['package_id']) : 0;
 if ($package_id <= 0) { header("Location: manage_packages.php"); exit(); }
 
-// 1. 抓取套餐資料
+
 $stmt = $conn->prepare("SELECT * FROM packages WHERE package_id = ?");
 $stmt->bind_param("i", $package_id);
 $stmt->execute();
@@ -21,7 +21,7 @@ $pkg = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 if (!$pkg) { header("Location: manage_packages.php"); exit(); }
 
-// 2. 抓取目前包含的零件
+
 $current_components = [];
 $stmt_items = $conn->prepare("SELECT product_id FROM package_items WHERE package_id = ?");
 $stmt_items->bind_param("i", $package_id);
@@ -32,7 +32,7 @@ while($row = $res_items->fetch_assoc()){
 }
 $stmt_items->close();
 
-// 3. 抓取全庫零件字典
+
 $components_by_category = [];
 $sql_prod = "SELECT p.product_id, p.product_name, p.price, c.category_name 
              FROM products p JOIN categories c ON p.category_id = c.category_id 
@@ -42,7 +42,7 @@ while($row = $res_prod->fetch_assoc()){
     $components_by_category[$row['category_name']][] = $row;
 }
 
-// 4. 處理更新邏輯
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $package_name = trim($_POST['package_name']);
     $description = trim($_POST['description']);
@@ -71,13 +71,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     if ($upload_ok && empty($error)) {
-        // 🌟 接收 4 个雷达分数
+    
         $score_gamer = intval($_POST['score_gamer'] ?? 0);
         $score_creator = intval($_POST['score_creator'] ?? 0);
         $score_student = intval($_POST['score_student'] ?? 0);
         $score_enthusiast = intval($_POST['score_enthusiast'] ?? 0);
 
-        // 自動計算更新後的所有選中零件總價格
+   
         $total_price = 0;
         if (isset($_POST['components']) && is_array($_POST['components'])) {
             foreach ($_POST['components'] as $prod_id) {
@@ -93,7 +93,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $conn->begin_transaction();
         try {
-            // 🌟 包含 4 个 score 字段的更新
+       
             $update_query = "UPDATE packages SET package_name=?, description=?, price=?, image_url=?, target_persona=?, stock_status=?, score_gamer=?, score_creator=?, score_student=?, score_enthusiast=? WHERE package_id=?";
             $update_pkg = $conn->prepare($update_query);
             
@@ -121,7 +121,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             $conn->commit();
 
-            // 记录动作到 Security Logs
+            // Security Logs
             $log_admin_id = $_SESSION['admin_id'];
             $log_username = $_SESSION['admin_username'];
             $log_role = $_SESSION['admin_role'];

@@ -3,7 +3,7 @@ ob_start();
 session_start();
 require_once 'config.php';
 
-// 🌟 强力洗消：如果 pc_build 脏了（变成了数字而不是数组），强行重置！
+
 if (!isset($_SESSION['pc_build']) || !is_array($_SESSION['pc_build'])) {
     $_SESSION['pc_build'] = [];
 }
@@ -15,13 +15,10 @@ if ($category_id == 0) {
     exit();
 }
 
-// ==========================================
-// 🚀 1. 严格模式 POST 处理 (完美对接 Builder 水合引擎)
-// ==========================================
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
     $product_id = intval($_POST['product_id']);
     
-    // 🌟 CTO 修复：只查询和存储 ID，绝对不存多维数组！
+
     $stmt = $conn->prepare("SELECT product_id FROM products WHERE product_id = ? AND category_id = ? AND stock_quantity > 0 AND status = 'Available'");
     $stmt->bind_param("ii", $product_id, $category_id);
     $stmt->execute();
@@ -39,25 +36,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_to_build'])) {
     exit();
 }
 
-// ==========================================
-// 2. 接收来自 Builder 的智能锁定参数
-// ==========================================
+
 $socket_filter = isset($_GET['socket']) ? trim($_GET['socket']) : '';
 $min_wattage = isset($_GET['min_w']) ? intval($_GET['min_w']) : 0;
 $ram_type_req = isset($_GET['ram_type']) ? trim($_GET['ram_type']) : ''; 
 
 $cat_name = "Component";
 $stmt_cat = $conn->prepare("SELECT category_name FROM categories WHERE category_id = ?");
-$stmt_cat->bind_param("i", $category_id); // 🌟 CTO 修复：废除 PDO 数组绑定
+$stmt_cat->bind_param("i", $category_id);
 $stmt_cat->execute();
 if ($row_cat = $stmt_cat->get_result()->fetch_assoc()) {
     $cat_name = $row_cat['category_name']; 
 }
 $stmt_cat->close();
 
-// ==========================================
-// 🛡️ 3. 动态预处理 SQL 构建器 (完全兼容旧版 PHP)
-// ==========================================
+
 $sql = "SELECT * FROM products WHERE category_id = ? AND stock_quantity > 0 AND status = 'Available'";
 $params = [$category_id]; 
 $types = "i"; 
@@ -85,7 +78,7 @@ if ($min_wattage > 0 && $category_id == 6) {
 }
 
 $stmt_products = $conn->prepare($sql);
-$stmt_products->bind_param($types, ...$params); // 🌟 CTO 修复：使用展开运算符完美兼容
+$stmt_products->bind_param($types, ...$params); 
 $stmt_products->execute();
 $result = $stmt_products->get_result();
 
@@ -138,7 +131,7 @@ include 'includes/header.php';
                 <div class="product-card">
                     
                     <?php 
-                        // 🌟 CTO 终极智能图片路径处理引擎 (全面兼容 Base64)
+                  
                         $raw_img = $row['image_url'] ?? '';
                         if (empty($raw_img) || strpos($raw_img, 'placeholder') !== false) {
                             $img_src = 'image/placeholder.jpg';

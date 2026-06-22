@@ -2,7 +2,6 @@
 session_start();
 require_once 'config.php';
 
-// 確保顧客只能看自己的收據
 if (!isset($_SESSION['customer_id']) || !isset($_GET['id'])) {
     die("Access Denied.");
 }
@@ -10,7 +9,6 @@ if (!isset($_SESSION['customer_id']) || !isset($_GET['id'])) {
 $customer_id = $_SESSION['customer_id'];
 $order_id = intval($_GET['id']);
 
-// 抓取訂單主檔與顧客資料
 $query = "SELECT o.*, c.username, c.email 
           FROM orders o 
           JOIN customers c ON o.customer_id = c.customer_id 
@@ -24,7 +22,7 @@ if (!$order) {
     die("Order not found or access denied.");
 }
 
-// 抓取訂單明細
+
 $query_details = "
     SELECT od.*, p.product_name, sb.build_name 
     FROM order_details od
@@ -62,7 +60,7 @@ while ($item = $details_result->fetch_assoc()) {
             color: #000;
         }
 
-                /* 基礎發票排版 (白底黑字最適合列印) */
+              
         body { font-family: 'Arial', sans-serif; background: #fff; color: #000; margin: 0; padding: 20px; }
         .invoice-container { max-width: 800px; margin: 0 auto; padding: 40px; border: 1px solid #ddd; }
         
@@ -84,15 +82,15 @@ while ($item = $details_result->fetch_assoc()) {
         .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
         .totals-row.grand-total { font-size: 1.5rem; font-weight: bold; color: #000; border-bottom: none; border-top: 2px solid #000; padding-top: 15px; }
         
-        /* 網頁上的功能按鈕區 */
+        
         .action-buttons { text-align: center; margin-bottom: 20px; }
         .btn { padding: 10px 20px; background: #000; color: #fff; text-decoration: none; border: none; cursor: pointer; font-size: 1rem; border-radius: 4px; }
         
-        /* 🌟 魔法在此：當進入「列印/PDF存檔」模式時，隱藏不要印出來的東西，消除邊界 */
+      
         @media print {
             body { padding: 0; }
             .invoice-container { border: none; padding: 0; max-width: 100%; }
-            .action-buttons { display: none !important; } /* 列印時隱藏按鈕 */
+            .action-buttons { display: none !important; } 
         }</style>
 <head>
     <meta charset="UTF-8">
@@ -169,7 +167,6 @@ while ($item = $details_result->fetch_assoc()) {
             </div>
             
             <?php 
-            // 🌟 财务逻辑修复：将总折扣拆分为“金币折扣”和“优惠券折扣”
             $coin_discount = $order['coins_used'] / 10;
             $promo_discount = $order['discount_amount'] - $coin_discount;
             ?>

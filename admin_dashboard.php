@@ -3,14 +3,13 @@ session_start();
 if (file_exists('config.php')) { require_once 'config.php'; } 
 else { include 'db_connect.php'; }
 
-// 🌟 統一安全准入
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
 if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
     header("Location: admin_login.php");
     exit();
 }
 
-// 實時財務加總 (排除 Cancelled 訂單)
+//Real-time financial summaries (excluding cancelled orders)
 $res_sales = $conn->query("SELECT SUM(total_amount) as total FROM orders WHERE order_status != 'Cancelled'");
 $total_sales = $res_sales->fetch_assoc()['total'] ?? 0;
 
@@ -23,7 +22,7 @@ $total_users = $res_users->fetch_assoc()['total'] ?? 0;
 $res_pending = $conn->query("SELECT COUNT(*) as total FROM orders WHERE order_status = 'Pending'");
 $total_pending = $res_pending->fetch_assoc()['total'] ?? 0;
 
-// 🌟 ====== 通知中心数据 ======
+// Notification data for pending orders
 $recent_pending_orders = [];
 $sql_notif = "SELECT o.order_id, c.username, o.order_date 
               FROM orders o JOIN customers c ON o.customer_id = c.customer_id 
@@ -36,7 +35,6 @@ if($res_notif && $res_notif->num_rows > 0) {
     }
 }
 
-// 🌟 ====== 卡片底部小波浪图动态数据 ======
 $dates = [];
 for ($i = 6; $i >= 0; $i--) { $dates[] = date('Y-m-d', strtotime("-$i days")); }
 
@@ -60,7 +58,7 @@ $res = $conn->query("SELECT DATE(order_date) as dt, COUNT(*) as cnt FROM orders 
 if($res) { while($r = $res->fetch_assoc()) { if(isset($pen_data[$r['dt']])) $pen_data[$r['dt']] = $r['cnt']; } }
 $pen_chart_data = implode(',', array_values($pen_data));
 
-// 🌟 ====== 弹窗大图表动态数据 ======
+
 $m_revenue = array_fill(1, 12, 0);
 $m_orders = array_fill(1, 12, 0);
 $m_users = array_fill(1, 12, 0);
@@ -116,7 +114,7 @@ $js_m_pen = implode(',', array_values($m_pending));
             display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
             align-items: center; justify-content: center;
-            pointer-events: none; /* 允许鼠标穿透背景，触发卡片的hover */
+            pointer-events: none; 
         }
         .cyber-modal-content {
             background: rgba(11,11,18,0.95); border: 1px solid #333; border-radius: 12px;
@@ -124,10 +122,10 @@ $js_m_pen = implode(',', array_values($m_pending));
             box-shadow: 0 0 40px rgba(0,0,0,1);
             animation: modalFadeIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transition: border-color 0.3s, box-shadow 0.3s;
-            pointer-events: auto; /* 图表区域恢复鼠标交互 */
+            pointer-events: auto;
         }
         .close-modal {
-            display: none; /* Hover触发不再需要手动关闭按钮 */
+            display: none; /* Hover no need to clode the window*/
         }
         @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         
@@ -428,7 +426,7 @@ $js_m_pen = implode(',', array_values($m_pending));
     </div>
 
     <script>
-        // --- 实时跳动的赛博时钟 ---
+        // Cyberclock real-time update 
         function updateCyberClock() {
             var now = new Date();
             var h = String(now.getHours()).padStart(2, '0');
@@ -439,7 +437,7 @@ $js_m_pen = implode(',', array_values($m_pending));
         setInterval(updateCyberClock, 1000);
         updateCyberClock(); 
 
-        // --- 通知下拉菜单逻辑 ---
+    
         function toggleNotif() {
             var dropdown = document.getElementById("notifDropdown");
             if (dropdown.style.display === "none" || dropdown.style.display === "") {
@@ -449,16 +447,16 @@ $js_m_pen = implode(',', array_values($m_pending));
             }
         }
 
-        // --- Hover 触发延迟防闪烁逻辑 ---
+        
         let hoverTimeout;
 
         function handleMouseEnter(type) {
-            clearHoverTimeout(); // 马上清除关闭倒计时
-            openDetailModal(type); // 呼出图表
+            clearHoverTimeout(); 
+            openDetailModal(type); 
         }
 
         function handleMouseLeave() {
-            // 延迟 200 毫秒关闭，避免卡片移向图表时闪退
+            
             hoverTimeout = setTimeout(function() {
                 closeDetailModal();
             }, 200); 
@@ -470,7 +468,7 @@ $js_m_pen = implode(',', array_values($m_pending));
             }
         }
 
-        // --- 1. 卡片底部的小动态 Sparkline 图表 ---
+        
         var commonOptions = {
             chart: { type: 'area', height: 80, sparkline: { enabled: true } },
             stroke: { curve: 'smooth', width: 2 },
@@ -483,7 +481,7 @@ $js_m_pen = implode(',', array_values($m_pending));
         new ApexCharts(document.querySelector("#spark3"), { ...commonOptions, series: [{ data: [<?php echo $usr_chart_data; ?>] }], colors: ['#ffd700'] }).render();
         new ApexCharts(document.querySelector("#spark4"), { ...commonOptions, series: [{ data: [<?php echo $pen_chart_data; ?>] }], colors: ['#ff4d4d'] }).render();
 
-        // --- 2. 强大的动态弹窗 (Modal) 与大图表逻辑 ---
+        
         var modal = document.getElementById("detailModal");
         var modalBox = document.getElementById("modalBox");
         var detailChart = null; 
@@ -576,7 +574,7 @@ $js_m_pen = implode(',', array_values($m_pending));
             modal.style.display = "none";
         }
 
-        // --- 仅保留通知下拉的外部点击关闭逻辑 ---
+
         window.onclick = function(event) {
             if (!event.target.closest('.notification-wrapper')) {
                 var dropdown = document.getElementById("notifDropdown");

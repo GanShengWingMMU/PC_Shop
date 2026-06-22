@@ -7,6 +7,14 @@ if (isset($_SESSION['customer_id'])) { header("Location: index.php"); exit(); }
 $error_msg = "";
 require_once 'keys.php'; 
 
+<<<<<<< HEAD
+
+if (empty($_SESSION['oauth_state'])) {
+    $_SESSION['oauth_state'] = bin2hex(random_bytes(32));
+}
+$oauth_state = $_SESSION['oauth_state'];
+=======
+>>>>>>> 60cb031b9fd9b8794264a33611c770d45164e9b3
 
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -15,7 +23,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
 
-    // 🛡️ 严格验证逻辑
+
     if (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username)) {
         $error_msg = "Username must be 3-20 characters long and contain only letters, numbers, and underscores.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -85,7 +93,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .error-msg { color: #ff4d4d; background: rgba(255,77,77,0.1); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,77,77,0.3); font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; text-align: center; }
 
-        /* 🌟 新增：密码条件打勾面板样式 */
         .pwd-checklist { list-style: none; padding: 0; margin: 10px 0 10px 0; font-size: 0.75rem; color: #64748b; font-family: 'JetBrains Mono', monospace; display: none; }
         .pwd-checklist li { margin-bottom: 5px; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
         .pwd-checklist li.valid { color: #00e676; }
@@ -152,7 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 眼睛图标切换逻辑
+
     const toggleIcons = document.querySelectorAll('.toggle-password');
     toggleIcons.forEach(icon => {
         icon.addEventListener('click', function() {
@@ -163,7 +170,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 🌟 打勾面板 + 进度条 双重联动核心逻辑
     document.getElementById('reg_pass').addEventListener('input', function() {
         let val = this.value; 
         let score = 0;
@@ -171,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const checklist = document.getElementById('pwd-checklist');
         const bar = document.getElementById('strength-bar-fill');
         
-        // 面板显隐逻辑
+  
         if(val.length > 0) { checklist.style.display = 'block'; } 
         else { checklist.style.display = 'none'; bar.style.width = '0%'; return; }
 
@@ -183,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const tick = '<i class="fas fa-check-circle"></i> ';
         const cross = '<i class="fas fa-times-circle"></i> ';
 
-        // 验证各条件并叠加分数
+  
         if(val.length >= 12) { score += 40; reqLen.className = 'valid'; reqLen.innerHTML = tick + '12+ characters'; }
         else { reqLen.className = ''; reqLen.innerHTML = cross + '12+ characters'; }
 
@@ -196,11 +202,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if(/[\W]/.test(val)) { score += 20; reqSym.className = 'valid'; reqSym.innerHTML = tick + '1 Symbol'; }
         else { reqSym.className = ''; reqSym.innerHTML = cross + '1 Symbol'; }
 
-        // 进度条渲染逻辑
+
         bar.style.width = score + '%';
-        if(score < 50) bar.style.background = '#ff4d4d'; // 红
-        else if(score < 100) bar.style.background = '#facc15'; // 黄
-        else bar.style.background = '#00e676'; // 绿
+        if(score < 50) bar.style.background = '#ff4d4d'; 
+        else if(score < 100) bar.style.background = '#facc15'; 
+        else bar.style.background = '#00e676'; 
     });
 });
 </script>

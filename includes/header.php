@@ -1,13 +1,9 @@
 <?php 
-// 1. 开启输出缓冲，防止 Header 跳转报错
 ob_start(); 
-
-// 2. 智能开启 Session (如果上面没开过，这里才开，完美解决冲突！)
 if (session_status() === PHP_SESSION_NONE) {
     session_start(); 
 }
 
-// 3. 引入数据库
 require_once 'config.php'; 
 
 $header_wallet_balance = 0.00;
@@ -24,24 +20,20 @@ if (isset($_SESSION['customer_id'])) {
         $header_wallet_balance = $header_row['wallet_balance'];
         $current_tier = $header_row['membership_tier'];
         $vip_expiry = $header_row['vip_expiry_date'];
-        
-// ==========================================
-        // 🚨 VIP 到期巡邏 & 自動扣款系統 (Auto-Renew Engine)
-        // ==========================================
         if ($current_tier === 'VIP' && $vip_expiry !== null) {
             $now = time();
             $expiry_time = strtotime($vip_expiry);
             
-            // 如果過期了！
+
             if ($now > $expiry_time) {
                 $renew_cost = 29.90;
                 $payment_success = false;
                 $auto_renew_enabled = $header_row['auto_renew'];
 
-                // 檢查是否有開啟自動續約
+               
                 if ($auto_renew_enabled == 1) {
                     
-                    // 💸 策略 1：嘗試從 Default Credit Card 扣款
+                   
                     $card_stmt = $conn->prepare("
                         SELECT b.id, b.balance 
                         FROM saved_cards sc 
@@ -54,33 +46,33 @@ if (isset($_SESSION['customer_id'])) {
                     
                     if ($card_row = $card_res->fetch_assoc()) {
                         if ($card_row['balance'] >= $renew_cost) {
-                            // 銀行餘額足夠，直接扣銀行！
+                            
                             $conn->query("UPDATE bank SET balance = balance - $renew_cost WHERE id = " . $card_row['id']);
                             $payment_success = true;
                         }
                     }
                     $card_stmt->close();
 
-                    // 💸 策略 2：如果信用卡失敗 (或沒綁定)，退而求其次扣 E-Wallet
+                    
                     if (!$payment_success && $header_wallet_balance >= $renew_cost) {
                         $conn->query("UPDATE customers SET wallet_balance = wallet_balance - $renew_cost WHERE customer_id = $header_user_id");
                         $conn->query("INSERT INTO wallet_transactions (customer_id, type, amount) VALUES ($header_user_id, 'Auto-Renew Payment', -$renew_cost)");
                         $payment_success = true;
                     }
 
-                    // ✅ 判定續約結果
+                    
                     if ($payment_success) {
-                        // 扣款成功：延長 30 天！
+                        
                         $new_expiry = date('Y-m-d H:i:s', strtotime('+30 days', $expiry_time));
                         $conn->query("UPDATE customers SET vip_expiry_date = '$new_expiry' WHERE customer_id = $header_user_id");
                     } else {
-                        // 扣款失敗 (沒錢或沒綁卡)：強制降級並關閉自動續約！
+                        
                         $conn->query("UPDATE customers SET membership_tier = 'Standard', vip_expiry_date = NULL, auto_renew = 0 WHERE customer_id = $header_user_id");
                         $current_tier = 'Standard';
                     }
                     
                 } else {
-                    // 沒有開啟自動續約：直接降級
+                    
                     $conn->query("UPDATE customers SET membership_tier = 'Standard', vip_expiry_date = NULL WHERE customer_id = $header_user_id");
                     $current_tier = 'Standard';
                 }
@@ -90,7 +82,7 @@ if (isset($_SESSION['customer_id'])) {
     $header_stmt->close();
 }
 
-// 🌟 修正：從資料庫即時計算購物車內商品總數
+
 $cart_item_count = 0;
 if (isset($_SESSION['customer_id'])) {
     $count_stmt = $conn->prepare("SELECT SUM(quantity) AS total_items FROM shopping_cart WHERE customer_id = ?");
@@ -98,7 +90,7 @@ if (isset($_SESSION['customer_id'])) {
     $count_stmt->execute();
     $count_res = $count_stmt->get_result();
     if ($count_row = $count_res->fetch_assoc()) {
-        $cart_item_count = $count_row['total_items'] ?? 0; // 如果沒有商品就顯示 0
+        $cart_item_count = $count_row['total_items'] ?? 0; 
     }
     $count_stmt->close();
 }
@@ -160,7 +152,6 @@ if (isset($_SESSION['customer_id'])) {
     </div>
     
     <?php 
-        // 自动侦测当前所在页面，用于点亮底部线条
         $current_page = basename($_SERVER['PHP_SELF']); 
     ?>
     <div class="nav-links">
@@ -170,18 +161,18 @@ if (isset($_SESSION['customer_id'])) {
         <a href="builder.php" class="<?php echo ($current_page == 'builder.php') ? 'active' : ''; ?>"><i class="fas fa-tools"></i> PC Builder</a>
         <a href="community.php" class="<?php echo ($current_page == 'community.php') ? 'active' : ''; ?>"><i class="fas fa-network-wired"></i> Neural Network</a>
         
-        <!-- 🌟 新增：独立滑动的能量条 -->
+       
         <div class="nav-indicator"></div>
     </div>
 
     <div class="nav-actions" style="display: flex; align-items: center;">
         
-        <!-- 🌟 1. 👑 ELITE VIP 按鈕 -->
+     
         <a href="membership.php" style="color: #ffd700; font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 8px; padding: 8px 15px; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.3); border-radius: 20px; transition: 0.3s; margin-right: 15px;" onmouseover="this.style.boxShadow='0 0 15px rgba(255, 215, 0, 0.5)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
             <i class="fa-solid fa-crown"></i> ELITE VIP
         </a>
 
-        <!-- 🌟 2. 👤 使用者名稱與下拉選單 -->
+        
         <?php if(isset($_SESSION['customer_id'])): ?>
         <div class="profile-dropdown" style="position: relative; display: inline-block; margin-right: 15px;">
             <a href="profile.php" style="color: #00f2fe; text-decoration: none; padding-bottom: 5px;">
@@ -205,7 +196,7 @@ if (isset($_SESSION['customer_id'])) {
             <a href="register.php" style="text-decoration: none; margin-right: 15px;"><i class="fas fa-user-plus"></i> Register</a>
         <?php endif; ?>
 
-        <!-- 🌟 3. 🛒 購物車按鈕 -->
+        
 <a href="cart.php" style="background: #00f2fe; color: #000; padding: 8px 20px; border-radius: 30px; font-weight: 900; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4); transition: 0.3s;" onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 25px rgba(0, 242, 254, 0.7)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 15px rgba(0, 242, 254, 0.4)';">
     <i class="fa-solid fa-cart-shopping"></i> Cart (<?php echo $cart_item_count; ?>)
 </a>
@@ -227,15 +218,15 @@ document.addEventListener('DOMContentLoaded', () => {
         indicator.style.width = linkRect.width + 'px';
     }
 
-    // 1. 页面加载完毕后：瞬间就位，没有任何动画！
+    
     if (activeLink) {
-        indicator.style.transition = 'none'; // 关键：关闭动画
-        setIndicator(activeLink);            // 瞬间定位
-        indicator.offsetHeight;              // 强制浏览器刷新渲染
-        indicator.style.transition = '';     // 恢复动画（为后面的点击滑动做准备）
+        indicator.style.transition = 'none'; 
+        setIndicator(activeLink);            
+        indicator.offsetHeight;             
+        indicator.style.transition = '';   
     }
 
-    // 2. 点击事件拦截：丝滑划过
+    
     navLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             const targetUrl = this.getAttribute('href');
@@ -246,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             navLinks.forEach(l => l.classList.remove('active'));
             this.classList.add('active');
 
-            setIndicator(this); // 触发滑动
+            setIndicator(this); 
             
             setTimeout(() => {
                 window.location.href = targetUrl;

@@ -10,7 +10,7 @@ if (!isset($_SESSION['customer_id'])) {
 
 $customer_id = $_SESSION['customer_id'];
 
-// 🌟 抓取會員狀態、到期日與自動續約狀態
+
 $stmt = $conn->prepare("SELECT membership_tier, reward_coins, wallet_balance, vip_expiry_date, auto_renew FROM customers WHERE customer_id = ?");
 $stmt->bind_param("i", $customer_id);
 $stmt->execute();
@@ -18,12 +18,12 @@ $user_data = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 $current_tier = $user_data['membership_tier'];
-$is_first_time = empty($user_data['vip_expiry_date']); // 🌟 判断是否曾经开通过 VIP
+$is_first_time = empty($user_data['vip_expiry_date']); 
 $subscription_fee = 29.90;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
-    // 🎯 情況 A：加入/續訂 VIP
+  
     if (isset($_POST['join_vip'])) {
         if ($current_tier === 'VIP') {
             $_SESSION['error_msg'] = "SECURITY ALERT: You are already an ELITE member.";
@@ -31,14 +31,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
 
-        // 🌟 修复：如果不是首次开通，则必须从钱包扣除 RM 29.90
+    
         if (!$is_first_time) {
             if ($user_data['wallet_balance'] < $subscription_fee) {
                 $_SESSION['error_msg'] = "Insufficient wallet balance. Please top up RM " . number_format($subscription_fee, 2) . " to renew ELITE.";
                 header("Location: membership.php");
                 exit();
             }
-            // 扣除余额并记录交易
+
             $new_balance = $user_data['wallet_balance'] - $subscription_fee;
             $deduct_stmt = $conn->prepare("UPDATE customers SET wallet_balance = ? WHERE customer_id = ?");
             $deduct_stmt->bind_param("di", $new_balance, $customer_id);
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $expiry_date = date('Y-m-d H:i:s', strtotime('+30 days'));
-        // 🌟 终极防薅羊毛：首月免费试用(白嫖)不送金币，只有扣除钱包余额的真实续费/开通才送 500 金币！
+
         $coins_to_add = (!$is_first_time) ? 500 : 0;
 
         $update_sql = "UPDATE customers 
@@ -76,9 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
     
-    // 🎯 情況 B：切換自動續約 (Toggle Auto-Renew)
+
     if (isset($_POST['toggle_auto_renew'])) {
-        // 🌟 邏輯修復：只有 VIP 才能切換自動續約
+   
         if ($current_tier !== 'VIP') {
             $_SESSION['error_msg'] = "Only active ELITE members can toggle auto-renew.";
             header("Location: membership.php");
@@ -119,7 +119,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             max-width: 1200px; margin: 40px auto; padding: 0 20px;
         }
 
-        /* 🌟 1. 頂部狀態橫幅 (Hero Banner) */
         .hero-banner {
             background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(0,0,0,0.8) 100%), url('https://via.placeholder.com/1200x300/111/111') center/cover;
             border: 1px solid rgba(255, 215, 0, 0.3);
@@ -136,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
         }
         
-        /* 🌟 2. 常駐福利區塊 (Benefits Grid) */
+     
         .section-title {
             color: #fff; font-size: 1.5rem; font-weight: bold; margin-bottom: 20px;
             border-left: 4px solid #ffd700; padding-left: 10px;
@@ -157,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex; justify-content: center; align-items: center; font-size: 1.5rem; flex-shrink: 0;
         }
 
-        /* 🌟 3. 每月優惠券票根 (Shopee Style Vouchers) */
+  
         .voucher-grid {
             display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px;
         }
@@ -287,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
     <?php
-    // 🌟 修正：改用 discount_value 和 discount_type 查詢
+    
     $promo_stmt = $conn->prepare("SELECT * FROM promo_codes WHERE is_vip_only = 1 AND status = 'Active' ORDER BY discount_value DESC");
     $promo_stmt->execute();
     $promo_res = $promo_stmt->get_result();
@@ -330,7 +329,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <script>
-// 🌟 複製代碼的小功能
+
 function copyPromoCode(code, btn) {
     navigator.clipboard.writeText(code).then(() => {
         const originalText = btn.innerHTML;

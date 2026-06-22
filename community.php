@@ -9,7 +9,7 @@ if (!isset($_SESSION['customer_id'])) {
 }
 $customer_id = $_SESSION['customer_id'];
 $sys_msg = $sys_err = "";
-$form_open = false; // 控制发帖面板是否保持打开
+$form_open = false; 
 
 if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['post_id'])) {
     $del_post_id = intval($_GET['post_id']);
@@ -48,12 +48,12 @@ if (isset($_GET['action']) && $_GET['action'] == 'like' && isset($_GET['post_id'
     exit();
 }
 
-// ==========================================
-// 🌟 发帖处理区域
-// ==========================================
+
+// Post Submission Logic
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
     
-    // 🚨 MUTE 拦截器：检测用户是否被禁言
+    // Check for status MUTE 
     $check_cid = intval($_SESSION['customer_id']);
     $mute_check = $conn->query("SELECT account_status FROM customers WHERE customer_id = $check_cid");
     if ($mute_check && $mute_check->num_rows > 0) {
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
                 alert('🚫 SYSTEM ALERT: You have been MUTED by an Admin. You can still browse and buy PCs, but you cannot post or comment.');
                 window.history.back();
             </script>";
-            exit(); // 🛑 触发禁言，立即停止后续发帖逻辑！
+            exit(); // 
         }
     }
 
@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
     $content = htmlspecialchars(trim($_POST['content'])); 
     $post_type = isset($_POST['post_type']) ? $_POST['post_type'] : 'Discussion';
     $pc_build_id = null;
-    $form_open = true; // 发帖动作触发，面板保持开启以防报错
+    $form_open = true; 
 
     if ($post_type == 'Showcase' && !empty($_POST['pc_build_id'])) {
         $submitted_build_id = intval($_POST['pc_build_id']);
@@ -116,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_post'])) {
         $stmt->bind_param("iissss", $customer_id, $pc_build_id, $title, $content, $post_type, $images_json);
         if ($stmt->execute()) {
             $sys_msg = "Post published successfully!";
-            $form_open = false; // 成功后关闭面板
+            $form_open = false; 
         } else {
             $sys_err = "System error: Failed to publish post.";
         }
@@ -555,7 +555,7 @@ function getRankBadge($coins, $tier = 'Basic') {
 <?php include 'includes/footer.php'; ?>
 
 <script>
-    // 发帖面板展开控制
+   
     function togglePostForm() {
         const form = document.getElementById('post-form');
         form.style.display = form.style.display === 'block' ? 'none' : 'block';
@@ -564,14 +564,14 @@ function getRankBadge($coins, $tier = 'Basic') {
         }
     }
 
-    // 🌟 发帖分类与配置单卡片显示控制
+  
     function selectPostType(cardElement, typeValue) {
-        // 清除选中样式
+        
         document.querySelectorAll('.type-card').forEach(card => {
             card.classList.remove('selected');
             card.querySelector('input[type="radio"]').checked = false;
         });
-        // 激活当前选项
+      
         cardElement.classList.add('selected');
         cardElement.querySelector('input[type="radio"]').checked = true;
 
@@ -589,7 +589,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         }
     }
 
-    // 图片上传预览
+    
     function previewImages(event) {
         const container = document.getElementById('image-preview-container');
         container.innerHTML = ''; 
@@ -608,7 +608,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         }
     }
 
-    // Lightbox 相册引擎
+    
     let currentGallery = [];
     let currentIndex = 0;
 
@@ -636,7 +636,7 @@ function getRankBadge($coins, $tier = 'Basic') {
         document.getElementById('lightbox-img').src = currentGallery[currentIndex];
     }
     
-    // 初始化检查 (如果在提交失败后，保持展示配置单)
+
     window.onload = function() {
         const checkedType = document.querySelector('input[name="post_type"]:checked');
         if(checkedType && checkedType.value === 'Showcase') {
