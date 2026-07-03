@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const input = this.previousElementSibling;
             input.type = input.type === 'password' ? 'text' : 'password';
             this.classList.toggle('fa-eye-slash');
-            this.style.color = input.type === 'password' ? '#00f2fe' : '#64748b';
+            this.style.color = input.type === 'password' ? '#64748b' : '#00f2fe';
         });
     });
 
