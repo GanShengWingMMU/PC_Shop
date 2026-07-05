@@ -87,7 +87,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             $insert_pkg->bind_param("ssdsssiiii", $package_name, $description, $total_price, $image_url, $target_persona, $stock_status, $score_gamer, $score_creator, $score_student, $score_enthusiast);
             $insert_pkg->execute();
-            $new_package_id = $insert_pkg->insert_id; // 獲取剛剛新增的 Package ID
+            $new_package_id = $insert_pkg->insert_id;
             $insert_pkg->close();
 
          
