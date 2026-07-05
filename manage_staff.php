@@ -6,9 +6,51 @@ else { include 'db_connect.php'; }
 $current_role = $_SESSION['admin_role'] ?? $_SESSION['role'] ?? '';
 $current_admin_id = $_SESSION['admin_id'] ?? 0;
 
-
 if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower($current_role) !== 'superadmin')) {
     header("Location: admin_dashboard.php");
+    exit();
+}
+
+
+if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
+    if (strtolower($current_role) !== 'superadmin') {
+        die("<div style='background:#000; color:#ff4d4d; padding:50px; text-align:center; font-family:monospace;'>ACCESS DENIED: ALPHA CLEARANCE REQUIRED TO TERMINATE PERSONNEL.</div>");
+    }
+
+    $del_id = intval($_GET['id']);
+    
+
+    if ($del_id != $current_admin_id) {
+        $stmt_get = $conn->prepare("SELECT username FROM admins WHERE admin_id = ?");
+        $stmt_get->bind_param("i", $del_id);
+        $stmt_get->execute();
+        $res = $stmt_get->get_result();
+        
+        if ($res->num_rows > 0) {
+            $staff = $res->fetch_assoc();
+            $deleted_username = $staff['username'];
+
+   
+            $stmt_del = $conn->prepare("DELETE FROM admins WHERE admin_id = ?");
+            $stmt_del->bind_param("i", $del_id);
+            
+            if ($stmt_del->execute()) {
+                $log_username = $_SESSION['admin_username'] ?? 'UnknownAdmin';
+                $ip_address = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+                $action_event = "Terminated Staff Personnel: " . $deleted_username;
+
+                $log_stmt = $conn->prepare("INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES (?, ?, ?, ?, ?)");
+                $log_stmt->bind_param("issss", $current_admin_id, $log_username, $current_role, $action_event, $ip_address);
+                $log_stmt->execute();
+                $log_stmt->close();
+            }
+            $stmt_del->close();
+        }
+        $stmt_get->close();
+    }
+    
+
+    header("Location: manage_staff.php?msg=deleted");
     exit();
 }
 
@@ -85,7 +127,8 @@ if($msg == 'deleted') $alert = "<div style='background:rgba(255,77,77,0.1); colo
                         <td style="text-align: right;">
                             <a href="edit_staff.php?id=<?php echo $row['admin_id']; ?>" style="background:rgba(0,242,254,0.1); color:#00f2fe; border:1px solid rgba(0,242,254,0.3); padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; margin-right:5px; transition:0.3s;"><i class="fas fa-edit"></i> Edit</a>
                             <?php if (!$is_self): ?>
-                                <a href="delete_staff.php?id=<?php echo $row['admin_id']; ?>" onclick="return confirm('Terminate this personnel?');" style="background:rgba(255,77,77,0.1); color:#ff4d4d; border:1px solid rgba(255,77,77,0.3); padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; transition:0.3s;"><i class="fas fa-trash-alt"></i></a>
+                              
+                                <a href="manage_staff.php?action=delete&id=<?php echo $row['admin_id']; ?>" onclick="return confirm('Terminate this personnel?');" style="background:rgba(255,77,77,0.1); color:#ff4d4d; border:1px solid rgba(255,77,77,0.3); padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; transition:0.3s;"><i class="fas fa-trash-alt"></i></a>
                             <?php endif; ?>
                         </td>
                     </tr>
