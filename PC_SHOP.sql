@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 06, 2026 at 05:42 PM
+-- Generation Time: Jul 06, 2026 at 05:48 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -292,7 +292,8 @@ INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_even
 (222, 1, 'Alvis', 'SuperAdmin', 'Censored Post ID: 16', '', '2026-07-06 23:25:34'),
 (223, 1, 'Alvis', 'SuperAdmin', 'Muted User ID: 8', '', '2026-07-06 23:25:37'),
 (224, 1, 'Alvis', 'SuperAdmin', 'Unmuted User ID: 8', '', '2026-07-06 23:25:58'),
-(225, 1, 'Alvis', 'SuperAdmin', 'Purged Forum Post ID: 16', '::1', '2026-07-06 23:26:32');
+(225, 1, 'Alvis', 'SuperAdmin', 'Purged Forum Post ID: 16', '::1', '2026-07-06 23:26:32'),
+(226, 1, 'Alvis', 'SuperAdmin', 'Deactivated Promo Code ID: 18', '::1', '2026-07-06 23:48:33');
 
 -- --------------------------------------------------------
 
@@ -1259,12 +1260,7 @@ INSERT INTO `promo_codes` (`promo_id`, `code_name`, `target_category`, `is_vip_o
 (5, 'ELITEGAMER', 'Packages', 1, 'Active', '2026-05-07 13:37:15', 150.00, 'Fixed', 3000.00, 0.00),
 (6, 'UPGRADE5', 'Components', 0, 'Active', '2026-05-07 13:37:15', 5.00, 'Percentage', 50.00, 20.00),
 (7, 'VIPPARTS12', 'Components', 1, 'Active', '2026-05-07 13:37:15', 12.00, 'Percentage', 200.00, 100.00),
-(8, 'EXPIRED50', 'All', 0, 'Inactive', '2026-05-07 13:37:15', 0.00, 'Percentage', 0.00, 0.00),
-(12, 'FATHTERDAY2026', 'All', 0, 'Active', '2026-06-18 20:37:57', 10.00, 'Percentage', 500.00, 0.00),
-(14, 'NEWATTEND', 'All', 1, 'Inactive', '2026-06-18 20:44:53', 10.00, 'Percentage', 0.00, 0.00),
-(15, 'NEWYEAR2024', 'All', 0, 'Inactive', '2026-07-06 15:56:10', 100000.00, 'Percentage', 50.00, 0.00),
-(16, 'NEWUSER2024', 'All', 0, 'Inactive', '2026-07-06 22:32:16', 20.00, 'Percentage', 50.00, 100.00),
-(17, 'TRY', 'All', 0, 'Inactive', '2026-07-06 22:36:34', 500.00, 'Fixed', 50.00, 0.00);
+(18, 'NEWYEAR2025', 'All', 0, 'Inactive', '2026-07-06 23:48:30', 10.00, 'Percentage', 100.00, 250.00);
 
 -- --------------------------------------------------------
 
@@ -1677,7 +1673,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `admin_logs`
 --
 ALTER TABLE `admin_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=226;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=227;
 
 --
 -- AUTO_INCREMENT for table `bank`
@@ -1779,7 +1775,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `promo_codes`
 --
 ALTER TABLE `promo_codes`
-  MODIFY `promo_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `promo_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `reviews`
