@@ -6,23 +6,20 @@ if (file_exists('config.php')) {
     include 'db_connect.php';
 }
 
-
 if (isset($_SESSION['admin_id']) || isset($_SESSION['user_id'])) {
     header("Location: admin_dashboard.php");
     exit();
 }
 
 $error = '';
-
 if (!isset($_SESSION['admin_login_attempts'])) { 
     $_SESSION['admin_login_attempts'] = 0; 
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    
     if (isset($_SESSION['admin_lockout_time']) && time() < $_SESSION['admin_lockout_time']) {
         $remaining = $_SESSION['admin_lockout_time'] - time();
-        $error = "Security Lockdown: Too many failed attempts. Gateway locked. Retry in " . $remaining . "s.";
+        $error = "Security Lockdown: Gateway locked. Retry in " . $remaining . "s.";
     } else {
         $username = trim($_POST['username']);
         $password = $_POST['password'];
@@ -30,7 +27,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($username) || empty($password)) {
             $error = "Please fill in all security credentials.";
         } else {
-    
+            // 修正SQL：确保能抓取到 status 栏位
             $stmt = $conn->prepare("SELECT * FROM admins WHERE username = ? AND (role = 'admin' OR role = 'superadmin')");
             $stmt->bind_param("s", $username);
             $stmt->execute();
@@ -39,54 +36,49 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if ($result->num_rows === 1) {
                 $user = $result->fetch_assoc();
                 
-                
-                $is_password_correct = false;
-                if (password_verify($password, $user['password'])) {
-                    $is_password_correct = true;
-                } elseif ($password === $user['password']) {
-                    $is_password_correct = true;
-                    $_SESSION['security_notice'] = "⚠️ Dev Notice: Admin password is currently stored in plain text. Please hash it before deployment.";
-                }
-
-                if ($is_password_correct) {
-                
-                    session_regenerate_id(true);
-                    
-                    unset($_SESSION['admin_login_attempts']);
-                    unset($_SESSION['admin_lockout_time']);
-                    
-                   
-                    $admin_pk = $user['admin_id'] ?? $user['user_id'] ?? 0;
-                    
-                    // 🌟 寫入 Session
-                    $_SESSION['admin_id'] = $admin_pk;
-                    $_SESSION['user_id'] = $admin_pk;
-                    $_SESSION['admin_username'] = $user['username'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['admin_role'] = $user['role'];
-                    $_SESSION['role'] = $user['role']; 
-                    
-                    
-                    //Security Audit Logging logs
-                  
-                    $ip_address = $_SERVER['REMOTE_ADDR']; // check IP address
-                
-                    if ($ip_address == '::1') { $ip_address = '127.0.0.1'; }
-                    
-                    $log_sql = "INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES (?, ?, ?, 'System Login', ?)";
-                    $log_stmt = $conn->prepare($log_sql);
-                    if ($log_stmt) {
-                        $log_stmt->bind_param("isss", $admin_pk, $user['username'], $user['role'], $ip_address);
-                        $log_stmt->execute();
-                        $log_stmt->close();
-                    }
-                    // ==========================================
-
-                    header("Location: admin_dashboard.php");
-                    exit();
+                // 🌟 新增的账号状态检查
+                $status = isset($user['status']) ? $user['status'] : 'Active'; 
+                if (strtolower($status) === 'inactive') {
+                    $error = "⚠️ Access Denied: This account has been suspended by an administrator.";
                 } else {
-                    $_SESSION['admin_login_attempts']++;
-                    $error = "Invalid administrative username or password.";
+                    // 密码验证逻辑
+                    $is_password_correct = false;
+                    if (password_verify($password, $user['password'])) {
+                        $is_password_correct = true;
+                    } elseif ($password === $user['password']) {
+                        $is_password_correct = true;
+                        $_SESSION['security_notice'] = "⚠️ Dev Notice: Admin password stored in plain text.";
+                    }
+
+                    if ($is_password_correct) {
+                        session_regenerate_id(true);
+                        unset($_SESSION['admin_login_attempts']);
+                        unset($_SESSION['admin_lockout_time']);
+                        
+                        $admin_pk = $user['admin_id'] ?? $user['user_id'] ?? 0;
+                        
+                        $_SESSION['admin_id'] = $admin_pk;
+                        $_SESSION['user_id'] = $admin_pk;
+                        $_SESSION['admin_username'] = $user['username'];
+                        $_SESSION['username'] = $user['username'];
+                        $_SESSION['admin_role'] = $user['role'];
+                        $_SESSION['role'] = $user['role']; 
+                        
+                        $ip_address = $_SERVER['REMOTE_ADDR'] == '::1' ? '127.0.0.1' : $_SERVER['REMOTE_ADDR'];
+                        $log_sql = "INSERT INTO admin_logs (admin_id, username, role, action_event, ip_address) VALUES (?, ?, ?, 'System Login', ?)";
+                        $log_stmt = $conn->prepare($log_sql);
+                        if ($log_stmt) {
+                            $log_stmt->bind_param("isss", $admin_pk, $user['username'], $user['role'], $ip_address);
+                            $log_stmt->execute();
+                            $log_stmt->close();
+                        }
+
+                        header("Location: admin_dashboard.php");
+                        exit();
+                    } else {
+                        $_SESSION['admin_login_attempts']++;
+                        $error = "Invalid administrative username or password.";
+                    }
                 }
             } else {
                 $_SESSION['admin_login_attempts']++;
@@ -94,7 +86,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
             $stmt->close();
 
-          
             if ($_SESSION['admin_login_attempts'] >= 5) {
                 $_SESSION['admin_lockout_time'] = time() + 60; 
                 $error = "Security Lockdown: Intrusive behavior detected. Gateway locked for 60 seconds.";
@@ -112,71 +103,49 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
     body {
-        margin: 0; padding: 0; font-family: 'Inter', 'JetBrains Mono', sans-serif;
+        margin: 0; padding: 0; font-family: 'Inter', sans-serif;
         background-image: linear-gradient(rgba(10, 10, 15, 0.6), rgba(10, 10, 15, 0.8)), url('image/Login_background.png');
-        background-size: cover; background-position: center; background-repeat: no-repeat;
-        background-attachment: fixed; display: flex; justify-content: center; align-items: center; height: 100vh;
+        background-size: cover; background-position: center; display: flex; justify-content: center; align-items: center; height: 100vh;
     }
     .login-container {
-        background: rgba(15, 15, 20, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-        padding: 40px; border-radius: 12px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 242, 254, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.1); border-top: 1px solid rgba(0, 242, 254, 0.3);
-        width: 100%; max-width: 400px; text-align: center;
+        background: rgba(15, 15, 20, 0.65); backdrop-filter: blur(12px); padding: 40px; border-radius: 12px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 242, 254, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.1); width: 100%; max-width: 400px; text-align: center;
     }
     .login-container h1 {
         background: linear-gradient(135deg, #00f2fe, #4facfe) !important;
         -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important;
-        margin-top: 0; margin-bottom: 5px; font-weight: 900; letter-spacing: 1px; filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.5));
+        margin: 0 0 5px; font-weight: 900;
     }
-    .login-container p { color: #cccccc !important; font-size: 12px; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; }
+    .login-container p { color: #cccccc; font-size: 12px; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; }
     .form-group { margin-bottom: 20px; text-align: left; }
-    .form-group label { display: block; color: #ffffff !important; font-weight: bold; font-size: 13px; margin-bottom: 8px; }
     .form-control {
-        width: 100%; padding: 12px 15px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 6px; color: #ffffff !important; font-size: 14px; box-sizing: border-box; transition: 0.3s;
+        width: 100%; padding: 12px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px; color: #fff; box-sizing: border-box;
     }
-    .form-control::placeholder { color: #999999; }
-    .form-control:focus { outline: none; border-color: #00f2fe; box-shadow: 0 0 10px rgba(0, 242, 254, 0.3); background: rgba(0, 0, 0, 0.7); }
     .btn-login {
         width: 100%; padding: 12px; background: linear-gradient(135deg, #00f2fe, #4facfe); border: none; border-radius: 6px;
-        color: #000000; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.3s; margin-top: 10px;
+        color: #000; font-weight: bold; cursor: pointer; margin-top: 10px;
     }
-    .btn-login:hover { box-shadow: 0 0 15px rgba(0, 242, 254, 0.6); transform: translateY(-2px); }
-    .login-container a { color: #00f2fe !important; text-decoration: none; font-size: 13px; display: inline-block; margin-top: 20px; transition: 0.3s; }
-    .login-container a:hover { color: #ffffff !important; text-shadow: 0 0 8px rgba(0, 242, 254, 0.8); }
-    .error-msg { background: rgba(255, 77, 77, 0.1); color: #ff4d4d; border: 1px solid rgba(255, 77, 77, 0.3); padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 20px; }
+    .error-msg { background: rgba(255, 77, 77, 0.1); color: #ff4d4d; border: 1px solid rgba(255, 77, 77, 0.3); padding: 10px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
 </style>
 </head>
 <body>
-
     <div class="login-container">
-        <div class="login-header">
-            <h1>GridCity PC</h1>
-            <p>System Administration</p>
-        </div>
-
+        <h1>GridCity PC</h1>
+        <p>System Administration</p>
         <?php if(!empty($error)) echo "<div class='error-msg'>$error</div>"; ?>
-
-        <form action="" method="POST">
+        <form method="POST">
             <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" class="form-control" required placeholder="Enter admin username">
+                <label style="color:#fff; font-size:13px; margin-bottom:8px; display:block;">Username</label>
+                <input type="text" name="username" class="form-control" required placeholder="Enter username">
             </div>
-            
-            <div class="form-group" style="margin-bottom: 5px;">
-                <label>Password</label>
+            <div class="form-group">
+                <label style="color:#fff; font-size:13px; margin-bottom:8px; display:block;">Password</label>
                 <input type="password" name="password" class="form-control" required placeholder="Enter password">
             </div>
-            
-            <div style="text-align: right; margin-bottom: 20px;">
-                <a href="admin_forgot_password.php" style="margin-top: 0; font-size: 12px; color: #888 !important;">Forgot Password?</a>
-            </div>
-            
             <button type="submit" class="btn-login">Access Dashboard</button>
         </form>
-
-        <a href="index.php" class="back-link">&larr; Back to Customer Page</a>
     </div>
-
 </body>
 </html>
