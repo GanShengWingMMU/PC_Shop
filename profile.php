@@ -894,6 +894,16 @@ document.addEventListener('DOMContentLoaded', function() {
            
                 let year = value.substring(2, 4);
                 
+                if (value.length === 4) {
+                    const currentYear = new Date().getFullYear() % 100; 
+                    const maxYear = currentYear + 10;
+                    
+                    if (parseInt(year) < currentYear) {
+                        year = currentYear.toString(); 
+                    } else if (parseInt(year) > maxYear) {
+                        year = maxYear.toString(); 
+                    }
+                }
              
                 if (value.length > 2) {
                     value = month + '/' + year;

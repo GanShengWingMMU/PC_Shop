@@ -384,11 +384,11 @@ switch($current_filter) {
                 <div class="timeline">
                     <div class="step <?php echo $tab_index >= 0 ? 'active' : ''; ?>">
                         <div class="icon"><i class="fa-solid fa-clipboard-list"></i></div>
-                        <div class="text">Placed</div>
+                        <div class="text">Pending</div>
                     </div>
                     <div class="step <?php echo $tab_index >= 1 ? 'active' : ''; ?>">
                         <div class="icon"><i class="fa-solid fa-box-open"></i></div>
-                        <div class="text">Preparing</div>
+                        <div class="text">Processing</div>
                     </div>
                     <div class="step <?php echo $tab_index >= 2 ? 'active' : ''; ?>">
                         <div class="icon"><i class="fa-solid fa-truck-fast"></i></div>

@@ -232,6 +232,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $card_name = trim($_POST['dummy_card_name'] ?? 'Cardholder'); 
                 $card_expiry = trim($_POST['dummy_card_expiry'] ?? '');
                 
+                $exp_parts = explode('/', $card_expiry);
+        if (count($exp_parts) === 2) {
+            $exp_month = (int)$exp_parts[0];
+            $exp_year = (int)$exp_parts[1];
+
+            $current_year = (int)date('y'); 
+            $current_month = (int)date('m'); 
+
+            if ($exp_year < $current_year || ($exp_year === $current_year && $exp_month < $current_month)) {
+                throw new Exception("[TRANSACTION FAILED] Your Credit Card has expired.");
+            }
+        } else {
+            throw new Exception("[TRANSACTION FAILED] Invalid expiry date format. Please use MM/YY.");
+        }
+
                 $bank_stmt = $conn->prepare("SELECT id FROM bank WHERE card_number = ? AND cvc = ? AND expiry_date = ?");
                 $bank_stmt->bind_param("sss", $card_num, $card_cvc, $card_expiry);
                 $bank_stmt->execute();
@@ -1015,6 +1030,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     let year = value.substring(2, 4);
+
+                    if (value.length === 4) {
+                const currentYear = new Date().getFullYear() % 100; 
+                const maxYear = currentYear + 10; 
+                
+                if (parseInt(year) < currentYear) {
+                    year = currentYear.toString(); 
+                } else if (parseInt(year) > maxYear) {
+                    year = maxYear.toString(); 
+                }
+            }
+
                     if (value.length > 2) {
                         value = month + '/' + year;
                     } else {
