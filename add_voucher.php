@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['forge_promo'])) {
             box-sizing: border-box; 
         }
 
-        /* 🌟 完美匹配第二张图片的表单比例与顶部亮线 */
+     
         .forge-form { 
             background: rgba(0,0,0,0.5); 
             padding: 40px; 

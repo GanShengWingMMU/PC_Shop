@@ -8,12 +8,10 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
     header("Location: admin_login.php"); exit();
 }
 
-// 🌟 处理实时切换账号状态的请求 (Toggle Account Status)
 if (isset($_GET['toggle_id']) && isset($_GET['new_status'])) {
     $toggle_id = intval($_GET['toggle_id']);
     $new_status = $_GET['new_status'] === 'Inactive' ? 'Inactive' : 'Active';
     
-    // 更新资料库里的 status 栏位
     $stmt = $conn->prepare("UPDATE customers SET status = ? WHERE customer_id = ?");
     $stmt->bind_param("si", $new_status, $toggle_id);
     if ($stmt->execute()) {
@@ -60,7 +58,6 @@ $message = "";
             </header>
             
             <?php 
-            // 显示状态更新成功的提示信息
             if (isset($_GET['msg']) && $_GET['msg'] == 'status_updated') {
                 echo "<div style='color:#00e676; background:rgba(0,230,118,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(0,230,118,0.3);'><i class='fas fa-check-circle'></i> Customer account status updated successfully.</div>";
             }
@@ -88,10 +85,8 @@ $message = "";
                         $total = $row['total_orders'];
                         $status = $row['latest_status'];
                         
-                        // 获取账号状态，默认当作 Active
                         $account_status = isset($row['status']) ? $row['status'] : 'Active'; 
 
-                        // 订单状态颜色逻辑
                         $bg = "rgba(255,255,255,0.05)"; $col = "#888";
                         if ($status == 'Pending') { $bg = "rgba(250, 204, 21, 0.1)"; $col = "#facc15"; }
                         elseif ($status == 'Processing') { $bg = "rgba(0, 242, 254, 0.1)"; $col = "#00f2fe"; }
@@ -99,13 +94,13 @@ $message = "";
                         elseif ($status == 'Completed') { $bg = "rgba(0, 230, 118, 0.1)"; $col = "#00e676"; }
                         elseif ($status == 'Cancelled') { $bg = "rgba(255, 77, 77, 0.1)"; $col = "#ff4d4d"; }
 
-                        // 如果账号被禁用，整行视觉变暗
+
                         $row_opacity = (strtolower($account_status) === 'inactive') ? '0.6' : '1';
 
                         echo "<tr style='opacity: {$row_opacity};'>";
                         echo "<td style='color:#64748b; font-family:JetBrains Mono;'>USR-".$uid."</td>";
                         
-                        // 显示名字与 Email，并动态显示标签
+
                         echo "<td>
                                 <strong>".htmlspecialchars($row['username'])."</strong>";
                         
@@ -118,7 +113,7 @@ $message = "";
                         echo "<br><span style='color:#64748b; font-size:12px;'>".htmlspecialchars($row['email'])."</span>
                               </td>";
                         
-                        // 显示订单活跃度
+
                         echo "<td>
                                 <div style='display: flex; flex-direction: row; align-items: center; gap: 15px;'>
                                     <span style='background:rgba(255,215,0,0.1); color:#ffd700; padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; white-space: nowrap;'>$total Orders</span>";
@@ -133,20 +128,19 @@ $message = "";
                         echo "  </div>
                               </td>";
 
-                        // 🌟 右侧按钮区 (实时显示 Active / Inactive 按钮)
+
                         echo "<td style='text-align:right;'>
                                 <div class='action-buttons'>";
                         
-                        // 判断当前状态，显示对应的切换按钮
+
                         if (strtolower($account_status) === 'inactive') {
-                            // 当前是 Inactive -> 显示绿色的 Set Active 按钮
+
                             echo "<a href='manage_users.php?toggle_id=$uid&new_status=Active' onclick=\"return confirm('Reactivate this customer account?');\" style='background:transparent; color:#00e676; border:1px solid #00e676; padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; transition:0.3s;' onmouseover=\"this.style.background='rgba(0,230,118,0.1)'\" onmouseout=\"this.style.background='transparent'\"><i class='fas fa-user-check'></i> Set Active</a>";
                         } else {
-                            // 当前是 Active -> 显示红色的 Set Inactive 按钮
+
                             echo "<a href='manage_users.php?toggle_id=$uid&new_status=Inactive' onclick=\"return confirm('Suspend this customer account? They will not be able to log in.');\" style='background:transparent; color:#ff4d4d; border:1px solid #ff4d4d; padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; transition:0.3s;' onmouseover=\"this.style.background='rgba(255,77,77,0.1)'\" onmouseout=\"this.style.background='transparent'\"><i class='fas fa-user-slash'></i> Set Inactive</a>";
                         }
 
-                        // 原本的 Details 按钮
                         echo "      <a href='view_customer.php?id=$uid' style='background:transparent; color:#00f2fe; border:1px solid #00f2fe; padding:6px 12px; border-radius:4px; text-decoration:none; font-size:12px; transition:0.3s;' onmouseover=\"this.style.background='rgba(0,242,254,0.1)'\" onmouseout=\"this.style.background='transparent'\"><i class='fas fa-eye'></i> Details</a>
                                 </div>
                               </td>";

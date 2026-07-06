@@ -14,7 +14,7 @@ if (!function_exists('isActive')) {
         <p style="color:#555; font-size:11px; font-family:'JetBrains Mono'; margin:5px 0 0 0;">Unified Architecture v4.0</p>
     </div>
 
-    <!-- 🌟 这里是新增的滚动区域 -->
+  
     <div class="sidebar-scroll">
         <ul class="sidebar-menu">
             <li><a href="admin_dashboard.php" class="<?= isActive('admin_dashboard.php', $current_page) ?>" style="<?= getStyle('admin_dashboard.php', $current_page) ?>"><i class="fas fa-chart-line"></i> Dashboard</a></li>
@@ -34,7 +34,7 @@ if (!function_exists('isActive')) {
         </ul>
     </div>
 
-    <!-- 🌟 这里是固定在底部的退出按钮 -->
+
     <div class="logout-btn">
         <a href="admin_logout.php" style="display:block; padding:18px 20px; color:#ff4d4d; font-weight:600; text-decoration:none;">
             <i class="fas fa-sign-out-alt"></i> Log out

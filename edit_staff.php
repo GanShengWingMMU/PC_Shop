@@ -37,7 +37,6 @@ $back_text = (strtolower($current_role) === 'superadmin') ? 'Back to Command Ros
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
     $email = trim($_POST['email']);
     
-    // 🌟 核心更改：完全移除 POST 接收 Role 的逻辑，因为不再允许修改
     
     // Check if new password is provided
     $new_password = $_POST['password'];
@@ -54,7 +53,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
     }
 
     if (empty($error)) {
-        // 🌟 核心更改：UPDATE SQL 语句中彻底移除了 role 的更新
         if (!empty($new_password)) {
             $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
             $update_sql = "UPDATE admins SET email = ?, password = ? WHERE admin_id = ?";
@@ -68,7 +66,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
 
         if ($stmt->execute()) {
             
-            // 🌟 重点：如果密码被修改了，自动发送邮件通知该 Admin
             if (!empty($new_password)) {
                 $mail = new PHPMailer(true);
                 try {
@@ -89,7 +86,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
                     $mail->isHTML(true);
                     $mail->Subject = '[GridCity PC] Administrative Security Protocol Update';
                     
-                    // 赛博风格邮件模板 (使用 $staff['role'] 抓取原始权限)
+
                     $mail->Body = "
                     <div style='background-color:#030305; padding:40px; font-family:\"Courier New\", Courier, monospace; color:#cbd5e1; border: 1px solid #333;'>
                         <div style='text-align:center; margin-bottom: 30px;'>
@@ -128,7 +125,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
                 exit();
             }
 
-            // 如果没改密码，刷新显示新资料
+
             $stmt_refresh = $conn->prepare("SELECT * FROM admins WHERE admin_id = ?");
             $stmt_refresh->bind_param("i", $staff_id);
             $stmt_refresh->execute();

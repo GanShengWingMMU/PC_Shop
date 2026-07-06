@@ -34,7 +34,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
     if (empty($login_id) || empty($password)) {
         $error_msg = "Please enter your email and password.";
     } else {
-        // 🌟 修正点 1: 改用 SELECT * 确保能抓到 status 栏位
         $stmt = $conn->prepare("SELECT * FROM customers WHERE email = ? OR username = ?");
         $stmt->bind_param("ss", $login_id, $login_id);
         $stmt->execute();
@@ -43,7 +42,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
             
-            // 🌟 修正点 2: 智能匹配你的数据库栏位名 (status 或 account_status)，并无视大小写
             $current_status = $user['status'] ?? $user['account_status'] ?? 'Active';
             
             if (strtolower($current_status) === 'inactive') {

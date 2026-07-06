@@ -11,7 +11,6 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
     exit();
 }
 
-// 🌟 处理 Active / Inactive 状态切换
 if (isset($_GET['toggle_id']) && isset($_GET['new_status'])) {
     if (strtolower($current_role) !== 'superadmin') {
         die("<div style='background:#000; color:#ff4d4d; padding:50px; text-align:center; font-family:monospace;'>ACCESS DENIED: ALPHA CLEARANCE REQUIRED.</div>");
@@ -66,17 +65,17 @@ if($msg == 'status_updated') $alert = "<div style='background:rgba(255,215,0,0.1
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 🌟 核心修改：固定网页高度，禁用 body 滚动，启用 content 滚动 */
+    
         html, body { height: 100vh; margin: 0; overflow: hidden; background-color: var(--bg-main); }
         .admin-container { display: flex; width: 100%; height: 100vh; }
         .admin-sidebar { width: 250px; height: 100vh; flex-shrink: 0; }
         
-        /* 右侧区域独立滚动 */
+   
         .admin-content { 
             flex: 1; 
             padding: 30px; 
             height: 100vh; 
-            overflow-y: auto; /* 只有这里可以滚动 */
+            overflow-y: auto; 
             box-sizing: border-box; 
         }
         

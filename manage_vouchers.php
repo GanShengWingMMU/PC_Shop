@@ -11,7 +11,7 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
     header("Location: admin_login.php"); exit();
 }
 
-// 🌟 1. Added Search & Sort Parameters
+// 1. Added Search & Sort Parameters
 $search = $_GET['search'] ?? '';
 $current_sort = $_GET['sort'] ?? 'desc';
 $order_by = 'promo_id DESC'; 
@@ -53,7 +53,7 @@ if (isset($_GET['delete_id']) && strtolower($current_role) === 'superadmin') {
         .btn-forge { background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; transition: 0.3s; }
         .btn-forge:hover { box-shadow: 0 0 15px rgba(0,242,254,0.5); transform: translateY(-2px); }
 
-        /* 🌟 2. Added Search Bar CSS without altering anything else */
+        /* 2. Added Search Bar CSS without altering anything else */
         .search-form-clean { display: flex; flex-wrap: wrap; gap: 15px; background: rgba(15, 15, 20, 0.6); padding: 15px 20px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05); align-items: center; margin-bottom: 25px; }
         .search-form-clean input, .search-form-clean select, .search-form-clean button { height: 42px !important; padding: 0 15px !important; font-size: 14px !important; font-family: 'Inter', sans-serif !important; border-radius: 6px !important; outline: none !important; box-sizing: border-box !important; margin: 0 !important; }
         .search-form-clean input { flex: 1; min-width: 200px; background: rgba(0, 0, 0, 0.5) !important; border: 1px solid rgba(0, 242, 254, 0.3) !important; color: #fff !important; }
@@ -79,7 +79,7 @@ if (isset($_GET['delete_id']) && strtolower($current_role) === 'superadmin') {
             if (isset($_GET['msg']) && $_GET['msg'] == 'forged') echo "<div style='color:#00e676; background:rgba(0,230,118,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(0,230,118,0.3);'><i class='fas fa-check-circle'></i> New Protocol Forged and Active!</div>";
             ?>
 
-            <!-- 🌟 3. Injected Search Bar UI -->
+            <!-- 3. Injected Search Bar UI -->
             <div class="search-wrapper">
                 <form method="GET" action="manage_vouchers.php" class="search-form-clean">
                     <input type="text" name="search" placeholder="Search by Code Name..." value="<?php echo htmlspecialchars($search); ?>">
@@ -113,7 +113,7 @@ if (isset($_GET['delete_id']) && strtolower($current_role) === 'superadmin') {
                 </thead>
                 <tbody>
                     <?php
-                    // 🌟 4. Added Search Query Logic
+                    // 4. Added Search Query Logic
                     if ($search !== '') {
                         $stmt = $conn->prepare("SELECT * FROM promo_codes WHERE code_name LIKE ? ORDER BY $order_by");
                         $param = "%" . trim($search) . "%";
