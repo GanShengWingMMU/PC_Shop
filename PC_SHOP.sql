@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 06, 2026 at 05:31 PM
+-- Generation Time: Jul 06, 2026 at 05:42 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -45,8 +45,7 @@ CREATE TABLE `admins` (
 
 INSERT INTO `admins` (`admin_id`, `username`, `password`, `email`, `role`, `reset_token`, `reset_token_expire`, `created_at`, `status`) VALUES
 (1, 'Alvis', 'Alvis@100884', 'chenweishen8733@gmail.com', 'SuperAdmin', NULL, NULL, '2026-04-29 21:17:21', 'Active'),
-(6, 'admin', '$2y$10$eEJCvFMxRls.uVHpHNhmE.RfF/tCcUAzzEO1j8tv9anwNH2UqEpje', 'admin123@gmail.com', 'Admin', NULL, NULL, '2026-06-16 17:19:24', 'Active'),
-(9, 'OCalvis', '$2y$10$ndHNbIXuKao0NZLm68k.mevhK4hrH.O14/wFaRX3LNd0d.3mK922O', 'ocalvis88@gmail.com', 'Admin', NULL, NULL, '2026-07-06 19:08:19', 'Active');
+(6, 'admin', '$2y$10$eEJCvFMxRls.uVHpHNhmE.RfF/tCcUAzzEO1j8tv9anwNH2UqEpje', 'admin123@gmail.com', 'Admin', NULL, NULL, '2026-06-16 17:19:24', 'Active');
 
 -- --------------------------------------------------------
 
@@ -404,14 +403,6 @@ INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`
 (62, 11, 16, 1),
 (63, 11, 19, 1),
 (64, 11, 18, 1),
-(65, 12, 1, 1),
-(66, 12, 4, 1),
-(67, 12, 10, 1),
-(68, 12, 13, 1),
-(69, 12, 8, 1),
-(70, 12, 16, 1),
-(71, 12, 19, 1),
-(72, 12, 18, 1),
 (73, 13, 1, 1),
 (74, 13, 4, 1),
 (75, 13, 10, 1),
@@ -525,28 +516,6 @@ INSERT INTO `build_items` (`build_item_id`, `pc_build`, `product_id`, `quantity`
 (196, 24, 56, 1),
 (197, 24, 60, 1),
 (198, 24, 22, 1),
-(199, 25, 27, 1),
-(200, 25, 37, 1),
-(201, 25, 38, 1),
-(202, 25, 46, 1),
-(203, 25, 49, 1),
-(204, 25, 53, 1),
-(205, 25, 56, 1),
-(206, 25, 60, 1),
-(207, 25, 22, 1),
-(208, 25, 23, 1),
-(209, 25, 26, 1),
-(210, 26, 27, 1),
-(211, 26, 33, 1),
-(212, 26, 38, 1),
-(213, 26, 47, 1),
-(214, 26, 49, 1),
-(215, 26, 52, 1),
-(216, 26, 57, 1),
-(217, 26, 61, 1),
-(218, 26, 21, 1),
-(219, 26, 23, 1),
-(220, 26, 25, 1),
 (221, 27, 27, 1),
 (222, 27, 33, 1),
 (223, 27, 38, 1),
@@ -920,7 +889,7 @@ INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_bu
 (12, 15, NULL, 22, NULL, NULL, 1, 6697.00, NULL, NULL, NULL),
 (13, 16, NULL, NULL, 16, NULL, 2, 14419.00, NULL, NULL, NULL),
 (14, 16, NULL, NULL, 14, NULL, 1, 14729.00, NULL, NULL, NULL),
-(15, 16, NULL, 26, NULL, NULL, 1, 11787.00, NULL, NULL, NULL),
+(15, 16, NULL, NULL, NULL, NULL, 1, 11787.00, NULL, NULL, NULL),
 (16, 16, NULL, NULL, 3, NULL, 1, 2820.00, NULL, NULL, NULL),
 (17, 16, NULL, NULL, 15, NULL, 1, 10259.00, NULL, NULL, NULL),
 (18, 16, NULL, 29, NULL, NULL, 1, 6427.00, NULL, NULL, NULL),
@@ -1350,7 +1319,6 @@ INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_pric
 (9, 1, 'Custom Gaming PC #1264', 4620.00, '2026-03-31 17:24:22'),
 (10, 1, 'Custom Gaming PC #9158', 7820.00, '2026-04-04 17:49:41'),
 (11, 1, 'strong man', 4620.00, '2026-04-04 18:52:47'),
-(12, 1, '超級吊', 4620.00, '2026-04-05 14:39:39'),
 (13, 1, 'My Custom Build', 4620.00, '2026-04-05 15:17:12'),
 (14, 3, 'yeaaaaaaa', 4620.00, '2026-04-06 09:17:24'),
 (15, 1, 'q', 10677.00, '2026-04-09 19:22:33'),
@@ -1362,8 +1330,6 @@ INSERT INTO `saved_builds` (`pc_build`, `customer_id`, `build_name`, `total_pric
 (21, 1, '4tgrrg', 6697.00, '2026-04-11 17:27:51'),
 (22, 1, 'i', 6697.00, '2026-04-12 22:40:26'),
 (24, 5, 'shengwing', 14229.00, '2026-05-01 14:59:50'),
-(25, 5, 'c', 15107.00, '2026-05-01 15:24:25'),
-(26, 5, 'io', 11787.00, '2026-05-01 16:18:23'),
 (27, 5, 'kkkk', 10259.00, '2026-05-01 22:00:25'),
 (28, 5, 'kkkk', 6427.00, '2026-05-02 22:28:17'),
 (29, 5, 'ttt', 6427.00, '2026-05-02 22:28:32'),
