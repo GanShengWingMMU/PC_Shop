@@ -20,7 +20,6 @@
     --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
 }
 
-/* 🌟 1. 基础网页设定：锁死高度，禁止网页整体滑动 */
 html, body {
     margin: 0;
     padding: 0;
@@ -31,14 +30,12 @@ html, body {
     overflow: hidden;
 }
 
-/* 🌟 2. 整体排版容器：左右分屏 (恢复你丢失的这一段) */
 .admin-container {
     display: flex;
     width: 100%;
     height: 100vh;
 }
 
-/* 🌟 3. 左侧边栏：固定在左边，高度 100vh，不许动 */
 .admin-sidebar {
     width: 250px;
     min-width: 250px;
@@ -53,7 +50,7 @@ html, body {
     flex-shrink: 0;
 }
 
-/* Title: 钉死在顶部 */
+/* Title*/
 .sidebar-header {
     display: flex;
     flex-direction: column;
@@ -62,7 +59,7 @@ html, body {
     padding: 25px 0;             
     border-bottom: 1px solid var(--border-color);
     text-align: center;
-    flex-shrink: 0; /* 绝对不压缩，固定不动 */
+    flex-shrink: 0; 
 }
 .sidebar-header h3 {
     margin: 0;
@@ -75,7 +72,7 @@ html, body {
     letter-spacing: 1px;
 }
 
-/* 菜单区域：独占中间空间，只有这里可以滑动 */
+
 .sidebar-scroll {
     flex: 1;             
     overflow-y: auto;     
@@ -103,19 +100,19 @@ html, body {
     text-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
 }
 
-/* Logout button: 钉死在底部 */
+/* Logout button: */
 .logout-btn { 
-    flex-shrink: 0; /* 绝对不压缩，固定不动 */
-    margin-top: auto; /* 强制推到最下面 */
+    flex-shrink: 0; 
+    margin-top: auto; 
     border-top: 1px solid var(--border-color); 
     background: var(--bg-surface);
 }
 
-/* 🌟 4. 右侧 Dashboard 资料区：独立滑动 (恢复你丢失的这一段) */
+
 .admin-content {
     flex: 1;
     height: 100vh;
-    overflow-y: auto; /* 右边内容多的时候，自己滑动 */
+    overflow-y: auto; 
     padding: 30px;
     box-sizing: border-box;
 }
@@ -124,9 +121,6 @@ html, body {
 .admin-content::-webkit-scrollbar-thumb { background: rgba(0, 242, 254, 0.3); border-radius: 4px; }
 .admin-content::-webkit-scrollbar-thumb:hover { background: var(--accent-blue); }
 
-/* ========================================= */
-/* 下面是其他的卡片和表格样式，完全保持原样 */
-/* ========================================= */
 
 .admin-header h2 {
     font-size: 2rem; 

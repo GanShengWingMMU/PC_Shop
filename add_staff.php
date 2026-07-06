@@ -184,7 +184,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
                             <input type="email" name="email" class="form-control">
                         </div>
 
-                        <!-- 🌟 密码栏位 -->
+                   
                         <div class="form-group full-width">
                             <label style="color: #ff4d4d; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Password *</label>
                             <div style="position: relative;">
@@ -201,7 +201,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
                             </div>
                         </div>
 
-                        <!-- 🌟 确认密码栏位 -->
+
                         <div class="form-group full-width" style="margin-top: 5px;">
                             <label style="color: #ff4d4d; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Confirm Password *</label>
                             <div style="position: relative;">

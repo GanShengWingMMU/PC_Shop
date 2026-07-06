@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['forge_promo'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/admin_style.css">
     <style>
-        /* 🌟 恢复原生的全网页滚动，匹配第二张图片的布局 */
+  
         html, body { 
             height: auto; 
             min-height: 100vh; 

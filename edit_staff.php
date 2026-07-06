@@ -118,7 +118,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
                 $success_msg = "✅ Personnel profile updated successfully.";
             }
 
-            // 如果当前登录者修改了自己的密码，需要重新登录
+
             if ($logged_in_id === $staff_id && !empty($new_password)) {
                 session_destroy();
                 header("Location: admin_login.php?msg=password_changed");
@@ -326,12 +326,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
                     targetInput.type = 'text';
                     this.classList.remove('fa-eye');
                     this.classList.add('fa-eye-slash');
-                    this.style.color = '#00f2fe'; // 激活时变成亮蓝色
+                    this.style.color = '#00f2fe'; 
                 } else {
                     targetInput.type = 'password';
                     this.classList.remove('fa-eye-slash');
                     this.classList.add('fa-eye');
-                    this.style.color = '#64748b'; // 隐藏时恢复灰色
+                    this.style.color = '#64748b'; 
                 }
             });
         });
