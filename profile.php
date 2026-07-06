@@ -13,13 +13,12 @@ $open_acc = 'account';
 
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
-    $new_user = trim($_POST['username']);
-    $new_email = trim($_POST['email']);
-    $new_pass = $_POST['new_password'];
-    $confirm_pass = $_POST['confirm_password'];
-    $new_birthday = trim($_POST['birthday']);
+    $new_user = trim($_POST['username'] ?? '');
+    $new_pass = $_POST['new_password'] ?? '';
+    $confirm_pass = $_POST['confirm_password'] ?? '';
+    $new_birthday = trim($_POST['birthday'] ?? '');
 
-    $raw_phone = trim($_POST['phone_number']);
+    $raw_phone = trim($_POST['phone_number'] ?? '');
     if (!empty($raw_phone)) {
         $raw_phone = preg_replace('/^\+?60/', '', $raw_phone); 
         $raw_phone = ltrim($raw_phone, '0'); 
@@ -28,12 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         $new_phone = "";
     }
 
-    if (empty($new_user) || empty($new_email)) { 
-        $update_err = "Username and Email cannot be empty."; 
+    if (empty($new_user)) { 
+        $update_err = "Username cannot be empty."; 
     } elseif (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $new_user)) {
         $update_err = "Username must be 3-20 characters (letters, numbers, underscore).";
-    } elseif (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) { 
-        $update_err = "Invalid email format."; 
     } elseif (!empty($new_phone) && !preg_match('/^\+60[0-9]{8,10}$/', $new_phone)) {
         $update_err = "Phone number must be a valid Malaysian format (8 to 10 digits after +60).";
     } elseif (!empty($new_birthday)) {
@@ -60,43 +57,70 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
                 $update_err = "Please enter your Current Password to authorize password change.";
             } elseif (!password_verify($current_pass, $curr_hash)) {
                 $update_err = "Incorrect Current Password.";
-            } elseif (strlen($new_pass) < 12 || !preg_match('/[A-Z]/', $new_pass) || !preg_match('/[0-9]/', $new_pass) || !preg_match('/[\W]/', $new_pass)) {
-                $update_err = "New password must be at least 12 characters and include uppercase, number, and symbol.";
-            } elseif ($new_pass !== $confirm_pass) { 
-                $update_err = "New passwords do not match."; 
+            } else {
+                $is_historical = false;
+                
+                if (password_verify($new_pass, $curr_hash)) {
+                    $is_historical = true;
+                } else {
+                    $history_stmt = $conn->prepare("SELECT password_hash FROM password_history WHERE customer_id = ?");
+                    $history_stmt->bind_param("i", $customer_id);
+                    $history_stmt->execute();
+                    $history_result = $history_stmt->get_result();
+                    
+                    while ($row = $history_result->fetch_assoc()) {
+                        if (password_verify($new_pass, $row['password_hash'])) {
+                            $is_historical = true;
+                            break;
+                        }
+                    }
+                    $history_stmt->close();
+                }
+
+                if ($is_historical) {
+                    $update_err = "Security Alert: You cannot reuse a password you have used in the past. Please choose a completely new one.";
+                } elseif (strlen($new_pass) < 12 || !preg_match('/[A-Z]/', $new_pass) || !preg_match('/[0-9]/', $new_pass) || !preg_match('/[\W]/', $new_pass)) {
+                    $update_err = "New password must be at least 12 characters and include uppercase, number, and symbol.";
+                } elseif ($new_pass !== $confirm_pass) { 
+                    $update_err = "New passwords do not match."; 
+                }
             }
         }
     }
         
     if (empty($update_err)) {
-        $check_stmt = $conn->prepare("SELECT customer_id FROM customers WHERE (email = ? OR username = ?) AND customer_id != ?");
-        $check_stmt->bind_param("ssi", $new_email, $new_user, $customer_id);
+        $check_stmt = $conn->prepare("SELECT customer_id FROM customers WHERE username = ? AND customer_id != ?");
+        $check_stmt->bind_param("si", $new_user, $customer_id);
         $check_stmt->execute();
         if ($check_stmt->get_result()->num_rows > 0) {
-            $update_err = "The selected Username or Email is already taken by another account.";
+            $update_err = "The selected Username is already taken by another account.";
         } else {
-            $sql = "UPDATE customers SET username=?, email=?, phone_number=?, birthday=? " . (!empty($new_pass) ? ", password=?" : "") . " WHERE customer_id=?";
+            $sql = "UPDATE customers SET username=?, phone_number=?, birthday=? " . (!empty($new_pass) ? ", password=?" : "") . " WHERE customer_id=?";
             $stmt = $conn->prepare($sql);
             
             if (!empty($new_pass)) {
                 $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
-                $stmt->bind_param("sssssi", $new_user, $new_email, $new_phone, $new_birthday, $hashed, $customer_id);
+                $stmt->bind_param("ssssi", $new_user, $new_phone, $new_birthday, $hashed, $customer_id);
             } else { 
-                $stmt->bind_param("ssssi", $new_user, $new_email, $new_phone, $new_birthday, $customer_id); 
+                $stmt->bind_param("sssi", $new_user, $new_phone, $new_birthday, $customer_id); 
             }
-            
-            if ($stmt->execute()) { 
-                $_SESSION['username'] = $new_user; 
-                $update_msg = "Profile updated successfully."; 
-            } else {
+    if ($stmt->execute()) { 
+        if (!empty($new_pass) && isset($hashed)) {
+            $hist_insert = $conn->prepare("INSERT INTO password_history (customer_id, password_hash) VALUES (?, ?)");
+            $hist_insert->bind_param("is", $customer_id, $curr_hash);
+            $hist_insert->execute();
+            $hist_insert->close();
+            }
+        $_SESSION['username'] = $new_user; 
+          $update_msg = "Profile updated successfully."; 
+        } else {
                 $update_err = "Database error. Failed to update profile.";
             }
             $stmt->close();
         }
         $check_stmt->close();
     }
-}
-
+} 
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_address'])) {
     $open_acc = 'address'; 
@@ -467,8 +491,8 @@ if ($tier_status === 'VIP') {
                                     <input type="text" name="username" class="tech-input" value="<?php echo htmlspecialchars($user['username']); ?>" pattern="[a-zA-Z0-9_]{3,20}" title="3-20 letters, numbers, or underscores" required>
                                 </div>
                                 <div class="tech-input-group">
-                                    <label class="tech-label">Email Address</label>
-                                    <input type="email" name="email" class="tech-input" value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                                    <label class="tech-label">Email Address (Immutable)</label>
+                                    <input type="email" class="tech-input" value="<?php echo htmlspecialchars($user['email']); ?>" readonly style="opacity: 0.6; cursor: not-allowed;" title="Your core identity email cannot be changed.">
                                 </div>
                                 <div class="tech-input-group">
                                     <label class="tech-label">Phone Number</label>
