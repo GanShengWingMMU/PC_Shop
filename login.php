@@ -17,14 +17,12 @@ if (!isset($_SESSION['login_attempts'])) { $_SESSION['login_attempts'] = 0; }
 
 $redirect_url = isset($_GET['redirect']) ? filter_var($_GET['redirect'], FILTER_SANITIZE_URL) : 'index.php';
 
-
 if (isset($_SESSION['lockout_time'])) {
     if (time() < $_SESSION['lockout_time']) {
         $locked_out = true;
         $remaining_time = $_SESSION['lockout_time'] - time();
         $error_msg = "Your account is temporarily locked due to multiple failed attempts.";
     } else {
-
         unset($_SESSION['lockout_time'], $_SESSION['login_attempts']);
     }
 }
@@ -36,26 +34,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
     if (empty($login_id) || empty($password)) {
         $error_msg = "Please enter your email and password.";
     } else {
-        $stmt = $conn->prepare("SELECT customer_id, username, password, account_status FROM customers WHERE email = ? OR username = ?");
+        // 🌟 修正点 1: 改用 SELECT * 确保能抓到 status 栏位
+        $stmt = $conn->prepare("SELECT * FROM customers WHERE email = ? OR username = ?");
         $stmt->bind_param("ss", $login_id, $login_id);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
-            if ($user['account_status'] !== 'Active') {
-                $error_msg = "Your account has been disabled. Please contact our support team.";
+            
+            // 🌟 修正点 2: 智能匹配你的数据库栏位名 (status 或 account_status)，并无视大小写
+            $current_status = $user['status'] ?? $user['account_status'] ?? 'Active';
+            
+            if (strtolower($current_status) === 'inactive') {
+                $error_msg = "Your account has been disabled. Please contact admin for support.";
             } else {
                 if (password_verify($password, $user['password'])) {
                     
-                   
                     session_regenerate_id(true);
                     
                     unset($_SESSION['login_attempts'], $_SESSION['lockout_time']);
                     $_SESSION['customer_id'] = $user['customer_id'];
                     $_SESSION['username'] = $user['username'];
                     $_SESSION['role'] = 'customer';
-                    
                     
                     $parsed = parse_url($redirect_url);
                     if (isset($parsed['host']) || isset($parsed['scheme'])) {
@@ -65,10 +66,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
                     }
                     exit();
                 } else {
-                    
                     $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
                     if ($_SESSION['login_attempts'] >= 3) {
-                        
                         $_SESSION['lockout_time'] = time() + 60; 
                         $locked_out = true;
                         $remaining_time = 60;
@@ -79,7 +78,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
                 }
             }
         } else {
-           
             $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
             if ($_SESSION['login_attempts'] >= 3) {
                 $_SESSION['lockout_time'] = time() + 60; 
@@ -114,20 +112,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
         .tech-label { font-family: 'Inter', sans-serif; color: #00f2fe; font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; }
         .tech-input { width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 14px 16px; border-radius: 6px; font-size: 0.95rem; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
         .tech-input:focus { outline: none; border-color: #00f2fe; background: rgba(0, 242, 254, 0.03); box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
-        
-    
         .tech-input:disabled { background: rgba(255,77,77,0.05); border-color: rgba(255,77,77,0.2); color: #ff4d4d; cursor: not-allowed; }
-        
         .tech-btn { background: transparent; color: #00f2fe; border: 1px solid #00f2fe; font-family: 'Inter', sans-serif; font-weight: 700; padding: 14px; width: 100%; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 1rem; }
         .tech-btn:hover:not(:disabled) { background: #00f2fe; color: #000; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
-        
-      
         .tech-btn:disabled { background: rgba(255,77,77,0.1); color: #ff4d4d; border-color: rgba(255,77,77,0.3); cursor: not-allowed; box-shadow: none; transform: none; }
-        
         .oauth-btn { flex: 1; text-align: center; padding: 12px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: #cbd5e1; text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: 0.3s; }
         .oauth-btn:hover { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.2); }
-        
-        
         .lockout-timer { font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: bold; text-align: center; color: #ff4d4d; margin: 15px 0; text-shadow: 0 0 15px rgba(255,77,77,0.6); }
     </style>
 </head>
@@ -185,8 +175,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
             </button>
         </form>
 
-
-
         <div style="text-align: center; margin-top: 30px; font-size: 0.85rem; color: #64748b;">
             Don't have an account? <a href="register.php" style="color: #00f2fe; text-decoration: none; font-weight: 700;">Sign Up</a>
         </div>
@@ -216,7 +204,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     <?php if ($locked_out): ?>
-   
     let timeLeft = <?php echo $remaining_time; ?>;
     const timerDisplay = document.getElementById('countdown');
     

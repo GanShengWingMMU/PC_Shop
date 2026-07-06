@@ -13,10 +13,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
     $password = $_POST['password'];
+    $confirm_password = $_POST['confirm_password'];
     $role = trim($_POST['role']);
 
-    if (empty($username) || empty($password) || empty($role)) {
+    if (empty($username) || empty($password) || empty($confirm_password) || empty($role)) {
         $error = "Please fill in all required fields.";
+    } elseif ($password !== $confirm_password) {
+        $error = "⚠️ Passwords do not match.";
     } else {
     
         if (strlen($password) < 12 || !preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password) || !preg_match('/[\W_]/', $password)) {
@@ -181,8 +184,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
                             <input type="email" name="email" class="form-control">
                         </div>
 
+                        <!-- 🌟 密码栏位 -->
                         <div class="form-group full-width">
-                            <label style="color: #ff4d4d; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">High-Security Password *</label>
+                            <label style="color: #ff4d4d; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Password *</label>
                             <div style="position: relative;">
                                 <input type="password" name="password" id="pwd-input" class="form-control" required style="padding-right: 40px; margin-bottom:0;">
                                 <i class="fas fa-eye" id="toggle-pwd" style="position: absolute; right: 15px; top: 15px; color: #888; cursor: pointer; transition: 0.2s;"></i>
@@ -197,6 +201,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
                             </div>
                         </div>
 
+                        <!-- 🌟 确认密码栏位 -->
+                        <div class="form-group full-width" style="margin-top: 5px;">
+                            <label style="color: #ff4d4d; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Confirm Password *</label>
+                            <div style="position: relative;">
+                                <input type="password" name="confirm_password" id="confirm-pwd-input" class="form-control" required style="padding-right: 40px; margin-bottom:0;">
+                                <i class="fas fa-eye" id="toggle-confirm-pwd" style="position: absolute; right: 15px; top: 15px; color: #888; cursor: pointer; transition: 0.2s;"></i>
+                            </div>
+                            <div id="pwd-match-msg" style="font-size: 12px; margin-top: 8px; font-weight: bold; display: none;"></div>
+                        </div>
+
                         <div class="form-group full-width" style="margin-top: 15px;">
                             <label style="color: #ff4d4d; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;">Role Level *</label>
                             <select name="role" class="form-control" required style="cursor:pointer;">
@@ -207,7 +221,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
                     </div>
 
                     <button type="submit" name="add_staff" id="submit-btn" disabled style="width: 100%; margin-top:40px; background: linear-gradient(135deg, #ff4d4d, #f39c12); color: #000; border: none; padding: 18px; border-radius: 8px; font-weight: 900; font-size: 16px; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;">
-                        <i class="fas fa-lock"></i> Authorize Clearance
+                        <i class="fas fa-lock"></i> Requirements Not Met
                     </button>
                 </form>
             </div>
@@ -216,9 +230,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
 
     <script>
         const pwdInput = document.getElementById('pwd-input');
+        const confirmPwdInput = document.getElementById('confirm-pwd-input');
         const togglePwd = document.getElementById('toggle-pwd');
+        const toggleConfirmPwd = document.getElementById('toggle-confirm-pwd');
         const rulesBox = document.getElementById('pwd-rules');
         const submitBtn = document.getElementById('submit-btn');
+        const pwdMatchMsg = document.getElementById('pwd-match-msg');
 
         const rules = {
             len: { el: document.getElementById('req-len'), regex: /.{12,}/ },
@@ -228,7 +245,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
             spc: { el: document.getElementById('req-spc'), regex: /[\W_]/ }
         };
 
-        // check password
+        let isPwdValid = false;
+        let isMatch = false;
+
+        // Toggle Password Visibility (Password Field)
         togglePwd.addEventListener('click', function () {
             const type = pwdInput.getAttribute('type') === 'password' ? 'text' : 'password';
             pwdInput.setAttribute('type', type);
@@ -236,12 +256,49 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
             this.style.color = type === 'text' ? '#ff4d4d' : '#888';
         });
 
-       
+        // Toggle Password Visibility (Confirm Password Field)
+        toggleConfirmPwd.addEventListener('click', function () {
+            const type = confirmPwdInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            confirmPwdInput.setAttribute('type', type);
+            this.classList.toggle('fa-eye-slash');
+            this.style.color = type === 'text' ? '#ff4d4d' : '#888';
+        });
+
+        // Show rules on focus
         pwdInput.addEventListener('focus', () => {
             rulesBox.style.display = 'block';
         });
 
-       
+        // Master function to validate entire form state
+        function validateForm() {
+            // Check matching
+            if (confirmPwdInput.value.length > 0) {
+                pwdMatchMsg.style.display = 'block';
+                if (pwdInput.value === confirmPwdInput.value) {
+                    isMatch = true;
+                    pwdMatchMsg.innerHTML = '<i class="fas fa-check-circle"></i> Passwords match';
+                    pwdMatchMsg.style.color = '#00e676';
+                } else {
+                    isMatch = false;
+                    pwdMatchMsg.innerHTML = '<i class="fas fa-times-circle"></i> Passwords do not match';
+                    pwdMatchMsg.style.color = '#ff4d4d';
+                }
+            } else {
+                pwdMatchMsg.style.display = 'none';
+                isMatch = false;
+            }
+
+            // Unlock button only if rules met AND passwords match
+            if (isPwdValid && isMatch) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Authorize Clearance';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-lock"></i> Requirements Not Met';
+            }
+        }
+
+        // Validate complex rules on password input
         pwdInput.addEventListener('input', function () {
             const val = this.value;
             let allValid = true;
@@ -258,16 +315,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_staff'])) {
                 }
             }
 
+            isPwdValid = allValid;
             if (allValid) {
                 rulesBox.classList.add('all-valid');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Authorize Clearance';
             } else {
                 rulesBox.classList.remove('all-valid');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-lock"></i> Requirements Not Met';
             }
+
+            validateForm();
         });
+
+        // Validate matching on confirm input
+        confirmPwdInput.addEventListener('input', validateForm);
     </script>
 </body>
 </html>
