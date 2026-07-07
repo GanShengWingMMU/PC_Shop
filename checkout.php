@@ -687,7 +687,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p style="color: #888; font-size: 0.85rem; margin-bottom: 15px; text-transform: uppercase;">Select Banking Node</p>
                         <div class="bank-grid">
                             <?php 
-                            $banks = ['Maybank' => 'maybank.png', 'CIMB Clicks' => 'cimb.png', 'Public Bank' => 'public.png', 'RHB Now' => 'rhb.png'];
+                            $banks = ['Maybank' => 'maybank.png', 'CIMB' => 'cimb.png', 'Public Bank' => 'public.png', 'RHB' => 'rhb.png'];
                             foreach($banks as $bname => $bimg): 
                             ?>
                             <label class="bank-card">

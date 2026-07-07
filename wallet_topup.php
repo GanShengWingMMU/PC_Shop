@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $method = $_POST['payment_method'] ?? '';
 
-    if ($amount >= 10) {
+    if ($amount >= 10 && $amount <= 10000) {
         $auth_success = false;
         $bank_id = null;
 
@@ -30,9 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($method === 'Online Banking (FPX)') {
             $fpx_user = trim($_POST['fpx_username'] ?? '');
             $fpx_pass = trim($_POST['fpx_password'] ?? '');
-            
-            $stmt_bank = $conn->prepare("SELECT id, balance FROM bank WHERE fpx_username = ? AND fpx_password = ?");
-            $stmt_bank->bind_param("ss", $fpx_user, $fpx_pass);
+            $selected_bank = trim($_POST['selected_bank'] ?? '');
+
+            $stmt_bank = $conn->prepare("SELECT id, balance FROM bank WHERE fpx_username = ? AND fpx_password = ? AND bank_name = ?");
+            $stmt_bank->bind_param("sss", $fpx_user, $fpx_pass, $selected_bank);
             $stmt_bank->execute();
             $bank_res = $stmt_bank->get_result();
             
@@ -121,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     } else {
-        if (empty($error_msg)) $error_msg = "Minimum top-up amount is RM 10.";
+        if (empty($error_msg)) $error_msg = "Top-up amount must be between RM 10 and RM 10,000.";
     }
 }
 
@@ -200,10 +201,10 @@ $stmt_cards->close();
                 </div>
 
                 <div class="form-group" style="margin-bottom: 25px;">
-                    <label class="form-label" for="custom_amount">Or Enter Custom Amount (Min RM 10)</label>
+                    <label class="form-label" for="custom_amount">Or Enter Custom Amount (min=RM10 & max=RM10000)</label>
                     <div class="custom-amount-wrapper">
                         <span>RM</span>
-                        <input type="number" id="custom_amount" name="custom_amount" min="10" step="0.01" placeholder="0.00">
+                        <input type="number" id="custom_amount" name="custom_amount" min="10" max="10000" step="0.01" placeholder="0.00">
                     </div>
                     <p id="custom_reward_preview" style="color: #ffd700; margin-top: 8px; font-size: 0.9rem; display: none;"></p>
                 </div>
@@ -257,11 +258,11 @@ $stmt_cards->close();
                     </h4>
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="Maybank2U" style="margin-right: 10px;" onchange="toggleFPXForm()">
+                            <input type="radio" name="selected_bank" value="Maybank" style="margin-right: 10px;" onchange="toggleFPXForm()">
                             <img src="image/maybank.png" style="height: 30px; object-fit: contain;">
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="CIMB Clicks" style="margin-right: 10px;" onchange="toggleFPXForm()">
+                            <input type="radio" name="selected_bank" value="CIMB" style="margin-right: 10px;" onchange="toggleFPXForm()">
                             <img src="image/cimb.png" style="height: 30px; object-fit: contain;">
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
@@ -269,7 +270,7 @@ $stmt_cards->close();
                             <img src="image/public.png" style="height: 30px; object-fit: contain;">
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;" onmouseover="this.style.borderColor='#00f2fe'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
-                            <input type="radio" name="selected_bank" value="RHB Now" style="margin-right: 10px;" onchange="toggleFPXForm()">
+                            <input type="radio" name="selected_bank" value="RHB" style="margin-right: 10px;" onchange="toggleFPXForm()">
                             <img src="image/rhb.png" style="height: 30px; object-fit: contain;">
                         </label>
                     </div>
@@ -317,7 +318,7 @@ $stmt_cards->close();
                 });
                 
                 let amount = parseFloat(customInput.value);
-                if (!isNaN(amount) && amount >= 10) {
+                if (!isNaN(amount) && amount >= 10 && amount <= 10000) {
                     let coins = Math.floor(amount / 10);
                     if(rewardPreview) {
                         rewardPreview.innerHTML = `<i class="fa-solid fa-coins"></i> +${coins} Coins earned!`;
