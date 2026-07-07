@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_post'])) {
 // Censor Filter
 if (isset($_GET['scan_post'])) {
     $pid = intval($_GET['scan_post']);
-    $bad_words = array('fuck', 'shit', 'scam', 'bitch', 'asshole');
+    $bad_words = array('fuck', 'shit', 'scam', 'bitch', 'asshole', 'cibai', 'damn');
     
     $res = $conn->query("SELECT content FROM community_posts WHERE post_id = $pid");
     if ($row = $res->fetch_assoc()) {
