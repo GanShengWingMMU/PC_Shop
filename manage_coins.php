@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $amount = abs(intval($_POST['coin_amount'])); 
     $action = $_POST['action']; 
 
-    // 🌟 核心逻辑：获取该用户当天的硬币变动记录
+  
     $check_stmt = $conn->prepare("SELECT reward_coins, daily_coins_added, daily_coins_deducted, last_coin_update FROM customers WHERE customer_id = ?");
     $check_stmt->bind_param("i", $cid);
     $check_stmt->execute();
@@ -22,31 +22,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($row = $res->fetch_assoc()) {
         $today = date('Y-m-d');
         
-        // 如果最后更新日期不是今天，则重置每日追踪额度
+
         $daily_added = ($row['last_coin_update'] === $today) ? intval($row['daily_coins_added']) : 0;
         $daily_deducted = ($row['last_coin_update'] === $today) ? intval($row['daily_coins_deducted']) : 0;
 
         if ($action === 'add') {
-            // 检查今日注入额度是否超标
+       
             if ($daily_added + $amount > 500) {
                 $rem = 500 - $daily_added;
                 header("Location: manage_coins.php?msg=limit_reached&type=add&rem=" . $rem);
                 exit();
             }
             $daily_added += $amount;
-            $db_amount = $amount; // 实际写入数据库的变动值
+            $db_amount = $amount;
         } else {
-            // 检查今日扣除额度是否超标
+          
             if ($daily_deducted + $amount > 500) {
                 $rem = 500 - $daily_deducted;
                 header("Location: manage_coins.php?msg=limit_reached&type=deduct&rem=" . $rem);
                 exit();
             }
             $daily_deducted += $amount;
-            $db_amount = -$amount; // 实际写入数据库的变动值
+            $db_amount = -$amount; 
         }
 
-        // 🌟 执行更新，同时保存每日额度和最后更新日期
+   
         $stmt = $conn->prepare("UPDATE customers SET reward_coins = GREATEST(0, reward_coins + ?), daily_coins_added = ?, daily_coins_deducted = ?, last_coin_update = ? WHERE customer_id = ?");
         $stmt->bind_param("iiisi", $db_amount, $daily_added, $daily_deducted, $today, $cid);
         
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 <p style="color:#888; font-size:13px; margin-top:5px;">Monitor and manually inject or deduct reward coins for citizens. (Max 500 per day)</p>
             </header>
 
-            <!-- 🌟 错误与成功讯息展示 -->
+      
             <?php 
             if (isset($_GET['msg'])) {
                 if ($_GET['msg'] == 'success') {
