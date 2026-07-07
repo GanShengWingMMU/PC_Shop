@@ -290,15 +290,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($final_payment_method === 'Online Banking (FPX)') {
             $fpx_user = trim($_POST['fpx_username'] ?? ''); 
             $fpx_pass = trim($_POST['fpx_password'] ?? '');
-            $fpx_stmt = $conn->prepare("SELECT id FROM bank WHERE fpx_username = ? AND fpx_password = ?");
-            $fpx_stmt->bind_param("ss", $fpx_user, $fpx_pass);
+            $selected_bank = trim($_POST['selected_bank'] ?? ''); 
+
+            $fpx_stmt = $conn->prepare("SELECT id FROM bank WHERE fpx_username = ? AND fpx_password = ? AND bank_name = ?");
+            $fpx_stmt->bind_param("sss", $fpx_user, $fpx_pass, $selected_bank);
             $fpx_stmt->execute();
-            if ($fpx_data = $fpx_stmt->get_result()->fetch_assoc()) {
-                 $bank_account_id_to_deduct = $fpx_data['id']; 
-                 $final_payment_method = "FPX - " . ($_POST['selected_bank'] ?? 'Bank');
-            } else {
-                 throw new Exception("[SYSTEM ERROR] FPX Login Failed: Invalid username or password.");
-            }
+    
+    if ($fpx_data = $fpx_stmt->get_result()->fetch_assoc()) {
+         $bank_account_id_to_deduct = $fpx_data['id']; 
+         $final_payment_method = "FPX - " . $selected_bank;
+    } else {
+         throw new Exception("[SYSTEM ERROR] FPX Login Failed: Invalid credentials or bank mismatch.");
+    }
         }
 
         $required_products = []; 
@@ -684,7 +687,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p style="color: #888; font-size: 0.85rem; margin-bottom: 15px; text-transform: uppercase;">Select Banking Node</p>
                         <div class="bank-grid">
                             <?php 
-                            $banks = ['Maybank2U' => 'maybank.png', 'CIMB Clicks' => 'cimb.png', 'Public Bank' => 'public.png', 'RHB Now' => 'rhb.png'];
+                            $banks = ['Maybank' => 'maybank.png', 'CIMB Clicks' => 'cimb.png', 'Public Bank' => 'public.png', 'RHB Now' => 'rhb.png'];
                             foreach($banks as $bname => $bimg): 
                             ?>
                             <label class="bank-card">

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 07, 2026 at 04:21 AM
+-- Generation Time: Jul 07, 2026 at 07:57 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -301,7 +301,8 @@ INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_even
 (231, 1, 'Alvis', 'SuperAdmin', 'Added New Staff: OCAlvis', '127.0.0.1', '2026-07-07 09:51:12'),
 (232, 10, 'OCAlvis', 'Admin', 'System Login', '127.0.0.1', '2026-07-07 09:51:21'),
 (233, 10, 'OCAlvis', 'Admin', 'Added New Product: MSI MAG A650BN 650W 80', '127.0.0.1', '2026-07-07 10:01:15'),
-(234, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 10:15:10');
+(234, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 10:15:10'),
+(235, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 13:53:56');
 
 -- --------------------------------------------------------
 
@@ -327,8 +328,12 @@ CREATE TABLE `bank` (
 
 INSERT INTO `bank` (`id`, `bank_name`, `cardholder_name`, `card_number`, `cvc`, `expiry_date`, `fpx_username`, `fpx_password`, `balance`) VALUES
 (1, 'Maybank', 'Ali Bin Abu', '1111222233334444', '123', '12/30', NULL, NULL, 8303.00),
-(2, 'Maybank', 'Gan Sheng Wing', '9999888877776666', '999', '12/30', NULL, NULL, 914000.10),
-(3, 'Maybank', 'FPX User 1', '0000', '000', '12/30', 'ganshengwing', '123456', 76101.00);
+(2, 'Maybank', 'Gan Sheng Wing', '9999888877776666', '999', '12/30', 'Wayne', '123456', 911200.10),
+(3, 'Maybank', 'Lily', '6000000000000000', '144', '12/30', 'Lily', '123456', 76101.00),
+(4, 'Maybank', 'Rich Gamer', '4111222233334444', '123', '12/30', 'rich_mb', '123456', 99999.00),
+(5, 'CIMB', 'Broke Student', '5555666677778888', '456', '12/28', 'student_cimb', '123456', 150.00),
+(6, 'Public Bank', 'Time Traveler', '3782111122223333', '789', '01/22', 'pb_test', '123456', 5000.00),
+(7, 'RHB', 'Standard User', '4242424242424242', '000', '11/29', 'rhb_user', '123456', 10000.00);
 
 -- --------------------------------------------------------
 
@@ -732,7 +737,7 @@ CREATE TABLE `customers` (
 --
 
 INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `birthday`, `wallet_balance`, `reward_coins`, `lifetime_coins`, `membership_tier`, `vip_expiry_date`, `auto_renew`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`, `created_at`, `status`, `daily_coins_added`, `daily_coins_deducted`, `last_coin_update`) VALUES
-(1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99972177.99, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active', 0, 0, NULL),
+(1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99971105.99, 252, 532, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active', 0, 0, NULL),
 (3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 6, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active', 0, 0, NULL),
 (5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queiiit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 110105.00, 1502, 500, 'VIP', '2026-07-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14', 'Active', 0, 0, NULL),
 (6, 'kskbl', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', '+60122222620', '2025-11-17', 7391.00, 3818, 3377, 'VIP', '2026-07-18 17:07:34', 1, NULL, 'Active', NULL, NULL, 27, 44, 13, 0, '2026-05-09 21:32:45', 'Active', 500, 500, '2026-07-07'),
@@ -831,14 +836,14 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `total_amount`, `coins_used`, `discount_amount`, `shipping_address`, `contact_number`, `order_status`) VALUES
-(7, 'My Custom Order', 1, '2026-04-09 19:20:44', 21680.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Completed'),
+(7, 'My Custom Order', 1, '2026-07-07 13:43:15', 21680.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Completed'),
 (8, 'My Custom Order', 1, '2026-04-09 19:22:37', 0.00, 1000000888, 99999999.99, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Completed'),
 (9, 'My Custom Order', 1, '2026-04-09 19:30:08', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
-(10, 'My Custom Order', 1, '2026-04-09 19:35:48', 6692.00, 55, 5.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(10, 'My Custom Order', 1, '2026-04-09 19:35:48', 6692.00, 55, 5.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Shipped'),
 (11, 's', 1, '2026-04-09 23:11:35', 6047.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
-(12, 'My Custom Order', 1, '2026-04-09 23:28:54', 950.00, 0, 0.00, 'Gan Sheng Wing | 012-3456789\nMMU Cyberjaya', '012-3456789', 'Cancelled'),
-(13, 'My Custom Order', 1, '2026-04-11 17:26:52', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
-(14, 'My Custom Order', 1, '2026-04-11 17:41:34', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
+(12, 'My Custom Order', 1, '2026-07-06 23:28:54', 950.00, 0, 0.00, 'Gan Sheng Wing | 012-3456789\nMMU Cyberjaya', '012-3456789', 'Completed'),
+(13, 'My Custom Order', 1, '2026-04-11 17:26:52', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Shipped'),
+(14, 'My Custom Order', 1, '2026-04-11 17:41:34', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Delivered\n'),
 (15, 'My Custom Order', 1, '2026-04-19 23:30:46', 6697.00, 0, 0.00, 'Sheng Wing Gan | 0162058560\\r\\na0805, 205 Short Rd\\r\\n05602 Berlin, Johor', '', 'Pending'),
 (16, 'My Custom Order', 5, '2026-05-02 22:30:30', 74860.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Completed'),
 (17, 'My Custom Order', 5, '2026-05-02 22:31:55', 6427.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Shipped'),
@@ -860,7 +865,10 @@ INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `to
 (33, 'My Custom Order', 6, '2026-06-20 20:50:36', 8609.00, 0, 150.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
 (34, 'My Custom Order', 6, '2026-06-20 21:54:48', 8759.00, 0, 0.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
 (35, 'My Custom Order', 6, '2026-06-20 21:55:54', 6427.00, 0, 0.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Cancelled'),
-(36, 'My Custom Order', 8, '2026-07-06 16:06:05', 14419.00, 0, 0.00, 'Alvis | +601158534889\n2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', NULL, 'Completed');
+(36, 'My Custom Order', 8, '2026-07-06 16:06:05', 14419.00, 0, 0.00, 'Alvis | +601158534889\n2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', NULL, 'Completed'),
+(37, 'My Custom Order', 1, '2026-07-07 13:08:43', 1450.00, 0, 0.00, 'Customer | 000-0000000\nSheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', NULL, 'Cancelled'),
+(38, 'My Custom Order', 1, '2026-07-07 13:23:26', 1350.00, 0, 0.00, 'Customer | 000-0000000\nSheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', NULL, 'Delivered'),
+(39, 'My Custom Order', 1, '2026-07-07 13:51:29', 2522.00, 280, 28.00, 'Customer | 000-0000000\nSheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', NULL, 'Completed');
 
 -- --------------------------------------------------------
 
@@ -925,7 +933,10 @@ INSERT INTO `order_details` (`order_detail_id`, `order_id`, `product_id`, `pc_bu
 (36, 33, NULL, NULL, 9, NULL, 1, 8759.00, NULL, NULL, NULL),
 (37, 34, NULL, NULL, 9, NULL, 1, 8759.00, NULL, NULL, NULL),
 (38, 35, NULL, 28, NULL, 5, 1, 6427.00, NULL, NULL, NULL),
-(39, 36, NULL, NULL, 16, NULL, 1, 14419.00, NULL, NULL, NULL);
+(39, 36, NULL, NULL, 16, NULL, 1, 14419.00, NULL, NULL, NULL),
+(40, 37, 4, NULL, NULL, NULL, 1, 1450.00, NULL, NULL, NULL),
+(41, 38, 48, NULL, NULL, NULL, 1, 1350.00, NULL, NULL, NULL),
+(42, 39, 44, NULL, NULL, NULL, 1, 2550.00, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1148,7 +1159,10 @@ INSERT INTO `payments` (`payment_id`, `order_id`, `payment_method`, `reference_n
 (26, 33, 'E-Wallet', NULL, 'Paid', '2026-06-20 20:50:36'),
 (27, 34, 'Credit Card ending in 6666', NULL, 'Paid', '2026-06-20 21:54:48'),
 (28, 35, 'Credit Card ending in 6666', NULL, 'Paid', '2026-06-20 21:55:54'),
-(29, 36, 'Credit Card ending in 6666', NULL, 'Paid', '2026-07-06 16:06:05');
+(29, 36, 'Credit Card ending in 6666', NULL, 'Paid', '2026-07-06 16:06:05'),
+(30, 37, 'FPX - CIMB Clicks', NULL, 'Paid', '2026-07-07 13:08:43'),
+(31, 38, 'FPX - Maybank', NULL, 'Paid', '2026-07-07 13:23:26'),
+(32, 39, 'E-Wallet', NULL, 'Paid', '2026-07-07 13:51:29');
 
 -- --------------------------------------------------------
 
@@ -1221,11 +1235,11 @@ INSERT INTO `products` (`product_id`, `category_id`, `product_name`, `descriptio
 (41, 3, 'Corsair Dominator Titanium 32GB DDR5 7200MHz', 'Ultra-premium high-frequency memory for Intel builds.', 850.00, 9, 'Memory Type: DDR5\r\nForm Factor: U-DIMM\r\nColor: White\r\nHeat Spreader: Aluminum\r\nCapacity: 16GB per DIMM\r\nSpeed: 7200 MT/s\r\nTimings: 34-44-44-96 2T\r\nOperating Voltage: 1.45V\r\nDimensions: 135.9 x 56.75×7.7mm(LxHxW)\r\nWeight: 77 grams', 'image/prod_6a26b7b386114.jpg', 'Available', 12, 0, '', 'DDR5', 9),
 (42, 3, 'TeamGroup T-Force Delta RGB 32GB DDR4 3600MHz', 'Flashy RGB DDR4 kit for mid-range systems.', 380.00, 25, 'Capacity: 32GB (2 x 16GB dual-channel kit)\r\nMemory Type: DDR4 UDIMM (Desktop)\r\nTested Speed: 3600 MHz (PC4-28800)\r\nCAS Latency: CL18 (18-22-22-42)Voltage: 1.35V\r\nForm Factor: 288-pin \r\nDIMMLighting: 120° ultra-wide-angle, full-frame RGB Force Flow effect\r\nHeatsink: Geometric asymmetric aluminum alloy heat spreader\r\nColors Available: Typically offered in Black or White\r\nDimensions: 49mm (1.93 inches) in total height', 'image/prod_6a26b7a8e455f.jpg', 'Available', 8, 0, '', 'DDR4', 8),
 (43, 4, 'ASUS TUF Gaming GeForce RTX™ 4060 Ti 8GB GDDR6 OC Edition', 'Excellent 1080p Ultra gaming with DLSS 3 Frame Gen.', 1850.00, 17, '- Graphic Engine: NVIDIA® GeForce RTX™ 4060 Ti\r\n- AI Performance: 366\r\n- Bus Standard: PCI Express 4.0\r\n- OpenGL: OpenGL®4.6\r\n- Memory: 8GB GDDR6\r\n- Engine Clock: 2655MHz\r\n- CUDA Core: 4352\r\n- Memory Speed: 18 Gbps\r\n- Resolution: 7680 x 4320\r\n- Interface: Yes x 1 (Native HDMI 2.1a), Yes x 3 (Native DisplayPort 1.4a), HDCP Support Yes (2.3)', 'image/prod_6a26b7a00ec82.png', 'Available', 160, 0, '', '', 5),
-(44, 4, 'AMD Radeon RX 7800 XT 16GB', 'Unbeatable 1440p value, massive VRAM for textures.', 2550.00, 16, '- lock: GPU / Memory\r\n- Game Clock: 2169 MHz / 19.5 Gbps\r\n- Memory: 16GB GDDR6\r\n- Memory Speed: 19.5 Gbps\r\n- Power Supply Unit: 700 W', 'image/prod_6a26b796662e7.png', 'Available', 263, 0, '', '', 7),
+(44, 4, 'AMD Radeon RX 7800 XT 16GB', 'Unbeatable 1440p value, massive VRAM for textures.', 2550.00, 15, '- lock: GPU / Memory\r\n- Game Clock: 2169 MHz / 19.5 Gbps\r\n- Memory: 16GB GDDR6\r\n- Memory Speed: 19.5 Gbps\r\n- Power Supply Unit: 700 W', 'image/prod_6a26b796662e7.png', 'Available', 263, 0, '', '', 7),
 (45, 4, 'ROG Strix GeForce RTX™ 4080 SUPER 16GB GDDR6X OC Edition', 'Incredible 4K performance and ray tracing capabilities.', 4950.00, 9, '- Engine Clock: 2640 MHz\r\n- Memory: 16GB GDDR6X\r\n- Memory Speed: 23 Gbps\r\n- Resolution: 7680 × 4320\r\n- Dimensions: 357.6 x 149.3 x 70.1 mm\r\n- Power Supply Unit: 850W', 'image/prod_6a26b78ea28d7.png', 'Available', 320, 0, '', '', 9),
 (46, 4, 'AMD Radeon RX 7900 XTX 24GB', 'Raw rasterization monster, destroys 4K without breaking a sweat.', 4800.00, 8, '- Stream Processors: 6,144 (96 Compute Units)\r\n- Memory: 24GB GDDR6\r\n- Power Supply Unit: 750W to 850W\r\n- Display Outputs: DisplayPort 2.1, HDMI 2.1a, USB Type-C', 'image/prod_6a26b784937e8.png', 'Available', 355, 0, '', '', 9),
 (47, 4, 'ASUS Dual GeForce RTX™ 4070 Ti SUPER OC Edition 16GB GDDR6X', 'Perfect 1440p high-refresh rate card.', 6039.00, 13, '- AI Performance: 710\r\n- Bus Standard: PCI Express 4.0\r\n- OpenGL: OpenGL®4.6\r\n- Video Memory: 16GB GDDR6X\r\n- Default mode: 2625 MHz (boost)\r\n- CUDA Core: 8448\r\n- Memory Speed: 21 Gbps\r\n- Memory Interface: 256-bit\r\n- Resolution: Digital Max Resolution 7680 x 4320\r\n- Interface: Yes x 1 (Native HDMI 2.1a), Yes x 3 (Native DisplayPort 1.4a), HDCP Support Yes (2.3)', 'image/prod_6a26b77aec538.png', 'Available', 285, 0, '', '', 8),
-(48, 4, 'AMD Radeon RX 7600 8GB', 'Budget king for entry-level 1080p gaming.', 1350.00, 9, 'Video Memory: 8GB GDDR6\r\nMemory Interface: 128-bit\r\nInterface Type: PCI Express 4.0\r\nOutput Ports: HDMI, DisplayPort (varies by manufacturer)\r\nArchitecture: RDNA 3\r\nPower Connector: 8-pin (varies by model)\r\nRecommended PSU: 550W or higher', 'image/prod_6a26b76fcdfc0.png', 'Available', 165, 0, '', '', 4),
+(48, 4, 'AMD Radeon RX 7600 8GB', 'Budget king for entry-level 1080p gaming.', 1350.00, 8, 'Video Memory: 8GB GDDR6\r\nMemory Interface: 128-bit\r\nInterface Type: PCI Express 4.0\r\nOutput Ports: HDMI, DisplayPort (varies by manufacturer)\r\nArchitecture: RDNA 3\r\nPower Connector: 8-pin (varies by model)\r\nRecommended PSU: 550W or higher', 'image/prod_6a26b76fcdfc0.png', 'Available', 165, 0, '', '', 4),
 (49, 5, 'WD Black SN850X 2TB Gen4 NVMe', 'Top-tier speeds up to 7300MB/s.', 780.00, 18, '- Capacity: 1 TB (Without Heatsink)\r\n- Form Factor: M.2 2280\r\n- Interface: PCIe Gen4 x4\r\n- Sequential Read Performance: 7300MB/s\r\n- Sequential Write Performance: 6300MB/s\r\n- Random Read: 8000004KB IOPS\r\n- Random Write: 11000004KB IOPS\r\n- Endurance (TBW): 600\r\n- Compatibility: Computer with M.2 (M-key) port\r\n- Dimensions: Length: 20mm Weight: 22mm Height: 2.38mm', 'image/prod_6a26b73aa2a97.jpg', 'Available', 8, 0, '', '', 9),
 (50, 5, 'Crucial P3 Plus 1TB Gen4 NVMe', 'Great balance of speed and affordability.', 280.00, 44, '- Storage Capacity: 1TB\r\n- Hard Disk Interface: NVMe\r\n- Connectivity Technology: NVMe\r\n- Additional Features: Portable\r\n- Hard Disk: Form Factor	2.5 Inches (6.4 cm)\r\n- Compatible Devices: Desktops & Laptops that accept PCIe NVMe Gen 4.0 drives\r\n- Read Speed: 5000MB/s\r\n- Media Speed: 4200 MB/S\r\n- Data Transfer Rate: 5000 MB/s\r\n- Form Factor: M.2\r\n- Hardware Connectivity: PCIE x 4\r\n- Hardware Platform: Linux, Mac, PC\r\n- Hard-Drive Size: 500 GB\r\n- Item Dimensions: L x W x Thickness	3.15\r\n- Color: Black\r\n- Enclosure Material: Aluminum', 'image/prod_6a26b72f9beef.jpg', 'Available', 5, 0, '', '', 8),
 (51, 5, 'Samsung 990 PRO 4TB NVMe', 'Massive fast storage for heavy video editors.', 1550.00, 7, '- Interface: PCIe Gen 4.0, x4, NVMe 2.0[5]\r\n- Form Factor: M.2 (2280)\r\n- Storage Memory: Samsung V-NAND 3-bit TLC\r\n- Controller: Samsung In-house controller\r\n- Capacity: 1TB\r\n- RAM: 4GB LPDDR4\r\n- Read/Write Speed[7]: up to 7,450 MB/s, up to 6,900 MB/s\r\n- Random Read/Write Speed: up to 1,600K IOPS, 1,550K IOPS', 'image/prod_6a26b727aebb2.jpg', 'Available', 10, 0, '', '', 10),
@@ -1366,7 +1380,6 @@ CREATE TABLE `saved_cards` (
 
 INSERT INTO `saved_cards` (`card_id`, `customer_id`, `bank_id`, `cardholder_name`, `last_four_digits`, `expiry_date`, `card_brand`, `is_default`, `created_at`) VALUES
 (1, 1, NULL, '22', '5353', '11/24', 'Credit Card', 0, '2026-04-09 23:11:21'),
-(2, 1, NULL, '日人人日r', '2331', '22/11', 'Credit Card', 1, '2026-04-11 17:06:45'),
 (4, 6, 2, 'Ali Bin Abu', '6666', '12/30', 'Credit Card', 1, '2026-05-18 00:13:55'),
 (5, 5, 2, 'GAN SHENG WING', '6666', '01/26', 'Credit Card', 1, '2026-05-18 16:45:44'),
 (6, 9, 2, 'Gan Sheng Wing', '6666', '12/30', 'Credit Card', 0, '2026-06-20 02:01:52'),
@@ -1399,8 +1412,6 @@ CREATE TABLE `shopping_cart` (
 
 INSERT INTO `shopping_cart` (`cart_id`, `customer_id`, `product_id`, `pc_build`, `package_id`, `affiliate_id`, `quantity`, `added_at`) VALUES
 (9, 3, NULL, 14, NULL, NULL, 1, '2026-04-06 09:17:24'),
-(19, 1, 4, NULL, NULL, NULL, 1, '2026-04-29 23:38:35'),
-(20, 1, NULL, NULL, 4, NULL, 2, '2026-04-30 00:06:55'),
 (51, 7, 48, NULL, NULL, NULL, 25, '2026-05-18 16:42:34'),
 (65, 11, 48, NULL, NULL, NULL, 1, '2026-06-20 02:32:32'),
 (69, 15, 48, NULL, NULL, NULL, 1, '2026-06-20 20:32:21'),
@@ -1476,7 +1487,9 @@ INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amo
 (27, 13, 'Top-up', 5000.00, 500, '2026-06-20 03:01:13'),
 (28, 6, 'Top-up', 5000.00, 500, '2026-06-20 13:36:09'),
 (29, 6, 'Top-up', 5000.00, 500, '2026-06-20 13:36:26'),
-(30, 6, 'Payment', -8609.00, 0, '2026-06-20 20:50:36');
+(30, 6, 'Payment', -8609.00, 0, '2026-06-20 20:50:36'),
+(31, 1, 'Refund', 1450.00, 0, '2026-07-07 13:12:59'),
+(32, 1, 'Payment', -2522.00, 0, '2026-07-07 13:51:29');
 
 --
 -- Indexes for dumped tables
@@ -1684,13 +1697,13 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `admin_logs`
 --
 ALTER TABLE `admin_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=235;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=236;
 
 --
 -- AUTO_INCREMENT for table `bank`
 --
 ALTER TABLE `bank`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `build_items`
@@ -1750,13 +1763,13 @@ ALTER TABLE `fpx_accounts`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `order_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `order_details`
 --
 ALTER TABLE `order_details`
-  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `order_detail_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- AUTO_INCREMENT for table `packages`
@@ -1774,7 +1787,7 @@ ALTER TABLE `package_items`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -1810,7 +1823,7 @@ ALTER TABLE `saved_cards`
 -- AUTO_INCREMENT for table `shopping_cart`
 --
 ALTER TABLE `shopping_cart`
-  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
+  MODIFY `cart_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
 
 --
 -- AUTO_INCREMENT for table `used_vouchers`
@@ -1822,7 +1835,7 @@ ALTER TABLE `used_vouchers`
 -- AUTO_INCREMENT for table `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- Constraints for dumped tables
