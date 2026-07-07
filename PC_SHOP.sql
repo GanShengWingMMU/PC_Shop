@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 07, 2026 at 07:57 AM
+-- Generation Time: Jul 07, 2026 at 08:41 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -302,7 +302,8 @@ INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_even
 (232, 10, 'OCAlvis', 'Admin', 'System Login', '127.0.0.1', '2026-07-07 09:51:21'),
 (233, 10, 'OCAlvis', 'Admin', 'Added New Product: MSI MAG A650BN 650W 80', '127.0.0.1', '2026-07-07 10:01:15'),
 (234, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 10:15:10'),
-(235, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 13:53:56');
+(235, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 13:53:56'),
+(236, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 14:32:08');
 
 -- --------------------------------------------------------
 
@@ -729,28 +730,29 @@ CREATE TABLE `customers` (
   `status` varchar(50) NOT NULL DEFAULT 'Active',
   `daily_coins_added` int(11) DEFAULT 0,
   `daily_coins_deducted` int(11) DEFAULT 0,
-  `last_coin_update` date DEFAULT NULL
+  `last_coin_update` date DEFAULT NULL,
+  `last_login` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `birthday`, `wallet_balance`, `reward_coins`, `lifetime_coins`, `membership_tier`, `vip_expiry_date`, `auto_renew`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`, `created_at`, `status`, `daily_coins_added`, `daily_coins_deducted`, `last_coin_update`) VALUES
-(1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99971105.99, 252, 532, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active', 0, 0, NULL),
-(3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 6, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active', 0, 0, NULL),
-(5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queiiit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 110105.00, 1502, 500, 'VIP', '2026-07-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14', 'Active', 0, 0, NULL),
-(6, 'kskbl', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', '+60122222620', '2025-11-17', 7391.00, 3818, 3377, 'VIP', '2026-07-18 17:07:34', 1, NULL, 'Active', NULL, NULL, 27, 44, 13, 0, '2026-05-09 21:32:45', 'Active', 500, 500, '2026-07-07'),
-(7, 'XUANMING0126', NULL, NULL, 'chenweishen8733@gmail.com', '$2y$10$t1mb1tQakaIxjZZJG/2/RurpbpIpkGQ9mObmsvcM9AFz.I0ZskP3.', '', '2026-05-18', 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-18 16:39:41', 'Active', 0, 0, NULL),
-(8, 'Alvis', NULL, NULL, 'ocalvis88@gmail.com', '$2y$10$JHAUBkQ2sgoDKHebVWIvNe7uUqsr3XUVHonZzXlpWy83oOcnjen4W', '', '2005-10-07', 105.00, 1441, 1441, 'VIP', '2026-08-06 04:09:54', 1, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-21 22:15:47', 'Active', 0, 0, NULL),
-(9, 'eee', NULL, NULL, 'qu22eit0126@gmail.com', '$2y$10$GjGIWiIk0yC5pcOWCjqiAutd8tFXSs7POpYJdJi/uvP/1j.C2.Pbu', NULL, NULL, 0.00, 0, 0, 'VIP', '2026-07-19 20:00:18', 1, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:00:13', 'Active', 0, 0, NULL),
-(10, 'prof', NULL, NULL, 'gg0126@gmail.com', '$2y$10$cHLLO2NbqdDqoItVVnEuNOFrNmUPIDUkHor54jt1KUgh5H5HHBX9G', NULL, NULL, 15500.00, 1550, 1050, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:02:47', 'Active', 0, 0, NULL),
-(11, 'seed', NULL, NULL, 'queit01226@gmail.com', '$2y$10$8np7BO0qZJYzIgMbZdY3Uu5pkXtVgqaCS0QfZxhY7WfFtJ3wKNCWi', NULL, NULL, 982.00, 0, 2000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:13:16', 'Active', 0, 0, NULL),
-(12, 'test2', NULL, NULL, 'quei22t0126@gmail.com', '$2y$10$7ZHRydnpFcZn68JvfUoCe.ggRkm50NUhBllCpw/HXuifIH0EpmODS', NULL, NULL, 20000.00, 2000, 2000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:52:55', 'Active', 0, 0, NULL),
-(13, 'SSSSSS', NULL, NULL, 'queit01X26@gmail.com', '$2y$10$MPeiirADAFUCt7Eqopaa2euWmpm.ljMj3DPnT7BxyFexEaWAUx2r2', NULL, NULL, 5000.00, 500, 500, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 03:00:20', 'Active', 0, 0, NULL),
-(14, 'kskbl22', NULL, NULL, 'queit220126@gmail.com', '$2y$10$Dhx7O886ykAP6haVez4b.ONmJNGnbKBdXn2Wwtbcg0tAdyxpO2LcW', NULL, NULL, 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 13:44:29', 'Active', 0, 0, NULL),
-(15, 'QIYUE', NULL, NULL, 'queit1234@gmail.com', '$2y$10$EgRvryjdEeF8Ydq5JZ.boujJVBUWjRYlLY0A1RK6qZgzqbT1eXPPi', NULL, NULL, 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 20:32:12', 'Active', 0, 0, NULL),
-(16, 'AlexVeteran', NULL, NULL, 'guragawr229@gmail.com', '$2y$10$2qmeaz2AZhZec6ROSE37iOOV0FePhsTnyheHSKkC7LZ5eF4PAgt7C', '', '2013-07-06', 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-07-06 15:34:06', 'Active', 0, 0, NULL);
+INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `birthday`, `wallet_balance`, `reward_coins`, `lifetime_coins`, `membership_tier`, `vip_expiry_date`, `auto_renew`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`, `created_at`, `status`, `daily_coins_added`, `daily_coins_deducted`, `last_coin_update`, `last_login`) VALUES
+(1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99971105.99, 252, 532, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active', 0, 0, NULL, '2026-07-07 14:32:43'),
+(3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 6, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active', 0, 0, NULL, '2026-07-07 14:32:41'),
+(5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queiiit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 110105.00, 1502, 500, 'VIP', '2026-07-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14', 'Active', 0, 0, NULL, '2026-07-07 14:32:39'),
+(6, 'kskbl', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', '+60122222620', '2025-11-17', 7391.00, 3818, 3377, 'VIP', '2026-07-18 17:07:34', 1, NULL, 'Active', NULL, NULL, 27, 44, 13, 0, '2026-05-09 21:32:45', 'Active', 500, 500, '2026-07-07', '2026-07-07 14:32:36'),
+(7, 'XUANMING0126', NULL, NULL, 'chenweishen8733@gmail.com', '$2y$10$t1mb1tQakaIxjZZJG/2/RurpbpIpkGQ9mObmsvcM9AFz.I0ZskP3.', '', '2026-05-18', 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-18 16:39:41', 'Active', 0, 0, NULL, '2026-07-07 14:32:34'),
+(8, 'Alvis', NULL, NULL, 'ocalvis88@gmail.com', '$2y$10$JHAUBkQ2sgoDKHebVWIvNe7uUqsr3XUVHonZzXlpWy83oOcnjen4W', '', '2005-10-07', 75.10, 1441, 1441, 'VIP', '2026-09-05 04:09:54', 1, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-21 22:15:47', 'Active', 0, 0, NULL, '2026-07-07 14:36:56'),
+(9, 'eee', NULL, NULL, 'qu22eit0126@gmail.com', '$2y$10$GjGIWiIk0yC5pcOWCjqiAutd8tFXSs7POpYJdJi/uvP/1j.C2.Pbu', NULL, NULL, 0.00, 0, 0, 'VIP', '2026-07-19 20:00:18', 1, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:00:13', 'Active', 0, 0, NULL, '2026-07-07 14:32:30'),
+(10, 'prof', NULL, NULL, 'gg0126@gmail.com', '$2y$10$cHLLO2NbqdDqoItVVnEuNOFrNmUPIDUkHor54jt1KUgh5H5HHBX9G', NULL, NULL, 15500.00, 1550, 1050, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:02:47', 'Active', 0, 0, NULL, '2026-07-07 14:32:28'),
+(11, 'seed', NULL, NULL, 'queit01226@gmail.com', '$2y$10$8np7BO0qZJYzIgMbZdY3Uu5pkXtVgqaCS0QfZxhY7WfFtJ3wKNCWi', NULL, NULL, 982.00, 0, 2000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:13:16', 'Active', 0, 0, NULL, '2026-07-07 14:32:25'),
+(12, 'test2', NULL, NULL, 'quei22t0126@gmail.com', '$2y$10$7ZHRydnpFcZn68JvfUoCe.ggRkm50NUhBllCpw/HXuifIH0EpmODS', NULL, NULL, 20000.00, 2000, 2000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:52:55', 'Active', 0, 0, NULL, '2026-07-07 14:32:22'),
+(13, 'SSSSSS', NULL, NULL, 'queit01X26@gmail.com', '$2y$10$MPeiirADAFUCt7Eqopaa2euWmpm.ljMj3DPnT7BxyFexEaWAUx2r2', NULL, NULL, 5000.00, 500, 500, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 03:00:20', 'Active', 0, 0, NULL, '2026-07-07 14:32:21'),
+(14, 'kskbl22', NULL, NULL, 'queit220126@gmail.com', '$2y$10$Dhx7O886ykAP6haVez4b.ONmJNGnbKBdXn2Wwtbcg0tAdyxpO2LcW', NULL, NULL, 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 13:44:29', 'Active', 0, 0, NULL, '2026-07-07 14:32:19'),
+(15, 'QIYUE', NULL, NULL, 'queit1234@gmail.com', '$2y$10$EgRvryjdEeF8Ydq5JZ.boujJVBUWjRYlLY0A1RK6qZgzqbT1eXPPi', NULL, NULL, 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 20:32:12', 'Active', 0, 0, NULL, '2026-07-07 14:32:16'),
+(16, 'AlexVeteran', NULL, NULL, 'guragawr229@gmail.com', '$2y$10$2qmeaz2AZhZec6ROSE37iOOV0FePhsTnyheHSKkC7LZ5eF4PAgt7C', '', '2013-07-06', 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-07-06 15:34:06', 'Active', 0, 0, NULL, '2026-07-07 14:32:13');
 
 -- --------------------------------------------------------
 
@@ -848,7 +850,7 @@ INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `to
 (16, 'My Custom Order', 5, '2026-05-02 22:30:30', 74860.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Completed'),
 (17, 'My Custom Order', 5, '2026-05-02 22:31:55', 6427.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Shipped'),
 (18, 'My Custom Order', 5, '2026-05-09 16:55:10', 10204.00, 550, 55.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending'),
-(19, 'My Custom Order', 5, '2026-05-09 21:03:11', 45.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Pending'),
+(19, 'My Custom Order', 5, '2026-05-09 21:03:11', 45.00, 0, 0.00, 'YYEYY | 0123456789\\r\\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', '', 'Shipped'),
 (20, 'My Custom Order', 6, '2026-05-17 23:43:50', 10727.00, 0, 0.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
 (21, 'My Custom Order', 6, '2026-05-18 00:13:55', 10727.00, 0, 0.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Shipped'),
 (22, 'My Custom Order', 6, '2026-05-18 00:28:23', 10672.00, 550, 55.00, 'YYEYY | 01233226201323232\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Shipped'),
@@ -860,13 +862,13 @@ INSERT INTO `orders` (`order_id`, `order_name`, `customer_id`, `order_date`, `to
 (28, 'My Custom Order', 5, '2026-06-20 01:42:45', 350.00, 10000, 1000.00, 'YYEYY | 0123456789\n58,Jalan Udara 22,Taman Universiti, 81365 perak, sembilan', NULL, 'Pending'),
 (29, 'My Custom Order', 6, '2026-06-20 01:52:03', 465.00, 550, 55.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
 (30, 'My Custom Order', 10, '2026-06-20 02:09:49', 1350.00, 0, 0.00, 'XUAN MING YEOH | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Completed'),
-(31, 'My Custom Order', 11, '2026-06-20 02:15:56', 1350.00, 0, 0.00, 'XUAN MING YEOH | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
+(31, 'My Custom Order', 11, '2026-06-20 02:15:56', 1350.00, 0, 0.00, 'XUAN MING YEOH | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Delivered'),
 (32, 'My Custom Order', 11, '2026-06-20 02:18:44', 19018.00, 2000, 200.00, 'XUAN MING YEOH | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
 (33, 'My Custom Order', 6, '2026-06-20 20:50:36', 8609.00, 0, 150.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
-(34, 'My Custom Order', 6, '2026-06-20 21:54:48', 8759.00, 0, 0.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Pending'),
-(35, 'My Custom Order', 6, '2026-06-20 21:55:54', 6427.00, 0, 0.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Cancelled'),
+(34, 'My Custom Order', 6, '2026-06-20 21:54:48', 8759.00, 0, 0.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Delivered'),
+(35, 'My Custom Order', 6, '2026-06-20 21:55:54', 6427.00, 0, 0.00, 'YEOH XUAN MING | +60122222620\n68,JALAN UTAMA28 TAMAN MUTIARA RINI, 81300 Johor Bahru, Johor', NULL, 'Shipped'),
 (36, 'My Custom Order', 8, '2026-07-06 16:06:05', 14419.00, 0, 0.00, 'Alvis | +601158534889\n2812, Jalan Sri Putri 10/2, 81000 Kulai, Johor', NULL, 'Completed'),
-(37, 'My Custom Order', 1, '2026-07-07 13:08:43', 1450.00, 0, 0.00, 'Customer | 000-0000000\nSheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', NULL, 'Cancelled'),
+(37, 'My Custom Order', 1, '2026-07-07 13:08:43', 1450.00, 0, 0.00, 'Customer | 000-0000000\nSheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', NULL, 'Completed'),
 (38, 'My Custom Order', 1, '2026-07-07 13:23:26', 1350.00, 0, 0.00, 'Customer | 000-0000000\nSheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', NULL, 'Delivered'),
 (39, 'My Custom Order', 1, '2026-07-07 13:51:29', 2522.00, 280, 28.00, 'Customer | 000-0000000\nSheng Wing Gan | 0162058560\na0805, 205 Short Rd\n05602 Berlin, Johor', NULL, 'Completed');
 
@@ -1489,7 +1491,8 @@ INSERT INTO `wallet_transactions` (`transaction_id`, `customer_id`, `type`, `amo
 (29, 6, 'Top-up', 5000.00, 500, '2026-06-20 13:36:26'),
 (30, 6, 'Payment', -8609.00, 0, '2026-06-20 20:50:36'),
 (31, 1, 'Refund', 1450.00, 0, '2026-07-07 13:12:59'),
-(32, 1, 'Payment', -2522.00, 0, '2026-07-07 13:51:29');
+(32, 1, 'Payment', -2522.00, 0, '2026-07-07 13:51:29'),
+(33, 8, 'Auto-Renew Payment', -29.90, 0, '2026-10-07 14:31:20');
 
 --
 -- Indexes for dumped tables
@@ -1697,7 +1700,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT for table `admin_logs`
 --
 ALTER TABLE `admin_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=236;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=237;
 
 --
 -- AUTO_INCREMENT for table `bank`
@@ -1835,7 +1838,7 @@ ALTER TABLE `used_vouchers`
 -- AUTO_INCREMENT for table `wallet_transactions`
 --
 ALTER TABLE `wallet_transactions`
-  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- Constraints for dumped tables
