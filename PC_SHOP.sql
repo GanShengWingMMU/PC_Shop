@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 06, 2026 at 05:48 PM
+-- Generation Time: Jul 07, 2026 at 04:21 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -293,7 +293,15 @@ INSERT INTO `admin_logs` (`log_id`, `admin_id`, `username`, `role`, `action_even
 (223, 1, 'Alvis', 'SuperAdmin', 'Muted User ID: 8', '', '2026-07-06 23:25:37'),
 (224, 1, 'Alvis', 'SuperAdmin', 'Unmuted User ID: 8', '', '2026-07-06 23:25:58'),
 (225, 1, 'Alvis', 'SuperAdmin', 'Purged Forum Post ID: 16', '::1', '2026-07-06 23:26:32'),
-(226, 1, 'Alvis', 'SuperAdmin', 'Deactivated Promo Code ID: 18', '::1', '2026-07-06 23:48:33');
+(226, 1, 'Alvis', 'SuperAdmin', 'Deactivated Promo Code ID: 18', '::1', '2026-07-06 23:48:33'),
+(227, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 00:25:37'),
+(228, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 08:19:34'),
+(229, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 09:48:28'),
+(230, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 09:50:42'),
+(231, 1, 'Alvis', 'SuperAdmin', 'Added New Staff: OCAlvis', '127.0.0.1', '2026-07-07 09:51:12'),
+(232, 10, 'OCAlvis', 'Admin', 'System Login', '127.0.0.1', '2026-07-07 09:51:21'),
+(233, 10, 'OCAlvis', 'Admin', 'Added New Product: MSI MAG A650BN 650W 80', '127.0.0.1', '2026-07-07 10:01:15'),
+(234, 1, 'Alvis', 'SuperAdmin', 'System Login', '127.0.0.1', '2026-07-07 10:15:10');
 
 -- --------------------------------------------------------
 
@@ -713,28 +721,31 @@ CREATE TABLE `customers` (
   `pref_student` int(11) DEFAULT 0,
   `pref_enthusiast` int(11) DEFAULT 0,
   `created_at` datetime DEFAULT current_timestamp(),
-  `status` varchar(50) NOT NULL DEFAULT 'Active'
+  `status` varchar(50) NOT NULL DEFAULT 'Active',
+  `daily_coins_added` int(11) DEFAULT 0,
+  `daily_coins_deducted` int(11) DEFAULT 0,
+  `last_coin_update` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `birthday`, `wallet_balance`, `reward_coins`, `lifetime_coins`, `membership_tier`, `vip_expiry_date`, `auto_renew`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`, `created_at`, `status`) VALUES
-(1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99972177.99, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active'),
-(3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 6, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active'),
-(5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queiiit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 110105.00, 1502, 500, 'VIP', '2026-07-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14', 'Active'),
-(6, 'kskbl', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', '+60122222620', '2025-11-17', 7391.00, 3818, 3377, 'VIP', '2026-07-18 17:07:34', 1, NULL, 'Active', NULL, NULL, 27, 44, 13, 0, '2026-05-09 21:32:45', 'Active'),
-(7, 'XUANMING0126', NULL, NULL, 'chenweishen8733@gmail.com', '$2y$10$t1mb1tQakaIxjZZJG/2/RurpbpIpkGQ9mObmsvcM9AFz.I0ZskP3.', '', '2026-05-18', 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-18 16:39:41', 'Active'),
-(8, 'Alvis', NULL, NULL, 'ocalvis88@gmail.com', '$2y$10$JHAUBkQ2sgoDKHebVWIvNe7uUqsr3XUVHonZzXlpWy83oOcnjen4W', '', '2005-10-07', 105.00, 1441, 1441, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-21 22:15:47', 'Active'),
-(9, 'eee', NULL, NULL, 'qu22eit0126@gmail.com', '$2y$10$GjGIWiIk0yC5pcOWCjqiAutd8tFXSs7POpYJdJi/uvP/1j.C2.Pbu', NULL, NULL, 0.00, 0, 0, 'VIP', '2026-07-19 20:00:18', 1, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:00:13', 'Active'),
-(10, 'prof', NULL, NULL, 'gg0126@gmail.com', '$2y$10$cHLLO2NbqdDqoItVVnEuNOFrNmUPIDUkHor54jt1KUgh5H5HHBX9G', NULL, NULL, 15500.00, 1550, 1050, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:02:47', 'Active'),
-(11, 'seed', NULL, NULL, 'queit01226@gmail.com', '$2y$10$8np7BO0qZJYzIgMbZdY3Uu5pkXtVgqaCS0QfZxhY7WfFtJ3wKNCWi', NULL, NULL, 982.00, 0, 2000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:13:16', 'Active'),
-(12, 'test2', NULL, NULL, 'quei22t0126@gmail.com', '$2y$10$7ZHRydnpFcZn68JvfUoCe.ggRkm50NUhBllCpw/HXuifIH0EpmODS', NULL, NULL, 20000.00, 2000, 2000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:52:55', 'Active'),
-(13, 'SSSSSS', NULL, NULL, 'queit01X26@gmail.com', '$2y$10$MPeiirADAFUCt7Eqopaa2euWmpm.ljMj3DPnT7BxyFexEaWAUx2r2', NULL, NULL, 5000.00, 500, 500, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 03:00:20', 'Active'),
-(14, 'kskbl22', NULL, NULL, 'queit220126@gmail.com', '$2y$10$Dhx7O886ykAP6haVez4b.ONmJNGnbKBdXn2Wwtbcg0tAdyxpO2LcW', NULL, NULL, 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 13:44:29', 'Active'),
-(15, 'QIYUE', NULL, NULL, 'queit1234@gmail.com', '$2y$10$EgRvryjdEeF8Ydq5JZ.boujJVBUWjRYlLY0A1RK6qZgzqbT1eXPPi', NULL, NULL, 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 20:32:12', 'Active'),
-(16, 'AlexVeteran', NULL, NULL, 'guragawr229@gmail.com', '$2y$10$2qmeaz2AZhZec6ROSE37iOOV0FePhsTnyheHSKkC7LZ5eF4PAgt7C', '', '2013-07-06', 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-07-06 15:34:06', 'Active');
+INSERT INTO `customers` (`customer_id`, `username`, `first_name`, `last_name`, `email`, `password`, `phone_number`, `birthday`, `wallet_balance`, `reward_coins`, `lifetime_coins`, `membership_tier`, `vip_expiry_date`, `auto_renew`, `default_shipping_address`, `account_status`, `reset_token`, `reset_token_expire`, `pref_gamer`, `pref_creator`, `pref_student`, `pref_enthusiast`, `created_at`, `status`, `daily_coins_added`, `daily_coins_deducted`, `last_coin_update`) VALUES
+(1, 'Sheng Wing Gan', NULL, NULL, 'ganshengwing1126@gmail.com', '$2y$10$6Na3FQF8P0dNwtlqRJrf2u4YNNXIohV5YkSx/KBPJtzqAY3RFGldG', NULL, NULL, 99972177.99, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active', 0, 0, NULL),
+(3, 'Sheng Gan', NULL, NULL, 'ganshengwing1126@yahoo.com', '$2y$10$P2hmbbymdla9zNVO1rI4TO/4I4LcSUfDgSkBPHxkl79J3Rc9VEwgO', NULL, NULL, 0.00, 6, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-04-30 20:09:29', 'Active', 0, 0, NULL),
+(5, 'MrSuhaimi', 'XUAN', 'YEOH', 'queiiit0126@gmail.com', '$2y$10$7xIGYUoYA838MBDwMys20.mgW.n0jcHAKOsGCgHOf2tnyq3iKa/xO', NULL, NULL, 110105.00, 1502, 500, 'VIP', '2026-07-08 09:57:49', 1, NULL, 'Active', '242270', '2026-05-12 18:54:26', 7, 5, 10, 0, '2026-05-01 13:59:14', 'Active', 0, 0, NULL),
+(6, 'kskbl', '何桥月光下', '奈', 'UIS292@gmail.com', '$2y$10$DfU8a04xIV3OhjZ.wZy5rOyFXBfivjKW8rijnqlMi.EcyUt93Pxcu', '+60122222620', '2025-11-17', 7391.00, 3818, 3377, 'VIP', '2026-07-18 17:07:34', 1, NULL, 'Active', NULL, NULL, 27, 44, 13, 0, '2026-05-09 21:32:45', 'Active', 500, 500, '2026-07-07'),
+(7, 'XUANMING0126', NULL, NULL, 'chenweishen8733@gmail.com', '$2y$10$t1mb1tQakaIxjZZJG/2/RurpbpIpkGQ9mObmsvcM9AFz.I0ZskP3.', '', '2026-05-18', 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-18 16:39:41', 'Active', 0, 0, NULL),
+(8, 'Alvis', NULL, NULL, 'ocalvis88@gmail.com', '$2y$10$JHAUBkQ2sgoDKHebVWIvNe7uUqsr3XUVHonZzXlpWy83oOcnjen4W', '', '2005-10-07', 105.00, 1441, 1441, 'VIP', '2026-08-06 04:09:54', 1, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-05-21 22:15:47', 'Active', 0, 0, NULL),
+(9, 'eee', NULL, NULL, 'qu22eit0126@gmail.com', '$2y$10$GjGIWiIk0yC5pcOWCjqiAutd8tFXSs7POpYJdJi/uvP/1j.C2.Pbu', NULL, NULL, 0.00, 0, 0, 'VIP', '2026-07-19 20:00:18', 1, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:00:13', 'Active', 0, 0, NULL),
+(10, 'prof', NULL, NULL, 'gg0126@gmail.com', '$2y$10$cHLLO2NbqdDqoItVVnEuNOFrNmUPIDUkHor54jt1KUgh5H5HHBX9G', NULL, NULL, 15500.00, 1550, 1050, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:02:47', 'Active', 0, 0, NULL),
+(11, 'seed', NULL, NULL, 'queit01226@gmail.com', '$2y$10$8np7BO0qZJYzIgMbZdY3Uu5pkXtVgqaCS0QfZxhY7WfFtJ3wKNCWi', NULL, NULL, 982.00, 0, 2000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:13:16', 'Active', 0, 0, NULL),
+(12, 'test2', NULL, NULL, 'quei22t0126@gmail.com', '$2y$10$7ZHRydnpFcZn68JvfUoCe.ggRkm50NUhBllCpw/HXuifIH0EpmODS', NULL, NULL, 20000.00, 2000, 2000, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 02:52:55', 'Active', 0, 0, NULL),
+(13, 'SSSSSS', NULL, NULL, 'queit01X26@gmail.com', '$2y$10$MPeiirADAFUCt7Eqopaa2euWmpm.ljMj3DPnT7BxyFexEaWAUx2r2', NULL, NULL, 5000.00, 500, 500, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 03:00:20', 'Active', 0, 0, NULL),
+(14, 'kskbl22', NULL, NULL, 'queit220126@gmail.com', '$2y$10$Dhx7O886ykAP6haVez4b.ONmJNGnbKBdXn2Wwtbcg0tAdyxpO2LcW', NULL, NULL, 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 13:44:29', 'Active', 0, 0, NULL),
+(15, 'QIYUE', NULL, NULL, 'queit1234@gmail.com', '$2y$10$EgRvryjdEeF8Ydq5JZ.boujJVBUWjRYlLY0A1RK6qZgzqbT1eXPPi', NULL, NULL, 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-06-20 20:32:12', 'Active', 0, 0, NULL),
+(16, 'AlexVeteran', NULL, NULL, 'guragawr229@gmail.com', '$2y$10$2qmeaz2AZhZec6ROSE37iOOV0FePhsTnyheHSKkC7LZ5eF4PAgt7C', '', '2013-07-06', 0.00, 0, 0, 'Standard', NULL, 0, NULL, 'Active', NULL, NULL, 0, 0, 0, 0, '2026-07-06 15:34:06', 'Active', 0, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -1667,13 +1678,13 @@ ALTER TABLE `wallet_transactions`
 -- AUTO_INCREMENT for table `admins`
 --
 ALTER TABLE `admins`
-  MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `admin_logs`
 --
 ALTER TABLE `admin_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=227;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=235;
 
 --
 -- AUTO_INCREMENT for table `bank`
@@ -1769,7 +1780,7 @@ ALTER TABLE `payments`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
 
 --
 -- AUTO_INCREMENT for table `promo_codes`
