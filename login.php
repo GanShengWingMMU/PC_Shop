@@ -51,6 +51,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !$locked_out) {
                     
                     session_regenerate_id(true);
                     
+                    $conn->query("UPDATE customers SET last_login = NOW() WHERE customer_id = " . intval($user['customer_id']));
+                    
                     unset($_SESSION['login_attempts'], $_SESSION['lockout_time']);
                     $_SESSION['customer_id'] = $user['customer_id'];
                     $_SESSION['username'] = $user['username'];

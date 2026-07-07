@@ -8,21 +8,54 @@ if (empty($current_role) || (strtolower($current_role) !== 'admin' && strtolower
     header("Location: admin_login.php"); exit();
 }
 
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $cid = intval($_POST['customer_id']);
     $amount = abs(intval($_POST['coin_amount'])); 
     $action = $_POST['action']; 
 
-    if ($action === 'deduct') { $amount = -$amount; }
-    
   
-    $stmt = $conn->prepare("UPDATE customers SET reward_coins = GREATEST(0, reward_coins + ?) WHERE customer_id = ?");
-    $stmt->bind_param("ii", $amount, $cid);
-    if($stmt->execute()) {
-        header("Location: manage_coins.php?msg=success");
-        exit();
+    $check_stmt = $conn->prepare("SELECT reward_coins, daily_coins_added, daily_coins_deducted, last_coin_update FROM customers WHERE customer_id = ?");
+    $check_stmt->bind_param("i", $cid);
+    $check_stmt->execute();
+    $res = $check_stmt->get_result();
+    
+    if ($row = $res->fetch_assoc()) {
+        $today = date('Y-m-d');
+        
+
+        $daily_added = ($row['last_coin_update'] === $today) ? intval($row['daily_coins_added']) : 0;
+        $daily_deducted = ($row['last_coin_update'] === $today) ? intval($row['daily_coins_deducted']) : 0;
+
+        if ($action === 'add') {
+       
+            if ($daily_added + $amount > 500) {
+                $rem = 500 - $daily_added;
+                header("Location: manage_coins.php?msg=limit_reached&type=add&rem=" . $rem);
+                exit();
+            }
+            $daily_added += $amount;
+            $db_amount = $amount;
+        } else {
+          
+            if ($daily_deducted + $amount > 500) {
+                $rem = 500 - $daily_deducted;
+                header("Location: manage_coins.php?msg=limit_reached&type=deduct&rem=" . $rem);
+                exit();
+            }
+            $daily_deducted += $amount;
+            $db_amount = -$amount; 
+        }
+
+   
+        $stmt = $conn->prepare("UPDATE customers SET reward_coins = GREATEST(0, reward_coins + ?), daily_coins_added = ?, daily_coins_deducted = ?, last_coin_update = ? WHERE customer_id = ?");
+        $stmt->bind_param("iiisi", $db_amount, $daily_added, $daily_deducted, $today, $cid);
+        
+        if($stmt->execute()) {
+            header("Location: manage_coins.php?msg=success");
+            exit();
+        }
     }
+    $check_stmt->close();
 }
 ?>
 <!DOCTYPE html>
@@ -52,10 +85,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <div class="admin-content" style="padding: 30px;">
             <header class="admin-header" style="margin-bottom: 30px;">
                 <h2 style="color: #ffd700; margin:0;"><i class="fas fa-coins"></i> Universal Coin Ledger</h2>
-                <p style="color:#888; font-size:13px; margin-top:5px;">Monitor and manually inject or deduct reward coins for citizens.</p>
+                <p style="color:#888; font-size:13px; margin-top:5px;">Monitor and manually inject or deduct reward coins for citizens. (Max 500 per day)</p>
             </header>
 
-            <?php if (isset($_GET['msg']) && $_GET['msg'] == 'success') echo "<div style='color:#00e676; background:rgba(0,230,118,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(0,230,118,0.3);'><i class='fas fa-check-circle'></i> Ledger Updated Successfully.</div>"; ?>
+      
+            <?php 
+            if (isset($_GET['msg'])) {
+                if ($_GET['msg'] == 'success') {
+                    echo "<div style='color:#00e676; background:rgba(0,230,118,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(0,230,118,0.3);'><i class='fas fa-check-circle'></i> Ledger Updated Successfully.</div>";
+                } elseif ($_GET['msg'] == 'limit_reached') {
+                    $rem = intval($_GET['rem'] ?? 0);
+                    $type = ($_GET['type'] == 'add') ? 'Inject' : 'Deduct';
+                    echo "<div style='color:#ff4d4d; background:rgba(255,77,77,0.1); padding:15px; border-radius:6px; margin-bottom:20px; border:1px solid rgba(255,77,77,0.3);'><i class='fas fa-exclamation-triangle'></i> Daily Limit Reached! You can only <strong>{$type} {$rem}</strong> more coins for this citizen today.</div>";
+                }
+            }
+            ?>
 
             <table class="cyber-table">
                 <thead>
@@ -80,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         echo "<td style='text-align: right;'>
                                 <form method='POST' style='display:flex; justify-content:flex-end; gap:8px; align-items:center;'>
                                     <input type='hidden' name='customer_id' value='{$row['customer_id']}'>
-                                    <input type='number' name='coin_amount' class='coin-input' placeholder='Qty' min='1' required>
+                                    <input type='number' name='coin_amount' class='coin-input' placeholder='Qty' min='1' max='500' required>
                                     <button type='submit' name='action' value='add' class='btn-add' title='Inject Coins'><i class='fas fa-plus'></i></button>
                                     <button type='submit' name='action' value='deduct' class='btn-deduct' title='Deduct Coins'><i class='fas fa-minus'></i></button>
                                 </form>

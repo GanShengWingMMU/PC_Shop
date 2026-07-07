@@ -27,7 +27,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if (empty($username) || empty($password)) {
             $error = "Please fill in all security credentials.";
         } else {
-            // 修正SQL：确保能抓取到 status 栏位
+      
             $stmt = $conn->prepare("SELECT * FROM admins WHERE username = ? AND (role = 'admin' OR role = 'superadmin')");
             $stmt->bind_param("s", $username);
             $stmt->execute();
@@ -36,12 +36,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if ($result->num_rows === 1) {
                 $user = $result->fetch_assoc();
                 
-                // 🌟 新增的账号状态检查
+               
                 $status = isset($user['status']) ? $user['status'] : 'Active'; 
                 if (strtolower($status) === 'inactive') {
                     $error = "⚠️ Access Denied: This account has been suspended by an administrator.";
                 } else {
-                    // 密码验证逻辑
+                
                     $is_password_correct = false;
                     if (password_verify($password, $user['password'])) {
                         $is_password_correct = true;
@@ -128,6 +128,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         color: #000; font-weight: bold; cursor: pointer; margin-top: 10px;
     }
     .error-msg { background: rgba(255, 77, 77, 0.1); color: #ff4d4d; border: 1px solid rgba(255, 77, 77, 0.3); padding: 10px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
+    
+   
+    .login-container a { color: #00f2fe !important; text-decoration: none; font-size: 13px; display: inline-block; transition: 0.3s; }
+    .login-container a:hover { color: #ffffff !important; text-shadow: 0 0 8px rgba(0, 242, 254, 0.8); }
 </style>
 </head>
 <body>
@@ -140,12 +144,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <label style="color:#fff; font-size:13px; margin-bottom:8px; display:block;">Username</label>
                 <input type="text" name="username" class="form-control" required placeholder="Enter username">
             </div>
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 5px;">
                 <label style="color:#fff; font-size:13px; margin-bottom:8px; display:block;">Password</label>
                 <input type="password" name="password" class="form-control" required placeholder="Enter password">
             </div>
+            
+            <div style="text-align: right; margin-bottom: 20px;">
+                <a href="admin_forgot_password.php" style="font-size: 12px; color: #888 !important;">Forgot Password?</a>
+            </div>
+            
             <button type="submit" class="btn-login">Access Dashboard</button>
         </form>
+        
+        <a href="index.php" style="margin-top: 20px; display: inline-block;">&larr; Back to Customer Page</a>
     </div>
 </body>
 </html>
