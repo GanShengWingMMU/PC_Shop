@@ -206,7 +206,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_staff'])) {
 
                     <div class="form-group" style="grid-column: 1 / -1; margin-top: 20px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 20px;">
                         <label style="color: #00f2fe; font-weight: bold; font-size: 13px; margin-bottom: 8px; display: block;"><i class="fas fa-key"></i> Modify Authentication Key </label>
-                        <p style="font-size: 11px; color: #888; margin-top: -5px; margin-bottom: 15px;">Leave blank if you do not wish to change the password.</p>
+
                         
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
     <div style="position: relative;">
